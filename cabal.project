@@ -1,4 +1,4 @@
-index-state: 2022-02-04T00:00:00Z
+index-state: 2022-02-23T23:59:40Z
 packages: .
 
 write-ghc-environment-files: never
@@ -46,3 +46,10 @@ source-repository-package
   tag: 61d0d14b5cb01db3d589101b3f17b0178f52e386
   --sha256: 17klag62sy1hnkw5jyipyhkafzxrncsmhh1mvgf7l736c00vhz4c
   subdir: servant-server
+
+source-repository-package
+  type: git
+  location: https://github.com/shlevy/cicero
+  tag: e730050abd280cd7d36d4ba14ba4ee5a9e9b8df2
+  --sha256: 1mxhzp8bfdg9m074d67csgzc7an883v6ccrngzg8maj3yzligmph
+  subdir: cicero-api

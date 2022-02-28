@@ -143,5 +143,5 @@
       rev = "minimal";
       sha256 = "";
       };
-    postUnpack = "sourceRoot+=/basement; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/basement; echo source root reset to $sourceRoot";
     }
