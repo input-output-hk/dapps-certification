@@ -168,10 +168,18 @@
         "cereal".revision = (((hackage."cereal")."0.5.8.2").revisions).default;
         "cereal".flags.bytestring-builder = false;
         "utf8-string".revision = (((hackage."utf8-string")."1.0.2").revisions).default;
+        "conduit".revision = (((hackage."conduit")."1.3.4.2").revisions).default;
         "transformers-base".revision = (((hackage."transformers-base")."0.4.6").revisions).default;
         "transformers-base".flags.orphaninstances = true;
         "aeson-qq".revision = (((hackage."aeson-qq")."0.8.4").revisions).default;
         "data-default-class".revision = (((hackage."data-default-class")."0.1.2.0").revisions).default;
+        "vector-algorithms".revision = (((hackage."vector-algorithms")."0.8.0.4").revisions).default;
+        "vector-algorithms".flags.internalchecks = false;
+        "vector-algorithms".flags.llvm = false;
+        "vector-algorithms".flags.properties = true;
+        "vector-algorithms".flags.boundschecks = true;
+        "vector-algorithms".flags.unsafechecks = false;
+        "vector-algorithms".flags.bench = true;
         "th-abstraction".revision = (((hackage."th-abstraction")."0.4.3.0").revisions).default;
         "semigroupoids".revision = (((hackage."semigroupoids")."5.3.7").revisions).default;
         "semigroupoids".flags.tagged = true;
@@ -185,6 +193,7 @@
         "wai-logger".revision = (((hackage."wai-logger")."2.4.0").revisions).default;
         "these".revision = (((hackage."these")."1.1.1.1").revisions).default;
         "these".flags.assoc = true;
+        "split".revision = (((hackage."split")."0.2.3.4").revisions).default;
         "base-orphans".revision = (((hackage."base-orphans")."0.8.6").revisions).default;
         "ghc-bignum".revision = (((hackage."ghc-bignum")."1.2").revisions).default;
         "time-compat".revision = (((hackage."time-compat")."1.9.6.1").revisions).default;
@@ -213,6 +222,7 @@
         "transformers".revision = (((hackage."transformers")."0.5.6.2").revisions).default;
         "template-haskell".revision = (((hackage."template-haskell")."2.18.0.0").revisions).default;
         "blaze-markup".revision = (((hackage."blaze-markup")."0.8.2.8").revisions).default;
+        "mono-traversable".revision = (((hackage."mono-traversable")."1.0.15.3").revisions).default;
         "witherable".revision = (((hackage."witherable")."0.4.2").revisions).default;
         "syb".revision = (((hackage."syb")."0.7.2.1").revisions).default;
         "th-reify-many".revision = (((hackage."th-reify-many")."0.1.10").revisions).default;
@@ -366,6 +376,7 @@
           "attoparsec-iso8601".components.library.planned = lib.mkOverride 900 true;
           "dec".components.library.planned = lib.mkOverride 900 true;
           "bytestring".components.library.planned = lib.mkOverride 900 true;
+          "mono-traversable".components.library.planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.exes."greet".planned = lib.mkOverride 900 true;
           "strict".components.library.planned = lib.mkOverride 900 true;
@@ -431,6 +442,7 @@
           "free".components.library.planned = lib.mkOverride 900 true;
           "unix-compat".components.library.planned = lib.mkOverride 900 true;
           "x509-store".components.library.planned = lib.mkOverride 900 true;
+          "vector-algorithms".components.library.planned = lib.mkOverride 900 true;
           "blaze-builder".components.library.planned = lib.mkOverride 900 true;
           "asn1-types".components.library.planned = lib.mkOverride 900 true;
           "unliftio-core".components.library.planned = lib.mkOverride 900 true;
@@ -443,6 +455,7 @@
           "memory".components.library.planned = lib.mkOverride 900 true;
           "pem".components.library.planned = lib.mkOverride 900 true;
           "base-compat-batteries".components.library.planned = lib.mkOverride 900 true;
+          "split".components.library.planned = lib.mkOverride 900 true;
           "contravariant".components.library.planned = lib.mkOverride 900 true;
           "appar".components.library.planned = lib.mkOverride 900 true;
           "syb".components.library.planned = lib.mkOverride 900 true;
@@ -493,6 +506,7 @@
           "deepseq".components.library.planned = lib.mkOverride 900 true;
           "primitive".components.library.planned = lib.mkOverride 900 true;
           "old-locale".components.library.planned = lib.mkOverride 900 true;
+          "conduit".components.library.planned = lib.mkOverride 900 true;
           "text".components.library.planned = lib.mkOverride 900 true;
           "bifunctors".components.library.planned = lib.mkOverride 900 true;
           "plutus-certification".components.exes."plutus-certification-client".planned = lib.mkOverride 900 true;

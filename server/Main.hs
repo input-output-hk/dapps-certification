@@ -11,6 +11,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE PatternGuards #-}
 module Main where
 
 import Servant
@@ -34,19 +35,53 @@ import System.Exit
 import Data.Functor
 import Data.UUID
 import Network.HTTP.Client.TLS
+import Conduit
+import Control.Monad.State.Strict
+import Numeric.Natural
+import Data.Aeson
+import Data.Monoid
+import Data.Maybe
+import Data.Aeson.KeyMap as KM
+import Data.Map qualified as Map
+import Data.IORef
 
 import IOHK.Cicero.API qualified as Cicero
 import IOHK.Cicero.API.Fact qualified as Cicero.Fact
+import IOHK.Cicero.API.Run qualified as Cicero.Run
+import IOHK.Cicero.API.Action qualified as Cicero.Action
 
 import Plutus.Certification.API
 import Paths_plutus_certification qualified as Package
 
-type RunClient c m = forall a . c a -> m (Either ClientError a)
+data ServerCaps m = ServerCaps
+  { submitJob :: !(URI -> m UUID)
+  , getRuns :: !(UUID -> ConduitT () RunStatusV1 m ())
+  }
+
+server :: Monad m => ServerCaps m -> NamedAPI (AsServerT m)
+server caps = NamedAPI
+  { version = pure $ VersionV1 Package.version
+  , versionHead = pure NoContent
+  , createRun = \ref -> RunID <$> caps.submitJob ref.uri
+  , getRun = \rid ->
+     runConduit
+        $ caps.getRuns rid.uuid
+       .| execStateC Queued consumeRuns
+  }
+  where
+    consumeRuns = await >>= \case
+      Nothing -> pure ()
+      Just s@(Finished _) -> lift $ put s
+      Just s ->
+        (modify $ max s) >> consumeRuns
+
+app :: ServerCaps Handler -> Application
+app = serve (Proxy @API) . server
 
 data ClientCaps c m = ClientCaps
-  { runClient :: RunClient c m
-  , scheduleCrash :: m ()
-  , raiseServerError :: forall a . ServerError -> m a
+  { runClient :: !(forall a . c a -> m (Either ClientError a))
+  , scheduleCrash :: !(m ())
+  , raiseServerError :: !(forall a . ServerError -> m a)
   }
 
 runClientOrDie :: Monad m => ClientCaps c m -> c a -> m a
@@ -63,27 +98,92 @@ ciceroClient = cicero `clientIn` m
 
     m = Proxy @m
 
-ciceroSubmitJob :: (Monad m, HasClient c Cicero.API) => ClientCaps c m -> URI -> m UUID
-ciceroSubmitJob caps uri  = (.id) <$> runClientOrDie caps req
+data KnownActionType
+  = Generate
+  | Build
+  | Certify
+
+data ActionType
+  = Known !KnownActionType
+  | Unknown
+
+data CiceroCaps c m = CiceroCaps
+  { clientCaps :: !(ClientCaps c m)
+  , lookupActionType :: !(UUID -> m (Maybe ActionType))
+  , registerActionType :: !(UUID -> ActionType -> m ())
+  }
+
+ciceroServerCaps :: forall c m . (Monad m, HasClient c Cicero.API) => CiceroCaps c m -> ServerCaps m
+ciceroServerCaps caps = ServerCaps {..}
   where
-    req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
-      { fact = [aesonQQ| { "plutus-certification/generate-flake": { "ref": #{uriToString id uri ""} } } |]
-      , artifact = Nothing
-      }
+    submitJob :: URI -> m UUID
+    submitJob uri = (.id) <$> runClientOrDie caps.clientCaps req
+      where
+        req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
+          { fact = [aesonQQ| { "plutus-certification/generate-flake": { "ref": #{uriToString id uri ""} } } |]
+          , artifact = Nothing
+          }
+    getRuns :: UUID -> ConduitT () RunStatusV1 m ()
+    getRuns rid = go 0
+      where
+        limit = 10
+        go offset = do
+          runs <- lift . runClientOrDie caps.clientCaps $ ciceroClient.run.getAll True [rid] (Just offset) (Just limit)
+          count <- yieldMany runs .| execStateC 0 status
+          when (count == limit) $ go (offset + limit)
 
-data ServerCaps m = ServerCaps
-  { submitJob :: !(URI -> m UUID)
-  }
+    status :: ConduitT Cicero.Run.RunV1 RunStatusV1 (StateT Natural m) ()
+    status = await >>= \case
+      Nothing -> pure ()
+      Just r ->  do
+        modify (+ 1)
+        ty <- lift . lift $ caps.lookupActionType r.actionId >>= \case
+          Just ty -> pure ty
+          Nothing -> do
+            act <- runClientOrDie caps.clientCaps $ ciceroClient.action.get r.actionId
+            let ty = getActionType act
+            caps.registerActionType r.actionId ty
+            pure ty
+        case ty of
+          Unknown -> pure ()
+          Known s -> yieldM . lift $ case s of
+            Generate ->
+              getOutput r "plutus-certification/generate-flake" <&> \case
+                Nothing -> Preparing Running
+                Just (Left _) -> Preparing Failed
+                Just (Right _) -> Building Running
+            Build ->
+              getOutput r "plutus-certification/build-flake" <&> \case
+                Nothing -> Building Running
+                Just (Left _) -> Building Failed
+                Just (Right _) -> Certifying Running
+            Certify ->
+              getOutput r "plutus-certification/run-certify" <&> \case
+                Nothing -> Certifying Running
+                Just (Left _) -> Certifying Failed
+                Just (Right v) -> Finished v
+        status
 
-server :: Applicative m => ServerCaps m -> NamedAPI (AsServerT m)
-server caps = NamedAPI
-  { version = pure $ VersionV1 Package.version
-  , versionHead = pure NoContent
-  , createRun = \ref -> RunID <$> caps.submitJob ref.uri
-  }
+    getOutput :: Cicero.Run.RunV1 -> Key -> m (Maybe (Either Value Value))
+    getOutput r name = if isJust r.finishedAt
+      then do
+        facts <- runClientOrDie caps.clientCaps $ ciceroClient.fact.getAll r.nomadJobId
+        let getOutput (Object o)
+              | Just (Object out) <- KM.lookup name o
+              , Just success <- KM.lookup "success"  out = Just (Right success)
+              | Just (Object out) <- KM.lookup name o
+              , Just failure <- KM.lookup "failure"  out = Just (Left failure)
+              | otherwise = Nothing
+            getOutput _ = Nothing
+        pure . getFirst . foldMap (First . getOutput . (.value)) $ facts
+      else pure Nothing
 
-app :: ServerCaps Handler -> Application
-app = serve (Proxy @API) . server
+    getActionType :: Cicero.Action.ActionV1 -> ActionType
+    getActionType act
+      | act.name == "plutus-certification/generate-flake" = Known Generate
+      | act.name == "plutus-certification/build-flake" = Known Build
+      | act.name == "plutus-certification/run-certify" = Known Certify
+      | otherwise = Unknown
 
 data Args = Args
   { port :: !Port
@@ -142,19 +242,24 @@ main = do
 
   manager <- newTlsManager
 
+  actionTypes <- newIORef Map.empty
   let settings = defaultSettings
                & setPort args.port
                & setHost args.host
                & setOnException (\_ _ -> void $ tryPutMVar crashSem ())
       cEnv = mkClientEnv manager args.ciceroURL
-      clientCaps = ClientCaps
-        { runClient = liftIO . flip runClientM cEnv
-        , scheduleCrash = void . liftIO $ tryPutMVar crashSem ()
-        , raiseServerError = throwError
+      caps = ciceroServerCaps $ CiceroCaps
+        { clientCaps = ClientCaps
+            { runClient = liftIO . flip runClientM cEnv
+            , scheduleCrash = void . liftIO $ tryPutMVar crashSem ()
+            , raiseServerError = throwError
+            }
+        , lookupActionType = \uuid -> liftIO $
+            readIORef actionTypes <&> Map.lookup uuid
+        , registerActionType = \uuid ty -> liftIO $ atomicModifyIORef' actionTypes \tys ->
+            (Map.insert uuid ty tys, ())
         }
 
   withAsync (takeMVar crashSem >> close' sock) \_ ->
-    runSettingsSocket settings sock . app $ ServerCaps
-      { submitJob = ciceroSubmitJob clientCaps
-      }
+    runSettingsSocket settings sock $ app caps
   exitFailure
