@@ -20,40 +20,43 @@ source-repository head
 library
   build-depends:
     base ^>= 4.16.0.0,
+    containers ^>= 0.6.5.1,
     servant ^>= 0.19,
+    servant-client ^>= 0.19,
+    servant-client-core ^>= 0.19,
+    servant-server ^>= 0.19,
+    conduit ^>= 1.3.4.2,
+    cicero-api ^>= 0.1.0.0,
     network-uri ^>= 2.6.4.1,
     bytestring ^>= 0.11.1.0,
     uuid ^>= 1.3.15,
     text ^>= 1.2.5.0,
-    aeson ^>= 2.0.3.0
+    mtl ^>= 2.2.2,
+    http-client-tls ^>= 0.3.6.1,
+    aeson ^>= 2.0.3.0,
+    aeson-qq ^>= 0.8.4,
   hs-source-dirs: src
-  exposed-modules: Plutus.Certification.API
+  exposed-modules:
+    Plutus.Certification.API
+    Plutus.Certification.Cache
+    Plutus.Certification.Cicero
+    Plutus.Certification.Client
+    Plutus.Certification.Server
+  other-modules: Paths_plutus_certification
+  autogen-modules: Paths_plutus_certification
 
 executable plutus-certification
   build-depends:
     base ^>= 4.16.0.0,
-    uuid ^>= 1.3.15,
-    containers ^>= 0.6.5.1,
     servant-server ^>= 0.19,
     optparse-applicative ^>= 0.17.0.0,
     warp ^>= 3.3.19,
     transformers ^>= 0.5.6.2,
-    cicero-api ^>= 0.1.0.0,
-    servant-client ^>= 0.19,
     servant-client-core ^>= 0.19,
-    aeson-qq ^>= 0.8.4,
-    network-uri ^>= 2.6.4.1,
-    bytestring ^>= 0.11.1.0,
     streaming-commons ^>= 0.2.2.4,
     network ^>= 3.1.2.7,
     async ^>= 2.2.4,
-    http-client-tls ^>= 0.3.6.1,
-    mtl ^>= 2.2.2,
-    conduit ^>= 1.3.4.2,
-    aeson ^>= 2.0.3.0,
     plutus-certification
-  other-modules: Paths_plutus_certification
-  autogen-modules: Paths_plutus_certification
   main-is: Main.hs
   hs-source-dirs: server
 
