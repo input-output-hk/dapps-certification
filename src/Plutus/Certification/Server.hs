@@ -9,7 +9,6 @@ import Conduit
 import Data.UUID
 import Network.URI
 import Servant
-import Servant.Server.Internal
 import Control.Monad.State.Strict
 
 import Plutus.Certification.API
@@ -24,9 +23,7 @@ data ServerCaps m = ServerCaps
   }
 
 -- | An implementation of 'API'
---
--- prop> NamedAPI (AsServerT Handler) ~ Server API
-server :: Monad m => ServerCaps m -> NamedAPI (AsServerT m)
+server :: Monad m => ServerCaps m -> ServerT API m
 server caps = NamedAPI
   { version = pure $ VersionV1 Package.version
   , versionHead = pure NoContent
