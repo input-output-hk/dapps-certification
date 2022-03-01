@@ -18,9 +18,9 @@ import Paths_plutus_certification qualified as Package
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m = ServerCaps
   { -- | Submit a new certification job
-    submitJob :: !(URI -> m UUID)
+    submitJob :: !(FlakeRefV1 -> m RunIDV1)
   , -- | Get the status of all runs associated with a job
-    getRuns :: !(UUID -> ConduitT () RunStatusV1 m ())
+    getRuns :: !(RunIDV1 -> ConduitT () RunStatusV1 m ())
   }
 
 -- | An implementation of 'API'
@@ -30,10 +30,10 @@ server :: Monad m => ServerCaps m -> NamedAPI (AsServerT m)
 server caps = NamedAPI
   { version = pure $ VersionV1 Package.version
   , versionHead = pure NoContent
-  , createRun = \ref -> RunID <$> caps.submitJob ref.uri
+  , createRun = caps.submitJob
   , getRun = \rid ->
      runConduit
-        $ caps.getRuns rid.uuid
+        $ caps.getRuns rid
        .| execStateC Queued consumeRuns
   }
   where

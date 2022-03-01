@@ -69,6 +69,7 @@
         "tls".flags.hans = false;
         "tls".flags.compat = true;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.6.1").revisions).default;
+        "basement".revision = (((hackage."basement")."0.0.13").revisions).default;
         "old-locale".revision = (((hackage."old-locale")."1.0.0.7").revisions).default;
         "mtl".revision = (((hackage."mtl")."2.2.2").revisions).default;
         "OneTuple".revision = (((hackage."OneTuple")."0.3.1").revisions).default;
@@ -217,7 +218,8 @@
         "monad-control".revision = (((hackage."monad-control")."1.0.3.1").revisions).default;
         "semialign".revision = (((hackage."semialign")."1.2.0.1").revisions).default;
         "semialign".flags.semigroupoids = true;
-        "wai-app-static".revision = (((hackage."wai-app-static")."3.1.7.2").revisions).default;
+        "wai-app-static".revision = (((hackage."wai-app-static")."3.1.7.3").revisions).default;
+        "wai-app-static".flags.cryptonite = true;
         "wai-app-static".flags.print = false;
         "transformers".revision = (((hackage."transformers")."0.5.6.2").revisions).default;
         "template-haskell".revision = (((hackage."template-haskell")."2.18.0.0").revisions).default;
@@ -314,7 +316,6 @@
         memory = ./.plan.nix/memory.nix;
         cicero-api = ./.plan.nix/cicero-api.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
-        basement = ./.plan.nix/basement.nix;
         servant-server = ./.plan.nix/servant-server.nix;
         };
       };
@@ -345,7 +346,6 @@
             };
           "cicero-api" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
-          "basement" = { flags = {}; };
           "servant-server" = { flags = {}; };
           };
         })

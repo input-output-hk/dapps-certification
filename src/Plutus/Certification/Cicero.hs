@@ -68,7 +68,7 @@ data CiceroCaps c m = CiceroCaps
   { -- | Client to talk to Cicero
     clientCaps :: !(ClientCaps c m)
   , -- | Cache of actions we've identified
-    actionCache :: !(Cache UUID ActionType m)
+    actionCache :: !(Cache Cicero.Action.ActionID ActionType m)
   }
 
 -- | Implement 'ServerCaps' with Cicero as the job engine
@@ -77,20 +77,22 @@ data CiceroCaps c m = CiceroCaps
 ciceroServerCaps :: forall c m . (Monad m, HasClient c Cicero.API) => CiceroCaps c m -> ServerCaps m
 ciceroServerCaps caps = ServerCaps {..}
   where
-    submitJob :: URI -> m UUID
-    submitJob uri = (.id) <$> runClientOrDie caps.clientCaps req
+    submitJob :: FlakeRefV1 -> m RunIDV1
+    submitJob ref = RunID . (.id.uuid) <$> runClientOrDie caps.clientCaps req
       where
+        uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet
         req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
           { fact = [aesonQQ| { "plutus-certification/generate-flake": { "ref": #{uriToString id uri ""} } } |]
           , artifact = Nothing
           }
 
-    getRuns :: UUID -> ConduitT () RunStatusV1 m ()
+    getRuns :: RunIDV1 -> ConduitT () RunStatusV1 m ()
     getRuns rid = go 0
       where
+        rid' = Cicero.Fact.FactID $ rid.uuid
         limit = 10
         go offset = do
-          runs <- lift . runClientOrDie caps.clientCaps $ ciceroClient.run.getAll True [rid] (Just offset) (Just limit)
+          runs <- lift . runClientOrDie caps.clientCaps $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
           count <- yieldMany runs .| execStateC 0 status
           when (count == limit) $ go (offset + limit)
 
