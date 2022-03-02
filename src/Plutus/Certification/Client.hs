@@ -14,6 +14,9 @@ import Servant.Client
 -- | Action to schedule a crash of an application
 newtype ScheduleCrash m = ScheduleCrash { run :: m () }
 
+hmap :: (forall a . m a -> n a) -> ScheduleCrash m -> ScheduleCrash n
+hmap f = ScheduleCrash . f . (.run)
+
 -- | Capabilities to make requests against a servant API within a servant server
 data ClientCaps c m = ClientCaps
   { -- | Make a request

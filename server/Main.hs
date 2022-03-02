@@ -11,8 +11,6 @@ import Control.Exception hiding (Handler)
 import Control.Monad.IO.Class
 import Data.Function
 import Data.Functor
-import Data.Streaming.Network (bindPortTCP)
-import Network.Socket
 import Network.Wai.Handler.Warp
 import Options.Applicative
 import Servant
@@ -76,23 +74,31 @@ opts = info (args <**> helper)
  <> header "plutus-certification — Certification as a service for Plutus applications"
   )
 
+withShutdownHandler :: (ScheduleCrash IO -> (IO () -> IO ()) -> IO a) -> IO a
+withShutdownHandler go = do
+  closeSocketChan <- newEmptyMVar
+  crashSem <- newEmptyMVar
+  let waitForCrash = do
+        (closeSocket, ()) <- concurrently (takeMVar closeSocketChan) (takeMVar crashSem)
+        closeSocket
+  withAsync waitForCrash \_ ->
+    go (ScheduleCrash . void $ tryPutMVar crashSem ()) (putMVar closeSocketChan)
+
 main :: IO ()
 main = do
   args <- execParser opts
 
-  sock <- bindPortTCP args.port args.host
-  crashSem <- newEmptyMVar
-  let scheduleCrash = void $ tryPutMVar crashSem ()
-  withAsync (takeMVar crashSem >> close' sock) \_ -> do
-    actionCache <- cacheMapIO
+  actionCache <- cacheMapIO
 
-    clientCaps <- clientCapsIO args.ciceroURL . ScheduleCrash $ liftIO scheduleCrash
+  withShutdownHandler \scheduleCrash shutdownHandler -> do
+    clientCaps <- clientCapsIO args.ciceroURL $ hmap liftIO scheduleCrash
 
     let settings = defaultSettings
                  & setPort args.port
                  & setHost args.host
-                 & setOnException (\_ _ -> scheduleCrash)
+                 & setOnException (\_ _ -> scheduleCrash.run)
+                 & setInstallShutdownHandler shutdownHandler
         caps = ciceroServerCaps $ CiceroCaps {..}
 
-    runSettingsSocket settings sock $ app caps
+    runSettings settings $ app caps
   exitFailure

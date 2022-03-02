@@ -53,8 +53,6 @@ executable plutus-certification
     warp ^>= 3.3.19,
     transformers ^>= 0.5.6.2,
     servant-client-core ^>= 0.19,
-    streaming-commons ^>= 0.2.2.4,
-    network ^>= 3.1.2.7,
     async ^>= 2.2.4,
     plutus-certification
   main-is: Main.hs
