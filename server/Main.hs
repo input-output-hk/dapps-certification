@@ -51,7 +51,7 @@ args =  Args
      <> showDefault
      <> value 9671
       )
-  <*> option auto
+  <*> option str
       ( long "bind"
      <> short 'b'
      <> metavar "HOST"
