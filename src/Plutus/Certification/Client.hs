@@ -7,6 +7,7 @@ module Plutus.Certification.Client where
 
 import Control.Monad.IO.Class
 import Control.Monad.Error.Class
+import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Servant
 import Servant.Client
@@ -47,7 +48,7 @@ clientCapsIO :: (MonadIO m, MonadError ServerError m)
              -> ScheduleCrash m
              -> IO (ClientCaps ClientM m)
 clientCapsIO url scheduleCrash = do
-  manager <- newTlsManager
+  manager <- newTlsManagerWith $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
   pure $ ClientCaps
     { runClient = liftIO . (flip runClientM $ mkClientEnv manager url)
     , scheduleCrash = scheduleCrash
