@@ -4,14 +4,14 @@
       packages = {
         "old-time".revision = (((hackage."old-time")."1.1.0.3").revisions).default;
         "servant-client".revision = (((hackage."servant-client")."0.19").revisions).default;
-        "mmorph".revision = (((hackage."mmorph")."1.1.5").revisions).default;
+        "mmorph".revision = (((hackage."mmorph")."1.2.0").revisions).default;
         "happy".revision = (((hackage."happy")."1.20.0").revisions).default;
         "streaming-commons".revision = (((hackage."streaming-commons")."0.2.2.4").revisions).default;
         "streaming-commons".flags.use-bytestring-builder = false;
         "pretty".revision = (((hackage."pretty")."1.1.3.6").revisions).default;
         "haskell-src-exts".revision = (((hackage."haskell-src-exts")."1.23.1").revisions).default;
         "network-uri".revision = (((hackage."network-uri")."2.6.4.1").revisions).default;
-        "unordered-containers".revision = (((hackage."unordered-containers")."0.2.16.0").revisions).default;
+        "unordered-containers".revision = (((hackage."unordered-containers")."0.2.17.0").revisions).default;
         "unordered-containers".flags.debug = false;
         "integer-logarithms".revision = (((hackage."integer-logarithms")."1.0.3.1").revisions).default;
         "integer-logarithms".flags.check-bounds = false;
@@ -32,6 +32,17 @@
         "network".flags.devel = false;
         "invariant".revision = (((hackage."invariant")."0.5.5").revisions).default;
         "asn1-parse".revision = (((hackage."asn1-parse")."0.9.5").revisions).default;
+        "cryptonite".revision = (((hackage."cryptonite")."0.30").revisions).default;
+        "cryptonite".flags.check_alignment = false;
+        "cryptonite".flags.support_sse = false;
+        "cryptonite".flags.use_target_attributes = true;
+        "cryptonite".flags.support_deepseq = true;
+        "cryptonite".flags.support_rdrand = true;
+        "cryptonite".flags.old_toolchain_inliner = false;
+        "cryptonite".flags.integer-gmp = true;
+        "cryptonite".flags.support_pclmuldq = false;
+        "cryptonite".flags.support_aesni = true;
+        "servant-server".revision = (((hackage."servant-server")."0.19.1").revisions).default;
         "vector".revision = (((hackage."vector")."0.12.3.1").revisions).default;
         "vector".flags.internalchecks = false;
         "vector".flags.wall = false;
@@ -59,7 +70,7 @@
         "base-compat-batteries".revision = (((hackage."base-compat-batteries")."0.12.1").revisions).default;
         "safe".revision = (((hackage."safe")."0.3.19").revisions).default;
         "th-lift-instances".revision = (((hackage."th-lift-instances")."0.1.19").revisions).default;
-        "Cabal".revision = (((hackage."Cabal")."3.6.0.0").revisions).default;
+        "Cabal".revision = (((hackage."Cabal")."3.6.3.0").revisions).default;
         "sop-core".revision = (((hackage."sop-core")."0.5.0.2").revisions).default;
         "assoc".revision = (((hackage."assoc")."1.0.2").revisions).default;
         "unliftio".revision = (((hackage."unliftio")."0.2.21.0").revisions).default;
@@ -69,13 +80,13 @@
         "tls".flags.hans = false;
         "tls".flags.compat = true;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.6.1").revisions).default;
-        "basement".revision = (((hackage."basement")."0.0.13").revisions).default;
+        "basement".revision = (((hackage."basement")."0.0.14").revisions).default;
         "old-locale".revision = (((hackage."old-locale")."1.0.0.7").revisions).default;
         "mtl".revision = (((hackage."mtl")."2.2.2").revisions).default;
         "OneTuple".revision = (((hackage."OneTuple")."0.3.1").revisions).default;
         "mime-types".revision = (((hackage."mime-types")."0.1.0.9").revisions).default;
-        "parsec".revision = (((hackage."parsec")."3.1.14.0").revisions).default;
-        "bytestring".revision = (((hackage."bytestring")."0.11.1.0").revisions).default;
+        "parsec".revision = (((hackage."parsec")."3.1.15.0").revisions).default;
+        "bytestring".revision = (((hackage."bytestring")."0.11.3.0").revisions).default;
         "attoparsec-iso8601".revision = (((hackage."attoparsec-iso8601")."1.0.2.1").revisions).default;
         "attoparsec-iso8601".flags.fast = false;
         "attoparsec-iso8601".flags.developer = false;
@@ -99,11 +110,14 @@
         "attoparsec".flags.developer = false;
         "singleton-bool".revision = (((hackage."singleton-bool")."0.1.6").revisions).default;
         "th-compat".revision = (((hackage."th-compat")."0.1.3").revisions).default;
-        "filepath".revision = (((hackage."filepath")."1.4.2.1").revisions).default;
+        "memory".revision = (((hackage."memory")."0.17.0").revisions).default;
+        "memory".flags.support_deepseq = true;
+        "memory".flags.support_bytestring = true;
+        "filepath".revision = (((hackage."filepath")."1.4.2.2").revisions).default;
         "th-lift".revision = (((hackage."th-lift")."0.8.2").revisions).default;
         "dec".revision = (((hackage."dec")."0.0.4").revisions).default;
         "unliftio-core".revision = (((hackage."unliftio-core")."0.2.0.1").revisions).default;
-        "stm".revision = (((hackage."stm")."2.5.0.0").revisions).default;
+        "stm".revision = (((hackage."stm")."2.5.0.2").revisions).default;
         "void".revision = (((hackage."void")."0.7.3").revisions).default;
         "void".flags.safe = false;
         "semigroups".revision = (((hackage."semigroups")."0.20").revisions).default;
@@ -138,7 +152,7 @@
         "http-api-data".flags.use-text-show = false;
         "ghc-prim".revision = (((hackage."ghc-prim")."0.8.0").revisions).default;
         "x509-validation".revision = (((hackage."x509-validation")."1.6.12").revisions).default;
-        "ghc-boot-th".revision = (((hackage."ghc-boot-th")."9.2.1").revisions).default;
+        "ghc-boot-th".revision = (((hackage."ghc-boot-th")."9.2.2").revisions).default;
         "asn1-encoding".revision = (((hackage."asn1-encoding")."0.9.6").revisions).default;
         "indexed-traversable".revision = (((hackage."indexed-traversable")."0.1.2").revisions).default;
         "distributive".revision = (((hackage."distributive")."0.6.2.1").revisions).default;
@@ -153,7 +167,7 @@
         "bifunctors".flags.semigroups = true;
         "kan-extensions".revision = (((hackage."kan-extensions")."5.2.3").revisions).default;
         "uuid".revision = (((hackage."uuid")."1.3.15").revisions).default;
-        "base".revision = (((hackage."base")."4.16.0.0").revisions).default;
+        "base".revision = (((hackage."base")."4.16.1.0").revisions).default;
         "time".revision = (((hackage."time")."1.11.1.1").revisions).default;
         "network-info".revision = (((hackage."network-info")."0.2.1").revisions).default;
         "async".revision = (((hackage."async")."2.2.4").revisions).default;
@@ -218,7 +232,7 @@
         "monad-control".revision = (((hackage."monad-control")."1.0.3.1").revisions).default;
         "semialign".revision = (((hackage."semialign")."1.2.0.1").revisions).default;
         "semialign".flags.semigroupoids = true;
-        "wai-app-static".revision = (((hackage."wai-app-static")."3.1.7.3").revisions).default;
+        "wai-app-static".revision = (((hackage."wai-app-static")."3.1.7.4").revisions).default;
         "wai-app-static".flags.cryptonite = true;
         "wai-app-static".flags.print = false;
         "transformers".revision = (((hackage."transformers")."0.5.6.2").revisions).default;
@@ -229,7 +243,7 @@
         "syb".revision = (((hackage."syb")."0.7.2.1").revisions).default;
         "th-reify-many".revision = (((hackage."th-reify-many")."0.1.10").revisions).default;
         "blaze-html".revision = (((hackage."blaze-html")."0.9.1.2").revisions).default;
-        "deepseq".revision = (((hackage."deepseq")."1.4.6.0").revisions).default;
+        "deepseq".revision = (((hackage."deepseq")."1.4.6.1").revisions).default;
         "unix".revision = (((hackage."unix")."2.7.2.2").revisions).default;
         "ansi-terminal".revision = (((hackage."ansi-terminal")."0.11.1").revisions).default;
         "ansi-terminal".flags.example = false;
@@ -237,8 +251,9 @@
         "wai-extra".flags.build-example = false;
         "haskell-src-meta".revision = (((hackage."haskell-src-meta")."0.8.9").revisions).default;
         "blaze-builder".revision = (((hackage."blaze-builder")."0.4.2.2").revisions).default;
-        "warp".revision = (((hackage."warp")."3.3.19").revisions).default;
+        "warp".revision = (((hackage."warp")."3.3.20").revisions).default;
         "warp".flags.network-bytestring = false;
+        "warp".flags.x509 = true;
         "warp".flags.allow-sendfilefd = true;
         "warp".flags.warp-debug = false;
         "x509-store".revision = (((hackage."x509-store")."1.6.9").revisions).default;
@@ -248,7 +263,7 @@
         "hashable".flags.random-initial-seed = false;
         "hashable".flags.integer-gmp = true;
         "integer-gmp".revision = (((hackage."integer-gmp")."1.1").revisions).default;
-        "transformers-compat".revision = (((hackage."transformers-compat")."0.6.6").revisions).default;
+        "transformers-compat".revision = (((hackage."transformers-compat")."0.7.1").revisions).default;
         "transformers-compat".flags.two = false;
         "transformers-compat".flags.mtl = true;
         "transformers-compat".flags.four = false;
@@ -278,21 +293,21 @@
         "colour".revision = (((hackage."colour")."2.3.6").revisions).default;
         };
       compiler = {
-        version = "9.2.1";
-        nix-name = "ghc921";
+        version = "9.2.2";
+        nix-name = "ghc922";
         packages = {
           "pretty" = "1.1.3.6";
           "text" = "1.2.5.0";
           "array" = "0.5.4.0";
-          "Cabal" = "3.6.0.0";
+          "Cabal" = "3.6.3.0";
           "mtl" = "2.2.2";
-          "parsec" = "3.1.14.0";
-          "bytestring" = "0.11.1.0";
-          "filepath" = "1.4.2.1";
-          "stm" = "2.5.0.0";
+          "parsec" = "3.1.15.0";
+          "bytestring" = "0.11.3.0";
+          "filepath" = "1.4.2.2";
+          "stm" = "2.5.0.2";
           "ghc-prim" = "0.8.0";
-          "ghc-boot-th" = "9.2.1";
-          "base" = "4.16.0.0";
+          "ghc-boot-th" = "9.2.2";
+          "base" = "4.16.1.0";
           "time" = "1.11.1.1";
           "process" = "1.6.13.2";
           "ghc-bignum" = "1.2";
@@ -301,7 +316,7 @@
           "rts" = "1.0.2";
           "transformers" = "0.5.6.2";
           "template-haskell" = "2.18.0.0";
-          "deepseq" = "1.4.6.0";
+          "deepseq" = "1.4.6.1";
           "unix" = "2.7.2.2";
           "integer-gmp" = "1.1";
           "binary" = "0.8.9.0";
@@ -312,41 +327,16 @@
   extras = hackage:
     {
       packages = {
-        cryptonite = ./.plan.nix/cryptonite.nix;
-        memory = ./.plan.nix/memory.nix;
         cicero-api = ./.plan.nix/cicero-api.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
-        servant-server = ./.plan.nix/servant-server.nix;
         };
       };
   modules = [
     ({ lib, ... }:
       {
         packages = {
-          "cryptonite" = {
-            flags = {
-              "check_alignment" = lib.mkOverride 900 false;
-              "support_sse" = lib.mkOverride 900 false;
-              "use_target_attributes" = lib.mkOverride 900 true;
-              "support_deepseq" = lib.mkOverride 900 true;
-              "support_rdrand" = lib.mkOverride 900 true;
-              "old_toolchain_inliner" = lib.mkOverride 900 false;
-              "integer-gmp" = lib.mkOverride 900 true;
-              "support_pclmuldq" = lib.mkOverride 900 false;
-              "support_aesni" = lib.mkOverride 900 true;
-              };
-            };
-          "memory" = {
-            flags = {
-              "support_basement" = lib.mkOverride 900 true;
-              "support_deepseq" = lib.mkOverride 900 true;
-              "support_bytestring" = lib.mkOverride 900 true;
-              "support_foundation" = lib.mkOverride 900 true;
-              };
-            };
           "cicero-api" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
-          "servant-server" = { flags = {}; };
           };
         })
     ({ lib, ... }:
