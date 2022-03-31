@@ -46,6 +46,7 @@
           (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+          (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
@@ -70,8 +71,6 @@
             (hsPkgs."warp" or (errorHandler.buildDepError "warp"))
             (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
             (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
-            (hsPkgs."streaming-commons" or (errorHandler.buildDepError "streaming-commons"))
-            (hsPkgs."network" or (errorHandler.buildDepError "network"))
             (hsPkgs."async" or (errorHandler.buildDepError "async"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
