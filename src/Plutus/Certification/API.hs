@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE BlockArguments #-}
 module Plutus.Certification.API
   ( API
   , NamedAPI(..)
@@ -27,7 +28,7 @@ import Data.Aeson.Encoding
 import Network.URI
 import Data.UUID
 import Data.ByteString.Lazy.Char8
-import Data.Text hiding (unpack)
+import Data.Text hiding (unpack, pack)
 
 type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
@@ -60,13 +61,21 @@ instance MimeUnrender PlainText FlakeRefV1 where
     where
       uristr = unpack uribs
 
-newtype RunIDV1 = RunID { uuid :: UUID } deriving newtype FromHttpApiData
+instance MimeRender PlainText FlakeRefV1 where
+  mimeRender _ ref = pack $ uriToString id ref.uri ""
+
+newtype RunIDV1 = RunID { uuid :: UUID } deriving newtype (FromHttpApiData, ToHttpApiData, ToJSON)
 
 instance MimeRender PlainText RunIDV1 where
   mimeRender _ rid = toLazyASCIIBytes rid.uuid
 
 instance MimeRender OctetStream RunIDV1 where
   mimeRender _ rid = toByteString rid.uuid
+
+instance MimeUnrender OctetStream RunIDV1 where
+  mimeUnrender _ ridbs = case fromByteString ridbs of
+    Just rid -> pure $ RunID rid
+    Nothing -> Left $ "couldn't parse '" ++ (unpack ridbs) ++ "' as a run ID"
 
 data StepState
   = Running
@@ -78,6 +87,14 @@ instance ToJSON StepState where
 
   toEncoding Running = text "running"
   toEncoding Failed = text "failed"
+
+instance FromJSON StepState where
+  parseJSON = withText "StepState" go
+    where
+      go t
+        | t == "running" = pure Running
+        | t == "failed" = pure Failed
+        | otherwise = fail $ "unknown step state " ++ show t
 
 data RunStatusV1
   = Queued
@@ -126,3 +143,15 @@ instance ToJSON RunStatusV1 where
     ( "status" .= ("finished" :: Text)
    <> "result" .= v
     )
+
+instance FromJSON RunStatusV1 where
+  parseJSON = withObject "RunStatusV1" \o -> do
+    status <- o .: "status"
+    let go
+          | status == ("queued" :: Text) = pure Queued
+          | status == "preparing" = Preparing <$> o .: "state"
+          | status == "building" = Building <$> o .: "state"
+          | status == "certifying" = Certifying <$> o .: "state"
+          | status == "finished" = Finished <$> o.: "result"
+          | otherwise = fail $ "unknown status " ++ show status
+    go

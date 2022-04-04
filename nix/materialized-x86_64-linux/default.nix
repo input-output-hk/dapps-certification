@@ -18,6 +18,7 @@
         "integer-logarithms".flags.integer-gmp = true;
         "HUnit".revision = (((hackage."HUnit")."1.6.2.0").revisions).default;
         "hourglass".revision = (((hackage."hourglass")."0.2.12").revisions).default;
+        "haskeline".revision = (((hackage."haskeline")."0.8.2").revisions).default;
         "psqueues".revision = (((hackage."psqueues")."0.2.7.3").revisions).default;
         "adjunctions".revision = (((hackage."adjunctions")."4.4").revisions).default;
         "dlist".revision = (((hackage."dlist")."1.0").revisions).default;
@@ -133,6 +134,7 @@
         "semigroups".flags.text = true;
         "semigroups".flags.hashable = true;
         "free".revision = (((hackage."free")."5.1.7").revisions).default;
+        "terminfo".revision = (((hackage."terminfo")."0.4.1.5").revisions).default;
         "connection".revision = (((hackage."connection")."0.3.1").revisions).default;
         "resourcet".revision = (((hackage."resourcet")."1.2.4.3").revisions).default;
         "vault".revision = (((hackage."vault")."0.3.1.5").revisions).default;
@@ -297,6 +299,7 @@
         nix-name = "ghc922";
         packages = {
           "pretty" = "1.1.3.6";
+          "haskeline" = "0.8.2";
           "text" = "1.2.5.0";
           "array" = "0.5.4.0";
           "Cabal" = "3.6.3.0";
@@ -305,6 +308,7 @@
           "bytestring" = "0.11.3.0";
           "filepath" = "1.4.2.2";
           "stm" = "2.5.0.2";
+          "terminfo" = "0.4.1.5";
           "ghc-prim" = "0.8.0";
           "ghc-boot-th" = "9.2.2";
           "base" = "4.16.1.0";
@@ -426,6 +430,7 @@
           "StateVar".components.library.planned = lib.mkOverride 900 true;
           "fast-logger".components.library.planned = lib.mkOverride 900 true;
           "case-insensitive".components.library.planned = lib.mkOverride 900 true;
+          "haskeline".components.library.planned = lib.mkOverride 900 true;
           "th-expand-syns".components.library.planned = lib.mkOverride 900 true;
           "unix-time".components.library.planned = lib.mkOverride 900 true;
           "cryptohash-sha1".components.library.planned = lib.mkOverride 900 true;
@@ -526,6 +531,7 @@
           "auto-update".components.library.planned = lib.mkOverride 900 true;
           "warp".components.library.planned = lib.mkOverride 900 true;
           "easy-file".components.library.planned = lib.mkOverride 900 true;
+          "terminfo".components.library.planned = lib.mkOverride 900 true;
           "connection".components.library.planned = lib.mkOverride 900 true;
           "void".components.library.planned = lib.mkOverride 900 true;
           };
