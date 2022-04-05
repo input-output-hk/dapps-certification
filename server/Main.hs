@@ -96,7 +96,6 @@ main = do
     let settings = defaultSettings
                  & setPort args.port
                  & setHost args.host
-                 & setOnException (\_ _ -> scheduleCrash.run)
                  & setInstallShutdownHandler shutdownHandler
         caps = ciceroServerCaps $ CiceroCaps {..}
 
