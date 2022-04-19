@@ -18,8 +18,8 @@ data Cache val meta m = Cache
   }
 
 -- | Initialize a 'Cache' in some 'MonadIO', backed by an 'IORef' 'Map.Map'
-cacheMapIO :: (Ord val, MonadIO m) => IO (Cache val key m)
-cacheMapIO = do
+newCacheMapIO :: (Ord val, MonadIO m) => IO (Cache val key m)
+newCacheMapIO = do
   state <- newIORef Map.empty
   pure $ Cache
     { lookup = \v -> liftIO $

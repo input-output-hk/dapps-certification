@@ -1,13 +1,22 @@
 index-state: 2022-03-31T00:00:00Z
 packages: .
 
+package plutus-certification
+  ghc-options: -Wall
+
 write-ghc-environment-files: never
 tests: true
 test-show-details: streaming
 
 source-repository-package
   type: git
-  location: https://github.com/shlevy/cicero
-  tag: 40b8357df674a1c7ec4e54e6bdbd455574b48941
-  --sha256: 01iaz973nhha1s740gv47bnwbddl0whz4s7m3161l1mzqic7syn2
+  location: https://github.com/input-output-hk/cicero
+  tag: 9ceba66ef56c1d6b5a9e366f384f3fe4fe6c2576
+  --sha256: 04nsk55lqhis2gbwsqlz8mjlqsgpx33hlb0ln8dnay0i3mz3bgxz
   subdir: cicero-api
+
+source-repository-package
+  type: git
+  location: https://github.com/shlevy/eventuo11y
+  tag: b9560a6a4a0c908df7225b80a53a4c0a1e5026d2
+  --sha256: 1g33iz867nvj33sls8jw8i11jby0x4lpivagkwkabrpk2akblc3r

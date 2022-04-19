@@ -36,7 +36,7 @@
         type = "app";
         program = (pkgs.writeShellScript "updateAllMaterialized" ''
           set -eEuo pipefail
-          export PATH="${pkgs.lib.makeBinPath [ pkgs.nix_2_5 pkgs.jq pkgs.coreutils pkgs.git ]}"
+          export PATH="${pkgs.lib.makeBinPath [ pkgs.nix pkgs.jq pkgs.coreutils pkgs.git ]}"
           export NIX_CONFIG="
             allow-import-from-derivation = true
             experimental-features = flakes nix-command

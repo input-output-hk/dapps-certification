@@ -50,6 +50,8 @@
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
+          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
+          (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
           ];
         buildable = true;
         modules = [
@@ -66,15 +68,23 @@
         "plutus-certification" = {
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
+            (hsPkgs."case-insensitive" or (errorHandler.buildDepError "case-insensitive"))
+            (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
             (hsPkgs."warp" or (errorHandler.buildDepError "warp"))
             (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
             (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
             (hsPkgs."async" or (errorHandler.buildDepError "async"))
+            (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
+            (hsPkgs."wai" or (errorHandler.buildDepError "wai"))
+            (hsPkgs."singletons" or (errorHandler.buildDepError "singletons"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
           buildable = true;
+          modules = [ "Paths_plutus_certification" ];
           hsSourceDirs = [ "server" ];
           mainPath = [ "Main.hs" ];
           };

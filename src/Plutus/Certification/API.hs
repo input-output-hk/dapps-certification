@@ -19,7 +19,6 @@ module Plutus.Certification.API
   ) where
 
 import Servant.API
-import Servant.API.NamedRoutes
 import Servant.API.Generic
 import Servant.API.Verbs
 import Data.Version
@@ -56,7 +55,7 @@ instance MimeUnrender PlainText FlakeRefV1 where
   mimeUnrender _ uribs = case parseAbsoluteURI uristr of
       Just u -> case u.uriScheme of
         "github:" -> Right $ FlakeRef u
-        scheme -> Left $ "URI '" ++ uristr ++ "' must be a github: flakeref, not '" ++ scheme ++ "'"
+        s -> Left $ "URI '" ++ uristr ++ "' must be a github: flakeref, not '" ++ s ++ "'"
       Nothing -> Left $ "couldn't not parse '" ++ uristr ++ "' as an absolute URI"
     where
       uristr = unpack uribs

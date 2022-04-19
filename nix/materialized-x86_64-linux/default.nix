@@ -289,6 +289,7 @@
         "QuickCheck".flags.old-random = false;
         "QuickCheck".flags.templatehaskell = true;
         "uuid-types".revision = (((hackage."uuid-types")."1.0.5").revisions).default;
+        "singletons".revision = (((hackage."singletons")."3.0.1").revisions).default;
         "auto-update".revision = (((hackage."auto-update")."0.1.6").revisions).default;
         "containers".revision = (((hackage."containers")."0.6.5.1").revisions).default;
         "StateVar".revision = (((hackage."StateVar")."1.2.2").revisions).default;
@@ -331,6 +332,7 @@
   extras = hackage:
     {
       packages = {
+        eventuo11y = ./.plan.nix/eventuo11y.nix;
         cicero-api = ./.plan.nix/cicero-api.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
         };
@@ -339,6 +341,7 @@
     ({ lib, ... }:
       {
         packages = {
+          "eventuo11y" = { flags = {}; };
           "cicero-api" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
           };
@@ -430,6 +433,7 @@
           "StateVar".components.library.planned = lib.mkOverride 900 true;
           "fast-logger".components.library.planned = lib.mkOverride 900 true;
           "case-insensitive".components.library.planned = lib.mkOverride 900 true;
+          "singletons".components.library.planned = lib.mkOverride 900 true;
           "haskeline".components.library.planned = lib.mkOverride 900 true;
           "th-expand-syns".components.library.planned = lib.mkOverride 900 true;
           "unix-time".components.library.planned = lib.mkOverride 900 true;
@@ -502,6 +506,7 @@
           "primitive".components.library.planned = lib.mkOverride 900 true;
           "old-locale".components.library.planned = lib.mkOverride 900 true;
           "conduit".components.library.planned = lib.mkOverride 900 true;
+          "eventuo11y".components.library.planned = lib.mkOverride 900 true;
           "text".components.library.planned = lib.mkOverride 900 true;
           "bifunctors".components.library.planned = lib.mkOverride 900 true;
           "plutus-certification".components.exes."plutus-certification-client".planned = lib.mkOverride 900 true;

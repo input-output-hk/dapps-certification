@@ -7,8 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE GADTs #-}
 module Plutus.Certification.Cicero
   ( KnownActionType(..)
   , ActionType(..)
@@ -23,14 +22,15 @@ import Data.Aeson.KeyMap as KM
 import Data.Aeson.QQ
 import Data.Functor
 import Data.Proxy
-import Data.UUID
 import Data.Maybe
 import Data.Monoid
 import Network.URI
-import Numeric.Natural
 import Servant.Client
 import Servant.Client.Core.HasClient
-
+import Observe.Event
+import Observe.Event.Render.JSON
+import Observe.Event.Servant.Client
+import Control.Monad.Catch
 
 import IOHK.Cicero.API qualified as Cicero
 import IOHK.Cicero.API.Fact qualified as Cicero.Fact
@@ -64,21 +64,29 @@ data ActionType
   | Unknown
 
 -- | Capabilities to implement 'ServerCaps' with Cicero as the job engine
-data CiceroCaps c m = CiceroCaps
+data CiceroCaps c m r = CiceroCaps
   { -- | Client to talk to Cicero
-    clientCaps :: !(ClientCaps c m)
+    clientCaps :: !(ClientCaps c m r)
   , -- | Cache of actions we've identified
     actionCache :: !(Cache Cicero.Action.ActionID ActionType m)
   }
 
+data JobEventSelector f where
+  ClientErrored :: JobEventSelector ClientError
+  -- TODO Domain-specific logging
+
 -- | Implement 'ServerCaps' with Cicero as the job engine
 --
 -- Jobs are submitted as new @plutus-certification/generate-flake@ facts.
-ciceroServerCaps :: forall c m . (Monad m, HasClient c Cicero.API) => CiceroCaps c m -> ServerCaps m
-ciceroServerCaps caps = ServerCaps {..}
+ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API) => CiceroCaps c m r -> ServerCaps m r
+ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
   where
-    submitJob :: FlakeRefV1 -> m RunIDV1
-    submitJob ref = RunID . (.id.uuid) <$> runClientOrDie caps.clientCaps req
+    mkClientErrorEv eb parent = do
+      ev <- newEvent eb ClientErrored
+      addParent ev parent
+      pure ev
+
+    submitJob eb parent ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps (mkClientErrorEv eb parent) (setParent clientCaps parent req)
       where
         uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet
         req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
@@ -86,60 +94,60 @@ ciceroServerCaps caps = ServerCaps {..}
           , artifact = Nothing
           }
 
-    getRuns :: RunIDV1 -> ConduitT () RunStatusV1 m ()
-    getRuns rid = go 0
+    renderJobSel :: RenderSelectorJSON JobEventSelector
+    renderJobSel ClientErrored = ("client-error", clientErrorJSON)
+
+    getRuns eb parent rid = go 0
       where
         rid' = Cicero.Fact.FactID $ rid.uuid
         limit = 10
         go offset = do
-          runs <- lift . runClientOrDie caps.clientCaps $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
-          count <- yieldMany runs .| execStateC 0 status
+          runs <- lift . runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
+          count <- yieldMany runs .| execStateC 0 (status eb parent)
           when (count == limit) $ go (offset + limit)
 
-    status :: ConduitT Cicero.Run.RunV1 RunStatusV1 (StateT Natural m) ()
-    status = await >>= \case
+    status eb parent = await >>= \case
       Nothing -> pure ()
       Just r ->  do
         modify (+ 1)
-        ty <- lift . lift $ caps.actionCache.lookup r.actionId >>= \case
+        ty <- lift . lift $ actionCache.lookup r.actionId >>= \case
           Just ty -> pure ty
           Nothing -> do
-            act <- runClientOrDie caps.clientCaps $ ciceroClient.action.get r.actionId
+            act <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.action.get r.actionId
             let ty = getActionType act
-            caps.actionCache.register r.actionId ty
+            actionCache.register r.actionId ty
             pure ty
         case ty of
           Unknown -> pure ()
           Known s -> yieldM . lift $ case s of
             Generate ->
-              getOutput r "plutus-certification/generate-flake" <&> \case
+              getOutput eb parent r "plutus-certification/generate-flake" <&> \case
                 Nothing -> Preparing Running
                 Just (Left _) -> Preparing Failed
                 Just (Right _) -> Building Running
             Build ->
-              getOutput r "plutus-certification/build-flake" <&> \case
+              getOutput eb parent r "plutus-certification/build-flake" <&> \case
                 Nothing -> Building Running
                 Just (Left _) -> Building Failed
                 Just (Right _) -> Certifying Running
             Certify ->
-              getOutput r "plutus-certification/run-certify" <&> \case
+              getOutput eb parent r "plutus-certification/run-certify" <&> \case
                 Nothing -> Certifying Running
                 Just (Left _) -> Certifying Failed
                 Just (Right v) -> Finished v
-        status
+        status eb parent
 
-    getOutput :: Cicero.Run.RunV1 -> Key -> m (Maybe (Either Value Value))
-    getOutput r name = if isJust r.finishedAt
+    getOutput eb parent r name = if isJust r.finishedAt
       then do
-        facts <- runClientOrDie caps.clientCaps $ ciceroClient.fact.getAll r.nomadJobId
-        let getOutput (Object o)
+        facts <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.fact.getAll r.nomadJobId
+        let getOutput' (Object o)
               | Just (Object out) <- KM.lookup name o
               , Just success <- KM.lookup "success"  out = Just (Right success)
               | Just (Object out) <- KM.lookup name o
               , Just failure <- KM.lookup "failure"  out = Just (Left failure)
               | otherwise = Nothing
-            getOutput _ = Nothing
-        pure . getFirst . foldMap (First . getOutput . (.value)) $ facts
+            getOutput' _ = Nothing
+        pure . getFirst . foldMap (First . getOutput' . (.value)) $ facts
       else pure Nothing
 
     getActionType :: Cicero.Action.ActionV1 -> ActionType
