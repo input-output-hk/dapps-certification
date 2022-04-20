@@ -18,5 +18,5 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/shlevy/eventuo11y
-  tag: b9560a6a4a0c908df7225b80a53a4c0a1e5026d2
-  --sha256: 1g33iz867nvj33sls8jw8i11jby0x4lpivagkwkabrpk2akblc3r
+  tag: 3c35d00604f55ee8ecda6becc807a1fed82accae
+  --sha256: 0s6zkw640idh53yghird31hf8qkk5v6drlgqklm0xn9dvgmqw6ra
