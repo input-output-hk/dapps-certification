@@ -153,7 +153,7 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
         pure . getFirst . foldMap (First . getOutput' . (.value)) $ facts
       else pure Nothing
 
-    getActionType :: Cicero.Action.ActionV1 -> ActionType
+    getActionType :: Cicero.Action.ActionV2 -> ActionType
     getActionType act
       | act.name == "plutus-certification/generate-flake" = Known Generate
       | act.name == "plutus-certification/build-flake" = Known Build

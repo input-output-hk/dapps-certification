@@ -11,8 +11,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cicero
-  tag: 61ac089562e4eb81bbafcd8aea4ec2c8c5589680
-  --sha256: 1b45ajwaz1rgp1nv6b8g4pyvxs2i4zcz88nsximjpl4rq9c8djc3
+  tag: fe2c57209cea3a7ed24b5083b1dcdd6e2edd8120
+  --sha256: 0wxasdrkxwk0jrp7yz5cz96kfsmyj2i1wpcbia5plhr4x6nyxd2p
   subdir: cicero-api
 
 source-repository-package
