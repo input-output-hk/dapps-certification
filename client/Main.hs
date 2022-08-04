@@ -5,19 +5,19 @@
 module Main where
 
 import Plutus.Certification.API
-import Servant.Client
+import Servant.Client hiding (manager)
 import Servant.Client.Core.BaseUrl
 import Data.Proxy
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Client.TLS
 import Options.Applicative
-import Control.Exception
+import Control.Exception hiding (handle)
 import System.Console.Haskeline
 import Data.UUID as UUID
 import Data.ByteString.Char8 as BS hiding (hPutStrLn)
 import Data.ByteString.Lazy.Char8 (hPutStrLn)
 import Data.Coerce
-import Network.URI
+import Network.URI hiding (scheme)
 import Servant.API.BasicAuth
 import Servant.Client.Core.BasicAuth
 import Data.Aeson
