@@ -36,6 +36,7 @@ import IOHK.Cicero.API qualified as Cicero
 import IOHK.Cicero.API.Fact qualified as Cicero.Fact
 import IOHK.Cicero.API.Run qualified as Cicero.Run
 import IOHK.Cicero.API.Action qualified as Cicero.Action
+import IOHK.Cicero.API.Invocation qualified as Cicero.Invocation
 
 import Plutus.Certification.API
 import Plutus.Certification.Cache
@@ -110,12 +111,14 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
       Nothing -> pure ()
       Just r ->  do
         modify (+ 1)
-        ty <- lift . lift $ actionCache.lookup r.actionId >>= \case
+        inv <- lift . lift $
+          runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.invocation.get r.invocationId
+        ty <- lift . lift $ actionCache.lookup inv.actionId >>= \case
           Just ty -> pure ty
           Nothing -> do
-            act <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.action.get r.actionId
+            act <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.action.get inv.actionId
             let ty = getActionType act
-            actionCache.register r.actionId ty
+            actionCache.register inv.actionId ty
             pure ty
         case ty of
           Unknown -> pure ()
