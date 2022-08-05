@@ -33,7 +33,7 @@ type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
   { version :: mode :- "version" :> Get '[JSON] VersionV1
   , versionHead :: mode :- "version" :> HeadNoContent
-  , createRun :: mode :- "run" :> ReqBody '[PlainText] FlakeRefV1 :> PostCreated '[OctetStream, PlainText] RunIDV1
+  , createRun :: mode :- "run" :> ReqBody '[PlainText] FlakeRefV1 :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
   , getRun :: mode :- "run" :> Capture "id" RunIDV1 :> Get '[JSON] RunStatusV1
   } deriving stock Generic
 
