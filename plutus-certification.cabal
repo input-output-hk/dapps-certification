@@ -63,6 +63,7 @@ executable plutus-certification
     async ^>= 2.2.4,
     eventuo11y ^>= 0.1.0.0,
     wai ^>= 3.2.3,
+    wai-cors ^>= 0.2.7,
     singletons ^>= 3.0.1,
     text ^>= 1.2.5.0,
     plutus-certification

@@ -79,6 +79,7 @@
             (hsPkgs."async" or (errorHandler.buildDepError "async"))
             (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
             (hsPkgs."wai" or (errorHandler.buildDepError "wai"))
+            (hsPkgs."wai-cors" or (errorHandler.buildDepError "wai-cors"))
             (hsPkgs."singletons" or (errorHandler.buildDepError "singletons"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))

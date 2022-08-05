@@ -17,6 +17,7 @@ import Data.Singletons
 import Data.Version
 import Data.Void
 import Network.Wai.Handler.Warp
+import Network.Wai.Middleware.Cors
 import Options.Applicative as Opts
 import Servant
 import Servant.Client.Core.BaseUrl
@@ -153,5 +154,5 @@ main = do
           caps = ciceroServerCaps $ CiceroCaps {..}
 
       runSettings settings . eventfulApplication (newEvent eb Request) $
-        serve (Proxy @API) . server caps (hoistEventBackend liftIO (narrowEventBackend InjectServerSel eb))
+        simpleCors . serve (Proxy @API) . server caps (hoistEventBackend liftIO (narrowEventBackend InjectServerSel eb))
   exitFailure

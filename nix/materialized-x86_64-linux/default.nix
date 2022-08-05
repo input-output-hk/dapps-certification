@@ -207,6 +207,9 @@
         "semigroupoids".flags.comonad = true;
         "hsc2hs".revision = (((hackage."hsc2hs")."0.68.8").revisions).default;
         "hsc2hs".flags.in-ghc-tree = false;
+        "base-unicode-symbols".revision = (((hackage."base-unicode-symbols")."0.2.4.2").revisions).default;
+        "base-unicode-symbols".flags.base-4-8 = true;
+        "base-unicode-symbols".flags.old-base = false;
         "wai-logger".revision = (((hackage."wai-logger")."2.4.0").revisions).default;
         "these".revision = (((hackage."these")."1.1.1.1").revisions).default;
         "these".flags.assoc = true;
@@ -226,6 +229,7 @@
         "optparse-applicative".revision = (((hackage."optparse-applicative")."0.17.0.0").revisions).default;
         "optparse-applicative".flags.process = true;
         "constraints".revision = (((hackage."constraints")."0.13.3").revisions).default;
+        "wai-cors".revision = (((hackage."wai-cors")."0.2.7").revisions).default;
         "th-expand-syns".revision = (((hackage."th-expand-syns")."0.4.9.0").revisions).default;
         "simple-sendfile".revision = (((hackage."simple-sendfile")."0.2.30").revisions).default;
         "simple-sendfile".flags.allow-bsd = true;
@@ -493,6 +497,7 @@
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "attoparsec".components.library.planned = lib.mkOverride 900 true;
           "mtl".components.library.planned = lib.mkOverride 900 true;
+          "base-unicode-symbols".components.library.planned = lib.mkOverride 900 true;
           "aeson-qq".components.library.planned = lib.mkOverride 900 true;
           "vault".components.library.planned = lib.mkOverride 900 true;
           "th-abstraction".components.library.planned = lib.mkOverride 900 true;
@@ -526,6 +531,7 @@
           "time-compat".components.library.planned = lib.mkOverride 900 true;
           "basement".components.library.planned = lib.mkOverride 900 true;
           "optparse-applicative".components.library.planned = lib.mkOverride 900 true;
+          "wai-cors".components.library.planned = lib.mkOverride 900 true;
           "aeson".components.library.planned = lib.mkOverride 900 true;
           "x509-system".components.library.planned = lib.mkOverride 900 true;
           "hourglass".components.library.planned = lib.mkOverride 900 true;
