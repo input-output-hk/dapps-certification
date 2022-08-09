@@ -154,23 +154,27 @@ function retrieveRunStatus(uuid = '') {
     const triggerFetchRunStatus = async () => {
         const url = baseUrl + 'run/' + uuid;
         await fetchData('GET', url).then(response => {
+            try {
+                const res = response.json()
+                const status = res.status;  
+            
+                if (status !== 'finished') {
+                    updateEntireTimeline(status, 'running')
 
-            const res = response.json()
-            const status = res.status;  
-        
-            if (status !== 'finished') {
-                updateEntireTimeline(status, 'running')
-
-                const timeOffset = 60*1000,
-                    refetchMins = 2;
-                const timeout = setTimeout(() => {
-                    clearTimeout(timeout);
-                    triggerFetchRunStatus()
-                }, refetchMins * timeOffset)
-            } else {
-                updateEntireTimeline(status, 'passed')
-                processFinishedJson(res.result);
-                toggleLoader(false)
+                    const timeOffset = 60*1000,
+                        refetchMins = 2;
+                    const timeout = setTimeout(() => {
+                        clearTimeout(timeout);
+                        triggerFetchRunStatus()
+                    }, refetchMins * timeOffset)
+                } else {
+                    updateEntireTimeline(status, 'passed')
+                    processFinishedJson(res.result);
+                    toggleLoader(false)
+                }
+            }
+            catch(err) {
+                console.log(err)
             }
         })
     }
