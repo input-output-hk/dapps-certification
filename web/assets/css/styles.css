@@ -1,0 +1,199 @@
+body {
+    color: #40485E;
+    margin: 0;
+    font-family: monospace;
+    font-size: 14px;
+    background-color: white;
+}
+header {
+    height: 80px;
+}
+#contentWrapper {
+    margin: 0 auto;
+    padding: 40px;
+    height: calc(100vh - 160px);
+    color: #2d333a;
+}
+
+
+#overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.8);
+    z-index: 1;
+}
+#overlay img {
+    width: 30px;
+    bottom: 55px;
+    left: 50%;
+    position: absolute;
+}
+
+#searchContainer {
+    margin: 0 auto;
+    max-width: 65%;
+    padding: 10px;
+}
+#searchContainer center {
+    font-size: 16px;
+    line-height: 24px;
+    color: #878E9E;
+}
+
+
+#searchForm {
+    max-width: 340px;
+    margin: 30px auto;
+    display: flex;
+    flex-flow: column;
+    position: relative;
+}
+#searchForm .input-wrapper:not(:last-child) {
+    margin-bottom: 20px;
+}
+#searchForm .input-wrapper .input {
+    padding: 20px 24px;
+    background: #F9F9F9;
+    border-radius: 16px;
+    display: flex;
+    flex-flow: column;
+    cursor: text;
+    border: 1.5px solid transparent
+}
+#searchForm .input-wrapper .input:hover {
+    border-color: #EFEFEF;
+}
+#searchForm .input-wrapper .input.error {
+    border-color: #FF5470;
+}
+#searchForm .input-wrapper .input.active {
+    padding-top: 7px;
+    padding-bottom: 7px;
+}
+#searchForm .input label {
+    color: #6F7786;
+    cursor: text;
+    z-index: 1;
+}
+#searchForm .input input {
+    border: 0;
+    background: inherit;
+    outline: none;
+    color: #3D3B39;
+    font-size: 18px;
+    line-height: 24px;
+    cursor: text;
+    position: absolute;
+    opacity: 0;
+}
+#searchForm .input.active label {
+    font-size: 12px;
+    line-height: 16px;
+    transform: translateY(-12%);
+    transition: 0.2s ease all;
+}
+#searchForm .input.active input {
+    position: relative;
+    opacity: 1;
+    transition: opacity 0.2s ease-out all;
+}
+#searchContainer button#start {
+    padding: 14px 35px;
+    border: 0;
+    border-radius: 18px;
+    transition: background-color .25s ease-in-out,box-shadow .25s ease-in-out;
+
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    background-color: #7F5AF0;
+    color: #fff;
+    cursor: pointer;
+    outline: none;
+    max-width: fit-content;
+    align-self: center;
+
+}
+#searchContainer button#start:hover {
+    box-shadow: inset 0 0 0 150px rgb(0 0 0 / 10%);
+}
+
+
+#resultContainer {
+    display: none;
+}
+#resultContainer #statusText {
+    text-transform: uppercase;
+}
+#resultContainer .failure {
+    margin-top: 15px;
+}
+#resultContainer .failure > span {
+    display: block;
+}
+
+
+#statusTimeline ul {
+    display: flex;
+    list-style-type: none;
+    justify-content: space-between;
+    margin: 30px 7rem;
+    padding: 0;
+    position: relative;
+}
+#statusTimeline ul:before {
+    position: absolute;
+    content: " ";
+    background-color: #c9c9c9;
+    height: 3px;
+    top: 6px;
+    bottom: 26px;
+    left: 30px;
+    right: 0;
+    width: calc(100% - 60px);
+    margin-bottom: 20px;
+}
+#statusTimeline ul li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-flow: column;
+    row-gap: 10px;
+}
+#statusTimeline ul li:last-child {
+    margin-left: 20px;
+}
+#statusTimeline ul li span.image {
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    padding: 0 3px;
+}
+#statusTimeline ul li span.text {
+    margin-left: 10px;
+    /* color: #002891; for class .success */
+}
+
+.font-bold {
+    font-weight: bold;
+}
+.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+}
+.visible,
+.input.active input {
+    display: block !important;
+}
+.hidden { 
+    display: none !important;
+}
+@keyframes rotate-keyframes {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+.anim-rotate {
+    animation: rotate-keyframes 1s linear infinite;
+}

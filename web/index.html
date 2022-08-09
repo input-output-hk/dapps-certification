@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certification Service</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <header></header>
+    <section id="contentWrapper">
+        <div id="searchContainer">
+            <center for="dappRef" class="font-small">Enter Github respository details of your Dapp to start the certification process.</center>
+            <form id="searchForm">
+                <div class="input-wrapper">
+                    <div class="input">
+                        <label for="username">Github Username</label>
+                        <input type="text" name="username" id="username"/>
+                    </div>
+                </div>
+                <div class="input-wrapper">
+                    <div class="input">
+                        <label for="repoName">Repository</label>
+                        <input type="text" name="repoName" id="repoName"/>
+                    </div>
+                </div>
+                <div class="input-wrapper">
+                    <div class="input">
+                        <label for="branch">Branch</label>
+                        <input type="text" name="branch" id="branch"/>
+                    </div>
+                </div>
+
+                <button type="submit" id="start">Start Certification</button>
+
+                <div id="overlay" class="hidden">
+                    <img src="assets/images/spinner.gif">
+                </div>
+            </form>
+        </div>
+        <div id="resultContainer">
+            <div id="statusTimeline">
+                <ul>
+                    <li data-value="queued">
+                        <span class="image"></span>
+                        <span class="text">Queued</span>
+                    </li>
+                    <li data-value="preparing">
+                        <span class="image"></span>
+                        <span class="text">Preparing</span>
+                    </li>
+                    <li data-value="building">
+                        <span class="image"></span>
+                        <span class="text">Building</span>
+                    </li>
+                    <li data-value="certifying">
+                        <span class="image"></span>
+                        <span class="text">Certifying</span>
+                    </li>
+                    <li data-value="finished">
+                        <span class="image"></span>
+                        <span class="text">Finished</span>
+                    </li>
+                </ul>
+            </div>
+            <div id="logContainer"></div>
+        </div>
+    </section>
+
+    <script src="assets/js/script.js"></script>
+</body>
+</html>
