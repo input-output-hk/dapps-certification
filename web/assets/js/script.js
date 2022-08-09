@@ -224,6 +224,17 @@ Array.from(wrappers).forEach(elm => {
         if(!elm.className.includes('active')){
             activateInput(evt)
         }
+
+        elm.addEventListener('keydown', function(e) {
+            e.stopImmediatePropagation();
+            if (e.which === 9) {
+                e.preventDefault();
+                var nextInput = wrappers[Array.prototype.indexOf.call(wrappers, this) + 1];
+                if (nextInput) {
+                   nextInput.click();
+                }
+            }
+        })
     })
 })
 
