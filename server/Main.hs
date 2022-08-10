@@ -152,7 +152,10 @@ main = do
                    & setInstallShutdownHandler shutdownHandler
                    & setBeforeMainLoop (finalize initEv)
           caps = ciceroServerCaps $ CiceroCaps {..}
+          corsPolicy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
 
       runSettings settings . eventfulApplication (newEvent eb Request) $
-        simpleCors . serve (Proxy @API) . server caps (hoistEventBackend liftIO (narrowEventBackend InjectServerSel eb))
+        cors (const $ Just corsPolicy) .
+        serve (Proxy @API) .
+        server caps (hoistEventBackend liftIO (narrowEventBackend InjectServerSel eb))
   exitFailure
