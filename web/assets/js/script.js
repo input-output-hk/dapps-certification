@@ -32,6 +32,7 @@ async function postData(url = '', data = '') {
 async function fetchData(method, url, data = '') {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
+    myHeaders.append("Accept", "application/json");
 
     var requestOptions = {
         method: method,
