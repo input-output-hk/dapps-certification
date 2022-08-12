@@ -36,9 +36,7 @@ async function fetchData(method, url, data = '') {
 
     var requestOptions = {
         method: method,
-        mode: 'no-cors',
-        headers: myHeaders,
-        redirect: 'follow'
+        headers: myHeaders
     };
     if (data) {
         requestOptions['body'] = data;
