@@ -1,4 +1,4 @@
-var baseUrl = 'https://testing.dapps.iog.io/';
+const baseUrl = 'https://testing.dapps.iog.io/';
 
 const toggleLoader = (show) => {
     if (show) {
@@ -42,7 +42,8 @@ async function fetchData(method, url, data = '') {
         requestOptions['body'] = data;
     }
     const api = await fetch(url, requestOptions)
-        .catch(error => {
+    .then(response => response.json())    
+    .catch(error => {
             console.log('error', error)
         });
     return api;
@@ -93,8 +94,14 @@ function startCertification(evt) {
 }
 
 function fetchSVG(type = 'outline') {
-    return fetch('assets/images/' + type + '.svg')
-        .then(r => r.text())
+    return fetch(
+            'assets/images/' + type + '.svg', 
+            {
+                headers: {
+                    'Cache-Control': 'private'
+                }
+            }
+        ).then(r => r.text())
         .catch(console.error.bind(console));
 }
 
@@ -129,8 +136,12 @@ function updateEntireTimeline(currentStatus, currentType) {
     if (foundAt == -1) {
         return; // do nothing
     }
-    statusSet.forEach((status, i) => {
-        if (foundAt < i) {
+
+    const statusSetLength = statusSet.length
+    for(var i=0; i<statusSetLength; i++) {
+        const status = statusSet[i];
+
+        if (i < foundAt) {
             statusValues[status] = 'passed'
             updateTimelineDisplay(status, 'passed')
         } else if (foundAt === i && status === currentStatus) {
@@ -138,7 +149,7 @@ function updateEntireTimeline(currentStatus, currentType) {
             updateTimelineDisplay(currentStatus, currentType)
             return; // to break the loop
         }
-    })
+    }
     
 }
 
@@ -152,28 +163,23 @@ function retrieveRunStatus(uuid = '') {
 
     const triggerFetchRunStatus = async () => {
         const url = baseUrl + 'run/' + uuid;
-        await fetchData('GET', url).then(response => {
-            try {
-                const res = response.json()
-                const status = res.status;  
-            
-                if (status !== 'finished') {
-                    updateEntireTimeline(status, 'running')
+        await fetchData('GET', url).then(res => {
+            const status = res.status,
+                state = res.hasOwnProperty('state') ? res.state : '';  
+        
+            if (status !== 'finished') {
+                updateEntireTimeline(status, state || 'running')
 
-                    const timeOffset = 60*1000,
-                        refetchMins = 2;
-                    const timeout = setTimeout(() => {
-                        clearTimeout(timeout);
-                        triggerFetchRunStatus()
-                    }, refetchMins * timeOffset)
-                } else {
-                    updateEntireTimeline(status, 'passed')
-                    processFinishedJson(res.result);
-                    toggleLoader(false)
-                }
-            }
-            catch(err) {
-                console.log(err)
+                const timeOffset = 60*1000,
+                    refetchMins = 2;
+                const timeout = setTimeout(() => {
+                    clearTimeout(timeout);
+                    triggerFetchRunStatus()
+                }, refetchMins * timeOffset)
+            } else {
+                updateEntireTimeline(status, 'passed')
+                processFinishedJson(res.result);
+                toggleLoader(false)
             }
         })
     }
