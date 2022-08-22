@@ -1,0 +1,47 @@
+#statusTimeline {
+  ul {
+    display: flex;
+    list-style-type: none;
+    justify-content: space-between;
+    margin: 30px 7rem;
+    padding: 0;
+    position: relative;
+
+    &:before {
+      position: absolute;
+      content: " ";
+      background-color: #c9c9c9;
+      height: 3px;
+      top: 6px;
+      bottom: 26px;
+      left: 30px;
+      right: 0;
+      width: calc(100% - 60px);
+      margin-bottom: 20px;
+    }
+
+    li {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex-flow: column;
+      row-gap: 10px;
+
+      &:last-child {
+        margin-left: 20px;
+      }
+
+      span.image {
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        padding: 0 3px;
+      }
+
+      span.text {
+        margin-left: 10px;
+        /* color: #002891; for class .success */
+      }
+    }
+  }
+}

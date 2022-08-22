@@ -1,0 +1,44 @@
+@import "styles/colors.scss";
+
+.btn {
+  padding: 14px 35px;
+  border: 0;
+  border-radius: 18px;
+  transition: background-color 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  background-color: #7f5af0;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  max-width: fit-content;
+  align-self: center;
+
+  &:active,
+  &:focus,
+  &:hover {
+    box-shadow: inset 0 0 0 150px rgba(0, 0, 0, 0.1);
+  }
+
+  &-primary {
+    background-color: $primary;
+    color: $white;
+  }
+
+  &-secondary {
+    background-color: $white;
+    color: $secondary;
+  }
+
+  &.is-loading {
+    pointer-events: none;
+    filter: grayscale(20%);
+    cursor: progress;
+    opacity: 0.8;
+
+    .button-label {
+      visibility: hidden;
+    }
+  }
+}

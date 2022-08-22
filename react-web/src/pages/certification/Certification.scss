@@ -1,0 +1,34 @@
+#searchContainer {
+  margin: 0 auto;
+  max-width: 65%;
+  padding: 10px;
+
+  .search-form {
+    max-width: 340px;
+    margin: 30px auto;
+    display: flex;
+    flex-flow: column;
+    position: relative;
+
+    .btn {
+      display: flex;
+      margin: 0 auto;
+    }
+  }
+
+  h2 {
+    font-size: 16px;
+    line-height: 24px;
+    color: #878e9e;
+    text-align: center;
+  }
+}
+
+#resultContainer {
+  .failure {
+    margin-top: 15px;
+  }
+  .failure > span {
+    display: block;
+  }
+}
