@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "proxy": "https://testing.dapps.iog.io/",
-  "homepage": "./",
+  "homepage": "https://input-output-hk.github.io/dapps-certification/react-web/",
   "dependencies": {
     "@hookform/resolvers": "^2.9.7",
     "@testing-library/jest-dom": "^5.16.4",
@@ -30,7 +30,9 @@
     "build": "react-scripts build",
     "build:production": "REACT_APP_ENV=production yarn build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -49,5 +51,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^4.0.0"
   }
 }
