@@ -1,6 +1,6 @@
 {
-  "short_name": "react-web",
-  "name": "React Web",
+  "short_name": "dapps_certification",
+  "name": "dApps Certification",
   "icons": [],
   "start_url": ".",
   "display": "standalone",

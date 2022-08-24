@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { onRequest, onRequestError } from "./onRequest";
 
-export const BASE_URL = "";
+export const BASE_URL = process.env.REACT_APP_BASE_URL;
 
 export const fetchData = axios.create({
   baseURL: BASE_URL,
