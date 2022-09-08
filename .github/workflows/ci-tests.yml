@@ -1,0 +1,14 @@
+name: CI Tests
+on: 
+  push: 
+  pull_request:
+  workflow_call:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.0.2
+      - run: |
+          cd react-web
+          npm ci
+          npm run test
