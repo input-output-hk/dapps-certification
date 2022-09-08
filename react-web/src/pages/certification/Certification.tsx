@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -106,7 +107,7 @@ const Certification = () => {
 
   return (
     <>
-      <div id="searchContainer">
+      <div id="searchContainer" className={classNames({ hidden: formSubmitted})}>
         <h2>
           Enter Github repository details of your Dapp to start the
           certification process.
@@ -164,6 +165,12 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
+
+            <h2 id="breadcrumb">
+              <a href="https://github.com/shlevy/plutus-apps/tree/certification-test">
+              {form.getValues("username")}/{form.getValues("repoName")}</a>
+            </h2>
+
             <Timeline statusConfig={timelineConfig} />
           </div>
           <div id="logContainer"></div>
