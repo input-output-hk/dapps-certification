@@ -8,7 +8,7 @@ permissions:
   contents: write
 jobs:
   tests:
-    uses: ./.github/workflows/ci-test.yml
+    uses: ./.github/workflows/ci-tests.yml
   build-and-deploy:
     needs:
       - tests
