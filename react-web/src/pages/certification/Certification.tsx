@@ -76,7 +76,6 @@ const Certification = () => {
                   if (cfg.status === status) {
                     return { ...cfg, state: "passed" };
                   }
-                  form.reset();
                   // Set the previously executed states as passed
                   return setManyStatus(index, config, cfg, status, "passed");
                 });
@@ -88,7 +87,6 @@ const Certification = () => {
               config[indexOfExecutingProcess(config, "outline")].state = "failed";
               processStateUpdate(config);
               console.log(error);
-              form.reset();
             });
         };
         triggerFetchRunStatus();
@@ -97,7 +95,6 @@ const Certification = () => {
         config[indexOfExecutingProcess(config, "queued")].state = "failed";
         processStateUpdate(config);
         console.log(error);
-        form.reset();
       });
   };
 
@@ -105,7 +102,6 @@ const Certification = () => {
     evt.stopImmediatePropagation();
     form.reset();
     clearTimeout(timeout);
-
   }
 
   return (
