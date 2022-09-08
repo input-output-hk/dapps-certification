@@ -1,2 +1,5 @@
 dist-newstyle
 result
+react-web/coverage
+react-web/node_modules
+react-web/build
