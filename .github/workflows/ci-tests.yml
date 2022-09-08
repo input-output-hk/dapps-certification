@@ -1,0 +1,13 @@
+name: CI Tests
+on: 
+  push: 
+    branches-ignore:
+      - develop
+  pull_request:
+jobs:
+  npm-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          cd react-web
+          npm run test
