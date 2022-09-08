@@ -16,7 +16,7 @@
       bottom: 26px;
       left: 30px;
       right: 0;
-      width: calc(100% - 60px);
+      width: calc(100% - 80px);
       margin-bottom: 20px;
     }
 
@@ -40,6 +40,7 @@
 
       span.text {
         margin-left: 10px;
+        font-size: 20px;
         /* color: #002891; for class .success */
       }
     }
