@@ -41,4 +41,8 @@
       visibility: hidden;
     }
   }
+
+  &[disabled] {
+    opacity: 0.5;
+  }
 }

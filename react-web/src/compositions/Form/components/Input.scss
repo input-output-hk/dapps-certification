@@ -7,15 +7,14 @@
 
   .input {
     padding: 20px 24px;
-    background: $muted-grey;
     border-radius: 16px;
     display: flex;
     flex-flow: column;
     cursor: text;
-    border: 1.5px solid transparent;
+    border: 1.5px solid $border-grey;
 
     &:hover {
-      border-color: $border-grey;
+      background: $muted-grey;
     }
 
     &.active {

@@ -31,6 +31,7 @@ export const Form = <T extends FieldValues>({
     <FormProvider {...form}>
       {/* the `form` passed here is return value of useForm() hook */}
       <form
+        autoComplete="off"
         onSubmit={form.handleSubmit(onSubmit)}
         className={classNames("form", className)}
         {...props}
