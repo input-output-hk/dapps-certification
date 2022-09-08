@@ -120,12 +120,14 @@ const Certification = () => {
             <Input
               label="Github Username"
               type="text"
+              disabled={submitting}
               {...form.register("username")}
             />
 
             <Input
               label="Repository"
               type="text"
+              disabled={submitting}
               {...form.register("repoName")}
             />
 
@@ -133,6 +135,7 @@ const Certification = () => {
               label="Branch"
               type="text"
               id="branch"
+              disabled={submitting}
               {...form.register("branch")}
             />
             {/* {!submitting ?

@@ -39,6 +39,13 @@
       border-color: $danger;
     }
 
+    &.disabled {
+      background: $muted-grey;
+      border-color: transparent;
+      pointer-events: none;
+      cursor: default;
+    }
+
     label {
       color: #6f7786;
       cursor: text;

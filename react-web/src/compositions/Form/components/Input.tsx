@@ -7,10 +7,18 @@ import { useFormContext } from "react-hook-form";
 
 interface InputProps extends ComponentProps<"input"> {
   label: string;
+  disabled?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, type = "text", className = "", name, ...props },
+  { 
+    disabled = false,
+    label,
+    type = "text",
+    className = "",
+    name,
+    ...props 
+  },
   ref
 ) {
   const {
@@ -35,7 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       onClick={(e: any) => setActive(true)}
     >
       <div
-        className={classNames("input", { active: active, error: errorMsg })}
+        className={classNames("input", { active: active, error: errorMsg, disabled: disabled })}
         onClick={(_) => {
           setActive(true);
           document.getElementById(name || "")?.focus();
