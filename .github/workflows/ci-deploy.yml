@@ -1,6 +1,6 @@
 name: CI Deployment
 on: 
-  workflow_dispatch:
+  workflow_dispatch: # to be able to manually run Deploy workflow
 permissions:
   contents: write
 jobs:
