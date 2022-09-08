@@ -28,7 +28,6 @@ const Button: FC<IButtonProps> = ({
       disabled={disabled}
     >
       <span className="button-label">{buttonLabel}</span>
-      {isLoading && <ButtonLoader />}
     </button>
   );
 };
