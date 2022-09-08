@@ -27,6 +27,8 @@ const Certification = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
   
+  let timeout: any;
+
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch } = formData;
     setSubmitting(true);
@@ -65,7 +67,7 @@ const Certification = () => {
                 setTimelineConfig(config);
 
                 const timeOffset = 60 * 1000, refetchMins = 2;
-                const timeout = setTimeout(() => {
+                timeout = setTimeout(() => {
                   clearTimeout(timeout);
                   triggerFetchRunStatus();
                 }, refetchMins * timeOffset);
@@ -99,6 +101,13 @@ const Certification = () => {
       });
   };
 
+  const resetForm = (evt: Event) => {
+    evt.stopImmediatePropagation();
+    form.reset();
+    clearTimeout(timeout);
+
+  }
+
   return (
     <>
       <div id="searchContainer">
@@ -126,15 +135,29 @@ const Certification = () => {
               id="branch"
               {...form.register("branch")}
             />
-
+            {/* {!submitting ?
             <Button
               type="submit"
               className="btn btn-primary"
               buttonLabel="Start Certification"
-              isLoading={submitting}
               disabled={!form.formState.isValid}
               onClick={(_) => setFormSubmitted(true)}
+            /> 
+            :
+            <Button
+              type="reset"
+              className="btn btn-primary"
+              buttonLabel="Abort"
+              onClick={(e) => resetForm(e)}
             />
+            } */}
+            <Button
+              type="submit"
+              className="btn btn-primary"
+              buttonLabel="Start Certification"
+              disabled={!form.formState.isValid || submitting}
+              onClick={(_) => setFormSubmitted(true)}
+            /> 
           </Form>
         </div>
       </div>
