@@ -11,7 +11,11 @@ import { useForm } from "hooks/useForm";
 import "./Certification.scss";
 import Timeline from "compositions/Timeline/Timeline";
 import { TIMELINE_CONFIG } from "compositions/Timeline/timeline.config";
-import { processFinishedJson, setManyStatus } from "components/TimelineItem/timeline.helper";
+import {
+  indexOfExecutingProcess,
+  processFinishedJson,
+  setManyStatus,
+} from "components/TimelineItem/timeline.helper";
 
 const Certification = () => {
   const form = useForm({
@@ -19,12 +23,23 @@ const Certification = () => {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
 
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch } = formData;
     setSubmitting(true);
     let config = timelineConfig;
+
+    // Reset to default process states
+    if (formSubmitted) {
+      setTimelineConfig(TIMELINE_CONFIG)
+    }
+
+    const processStateUpdate = (config: any) => {
+      setTimelineConfig(config);
+      setSubmitting(false);
+    };
 
     postData
       .post("/run", "github:" + [username, repoName, branch].join("/"))
@@ -48,8 +63,7 @@ const Certification = () => {
                 });
                 setTimelineConfig(config);
 
-                const timeOffset = 60 * 1000,
-                  refetchMins = 2;
+                const timeOffset = 60 * 1000, refetchMins = 2;
                 const timeout = setTimeout(() => {
                   clearTimeout(timeout);
                   triggerFetchRunStatus();
@@ -62,25 +76,21 @@ const Certification = () => {
                   // Set the previously executed states as passed
                   return setManyStatus(index, config, cfg, status, "passed");
                 });
-                setTimelineConfig(config);
                 processFinishedJson(res.data.result);
-                setSubmitting(false);
+                processStateUpdate(config);
               }
             })
             .catch((error) => {
+              config[indexOfExecutingProcess(config, "outline")].state = "failed";
+              processStateUpdate(config);
               console.log("Oops 2", error);
             });
         };
         triggerFetchRunStatus();
       })
       .catch((error) => {
-        config = config.map((config) => {
-          if (config.status === "queued") {
-            return { ...config, state: "failed" };
-          }
-          return config;
-        });
-        setTimelineConfig(config);
+        config[indexOfExecutingProcess(config, "queued")].state = "failed";
+        processStateUpdate(config);
         console.log("Oops 1", error);
       });
   };
@@ -118,12 +128,13 @@ const Certification = () => {
               className="btn btn-primary"
               buttonLabel="Start Certification"
               isLoading={submitting}
+              onClick={(_) => setFormSubmitted(true)}
             />
           </Form>
         </div>
       </div>
 
-      {submitting && timelineConfig.length && (
+      {formSubmitted && (
         <>
           <div id="resultContainer">
             <Timeline statusConfig={timelineConfig} />

@@ -11,7 +11,7 @@ const PageLayout = () => {
       <header></header>
 
       {/* Load page content here */}
-      <section id="contentWrapper">
+      <section data-testid="contentWrapper" id="contentWrapper">
         <Outlet />
       </section>
     </>
