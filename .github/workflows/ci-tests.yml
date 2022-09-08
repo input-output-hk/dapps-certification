@@ -2,7 +2,7 @@ name: CI Tests
 on: 
   push: 
   pull_request:
-  workflow_call:
+  workflow_call: # as ci-tests.yml is called from ci-deploy.yml as a dependency
 jobs:
   tests:
     runs-on: ubuntu-latest
