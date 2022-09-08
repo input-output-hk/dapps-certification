@@ -24,11 +24,24 @@
   }
 }
 
-#resultContainer {
+#logContainer {
+  margin-top: 60px;
+
   .failure {
-    margin-top: 15px;
+    margin-bottom: 15px;
+    padding: 8px;
+    overflow: auto;
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+    border-radius: 5px;
   }
+
   .failure > span {
     display: block;
+    margin-bottom: 10px;
+    
+    &:first-child {
+      color: #a94442;
+    }
   }
 }
