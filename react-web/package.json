@@ -30,6 +30,7 @@
     "build": "react-scripts build",
     "build:production": "REACT_APP_ENV=production yarn build",
     "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"

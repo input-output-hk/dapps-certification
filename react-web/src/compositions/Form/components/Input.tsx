@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         }}
       >
         <label>{label}</label>
-        <input type={type} ref={ref} {...props} name={name} id={name} />
+        <input type={type} ref={ref} {...props} name={name} id={name} data-testid={name} />
       </div>
 
       {errorMsg && <FieldError message={errorMsg} />}

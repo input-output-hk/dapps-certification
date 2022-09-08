@@ -101,3 +101,6 @@ export const processFinishedJson = (result: { [x: string]: any }) => {
     }
   }
 };
+
+export const indexOfExecutingProcess = (config: any[], state: string): number =>
+  config.map((val: { state: any }) => val.state).indexOf(state) - 1;

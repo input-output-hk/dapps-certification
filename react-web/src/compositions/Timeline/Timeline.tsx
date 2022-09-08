@@ -8,7 +8,7 @@ const Timeline = (props: any) => {
   const { statusConfig } = props;
 
   return (
-    <div id="statusTimeline">
+    <div id="statusTimeline" data-testid="statusTimeline">
       <ul>
         {statusConfig.map(
           (config: any, index: React.Key | null | undefined) => (
