@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -20,12 +20,13 @@ import {
 const Certification = () => {
   const form = useForm({
     schema: certificationSchema,
+    mode: "onChange"
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
-
+  
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch } = formData;
     setSubmitting(true);
@@ -73,6 +74,7 @@ const Certification = () => {
                   if (cfg.status === status) {
                     return { ...cfg, state: "passed" };
                   }
+                  form.reset();
                   // Set the previously executed states as passed
                   return setManyStatus(index, config, cfg, status, "passed");
                 });
@@ -83,7 +85,8 @@ const Certification = () => {
             .catch((error) => {
               config[indexOfExecutingProcess(config, "outline")].state = "failed";
               processStateUpdate(config);
-              console.log("Oops 2", error);
+              console.log(error);
+              form.reset();
             });
         };
         triggerFetchRunStatus();
@@ -91,7 +94,8 @@ const Certification = () => {
       .catch((error) => {
         config[indexOfExecutingProcess(config, "queued")].state = "failed";
         processStateUpdate(config);
-        console.log("Oops 1", error);
+        console.log(error);
+        form.reset();
       });
   };
 
@@ -128,6 +132,7 @@ const Certification = () => {
               className="btn btn-primary"
               buttonLabel="Start Certification"
               isLoading={submitting}
+              disabled={!form.formState.isValid}
               onClick={(_) => setFormSubmitted(true)}
             />
           </Form>

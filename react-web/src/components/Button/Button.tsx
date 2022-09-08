@@ -4,6 +4,7 @@ import "./Button.scss";
 import ButtonLoader from "components/ButtonLoader/ButtonLoader";
 
 export interface IButtonProps {
+  disabled?: boolean;
   className?: string;
   buttonLabel?: string;
   isLoading?: boolean;
@@ -12,6 +13,7 @@ export interface IButtonProps {
 }
 
 const Button: FC<IButtonProps> = ({
+  disabled = false,
   className = "",
   buttonLabel = "Submit",
   isLoading = false,
@@ -23,6 +25,7 @@ const Button: FC<IButtonProps> = ({
       className={classNames("btn", className, { "is-loading": isLoading })}
       type={type}
       onClick={onClick}
+      disabled={disabled}
     >
       <span className="button-label">{buttonLabel}</span>
       {isLoading && <ButtonLoader />}
