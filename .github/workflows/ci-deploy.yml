@@ -1,9 +1,6 @@
 name: CI Deployment
 on: 
-  push: 
-    branches:
-      - develop
-      - CI
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
