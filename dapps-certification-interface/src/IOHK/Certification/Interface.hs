@@ -156,7 +156,7 @@ instance FromJSON Progress where
     <*> o .: "finished-tasks"
 
 -- | A plutus-apps independent representation of an entire certification run
-data CertificationResult = forall a . (ToJSON a, FromJSON a) => CertificationResult !a
+data CertificationResult = forall a . (ToJSON a) => CertificationResult !a
 
 instance ToJSON CertificationResult where
   toJSON (CertificationResult v) = toJSON v
