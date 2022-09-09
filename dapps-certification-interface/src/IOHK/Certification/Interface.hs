@@ -165,29 +165,15 @@ instance ToJSON CertificationResult where
 instance FromJSON CertificationResult where
   parseJSON v = CertificationResult <$> pure v
 
--- | A recoverable error during certification
-data Error
-
-instance ToJSON Error where
-  toJSON = \case {}
-  toEncoding = \case {}
-
-instance FromJSON Error where
-  parseJSON _ = fail "No errors yet defined"
-
 -- | A message from the certification process
 data Message
   = Status !Progress !Integer
-  | Error !Error
   | Success !CertificationResult
 
 instance ToJSON Message where
   toJSON (Status p idx) = object
     [ "status" .= p
     , "status-count" .= idx
-    ]
-  toJSON (Error e) = object
-    [ "error" .= e
     ]
   toJSON (Success c) = object
     [ "success" .= c
@@ -196,16 +182,12 @@ instance ToJSON Message where
     ( "status" .= p
    <> "status-count" .= idx
     )
-  toEncoding (Error e) = pairs
-    ( "error" .= e
-    )
   toEncoding (Success c) = pairs
     ( "success" .= c
     )
 instance FromJSON Message where
   parseJSON = withObject "Message" \o ->
-      success o <|> err o <|> stat o
+      success o <|> stat o
     where
       success o = Success <$> o .: "success"
-      err o = Error <$> o .: "error"
       stat o = Status <$> o .: "status" <*> o .: "status-count"

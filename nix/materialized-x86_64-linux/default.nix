@@ -336,6 +336,7 @@
   extras = hackage:
     {
       packages = {
+        dapps-certification-interface = ./.plan.nix/dapps-certification-interface.nix;
         eventuo11y = ./.plan.nix/eventuo11y.nix;
         cicero-api = ./.plan.nix/cicero-api.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
@@ -345,6 +346,7 @@
     ({ lib, ... }:
       {
         packages = {
+          "dapps-certification-interface" = { flags = {}; };
           "eventuo11y" = { flags = {}; };
           "cicero-api" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
@@ -438,6 +440,7 @@
           "fast-logger".components.library.planned = lib.mkOverride 900 true;
           "case-insensitive".components.library.planned = lib.mkOverride 900 true;
           "singletons".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-interface".components.library.planned = lib.mkOverride 900 true;
           "haskeline".components.library.planned = lib.mkOverride 900 true;
           "th-expand-syns".components.library.planned = lib.mkOverride 900 true;
           "unix-time".components.library.planned = lib.mkOverride 900 true;
