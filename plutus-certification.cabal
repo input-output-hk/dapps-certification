@@ -38,6 +38,7 @@ library
     aeson-qq ^>= 0.8.4,
     exceptions ^>= 0.10.4,
     eventuo11y ^>= 0.1.0.0,
+    dapps-certification-interface
   hs-source-dirs: src
   exposed-modules:
     Plutus.Certification.API

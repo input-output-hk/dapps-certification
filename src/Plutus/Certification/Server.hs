@@ -17,6 +17,7 @@ import Control.Monad.State.Strict
 import Observe.Event
 import Observe.Event.Render.JSON
 import Network.URI
+import IOHK.Certification.Interface
 
 import Plutus.Certification.API
 import Paths_plutus_certification qualified as Package
@@ -62,13 +63,37 @@ server ServerCaps {..} eb parent = NamedAPI
   , getRun = \rid -> withSubEvent eb parent GetRun \ev ->
      runConduit
         $ getRuns jobEb (ref ev) rid
-       .| execStateC Queued consumeRuns
+       .| evalStateC Queued consumeRuns
   }
   where
     jobEb = narrowEventBackend (InjectJobSel renderJobSel) eb
     consumeRuns = await >>= \case
-      Nothing -> pure ()
-      Just s@(Finished _) -> put s
-      Just s -> do
-        modify $ max s
+      Nothing -> Incomplete <$> get
+      Just (Incomplete s) -> do
+        modify \s' -> case (s, s') of
+          (_, Queued) -> s
+          (Queued, _) -> s'
+
+          (Preparing st, Preparing st') -> case compare st st' of
+            LT -> s'
+            _ -> s
+          (_, Preparing _) -> s
+          (Preparing _, _) -> s'
+
+          (Building st, Building st') -> case compare st st' of
+            LT -> s'
+            _ -> s
+          (_, Building _) -> s
+          (Building _, _) -> s'
+
+          (Certifying st mp, Certifying st' mp') -> case compare st st' of
+            LT -> s'
+            GT -> s
+            EQ -> case (mp, mp') of
+              (_, Nothing) -> s
+              (Nothing, _) -> s'
+              (Just p, Just p') -> case compare p.progressIndex p'.progressIndex of
+                LT -> s'
+                _ -> s
         consumeRuns
+      Just s -> pure s

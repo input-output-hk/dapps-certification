@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiWayIf #-}
 module Plutus.Certification.Cicero
   ( KnownActionType(..)
   , ActionType(..)
@@ -18,7 +19,7 @@ module Plutus.Certification.Cicero
 import Conduit
 import Control.Monad.State.Strict
 import Data.Aeson
-import Data.Aeson.KeyMap as KM
+import Data.Aeson.KeyMap as KM hiding (foldr)
 import Data.Aeson.QQ
 import Data.Functor
 import Data.Proxy
@@ -31,6 +32,7 @@ import Observe.Event
 import Observe.Event.Render.JSON
 import Observe.Event.Servant.Client
 import Control.Monad.Catch
+import IOHK.Certification.Interface qualified as I
 
 import IOHK.Cicero.API qualified as Cicero
 import IOHK.Cicero.API.Fact qualified as Cicero.Fact
@@ -63,6 +65,11 @@ data KnownActionType
 data ActionType
   = Known !KnownActionType
   | Unknown
+
+data CertifyOutput
+  = CertifyFailed
+  | Succeeded !I.CertificationResult
+  | Intermediate !I.Progress
 
 -- | Capabilities to implement 'ServerCaps' with Cicero as the job engine
 data CiceroCaps c m r = CiceroCaps
@@ -123,35 +130,60 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
         case ty of
           Unknown -> pure ()
           Known s -> yieldM . lift $ case s of
-            Generate ->
-              getOutput eb parent r "plutus-certification/generate-flake" <&> \case
+            Generate -> Incomplete <$>
+              (getIntermediateOutput eb parent r "plutus-certification/generate-flake" <&> \case
                 Nothing -> Preparing Running
-                Just (Left _) -> Preparing Failed
-                Just (Right _) -> Building Running
-            Build ->
-              getOutput eb parent r "plutus-certification/build-flake" <&> \case
+                Just False -> Preparing Failed
+                Just True -> Building Running)
+            Build -> Incomplete <$>
+              (getIntermediateOutput eb parent r "plutus-certification/build-flake" <&> \case
                 Nothing -> Building Running
-                Just (Left _) -> Building Failed
-                Just (Right _) -> Certifying Running
+                Just False -> Building Failed
+                Just True -> Certifying Running Nothing)
             Certify ->
-              getOutput eb parent r "plutus-certification/run-certify" <&> \case
-                Nothing -> Certifying Running
-                Just (Left _) -> Certifying Failed
-                Just (Right v) -> Finished v
+              getCertifyOutput eb parent r "plutus-certification/run-certify" <&> \case
+                Nothing -> Incomplete $ Certifying Running Nothing
+                Just (Intermediate p) -> Incomplete $ Certifying Running (Just p)
+                Just CertifyFailed -> Incomplete $ Certifying Failed Nothing
+                Just (Succeeded cr) -> Finished cr
         status eb parent
 
-    getOutput eb parent r name = if isJust r.finishedAt
+    getRunFacts eb parent r =
+      runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.fact.getAll r.nomadJobId
+
+    getIntermediateOutput eb parent r name = if isJust r.finishedAt
       then do
-        facts <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.fact.getAll r.nomadJobId
+        facts <- getRunFacts eb parent r
         let getOutput' (Object o)
               | Just (Object out) <- KM.lookup name o
-              , Just success <- KM.lookup "success"  out = Just (Right success)
+              , Just _ <- KM.lookup "success"  out = Just True
               | Just (Object out) <- KM.lookup name o
-              , Just failure <- KM.lookup "failure"  out = Just (Left failure)
+              , Just _ <- KM.lookup "failure"  out = Just False
               | otherwise = Nothing
             getOutput' _ = Nothing
         pure . getFirst . foldMap (First . getOutput' . (.value)) $ facts
       else pure Nothing
+
+    progressLater _ Nothing = True
+    progressLater p (Just (Intermediate p')) = p.progressIndex > p'.progressIndex
+    progressLater _ _ = False
+
+    getCertifyOutput eb parent r name = do
+      facts <- getRunFacts eb parent r
+      pure $ foldr (\f acc -> case f.value of
+                       Object o -> case KM.lookup name o of
+                         Nothing -> acc
+                         Just v -> case fromJSON v of
+                           Success (I.Status p) -> if progressLater p acc
+                             then Just $ Intermediate p
+                             else acc
+                           Success (I.Success cr) -> Just $ Succeeded cr
+                           Error _ -> if
+                             | Just (Object out) <- KM.lookup name o
+                             , Just _ <- KM.lookup "failure"  out -> Just CertifyFailed
+                             | otherwise -> acc
+                       _ -> acc
+                   ) Nothing facts
 
     getActionType :: Cicero.Action.ActionV2 -> ActionType
     getActionType act

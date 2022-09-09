@@ -136,6 +136,7 @@ data Progress = Progress
   { currentTask :: !(Maybe CertificationTask)
   , currentQc :: !QCProgress
   , finishedTasks :: ![TaskResult]
+  , progressIndex :: !Integer
   }
 
 instance ToJSON Progress where
@@ -143,17 +144,20 @@ instance ToJSON Progress where
     [ "current-task" .= currentTask
     , "qc-progress" .= currentQc
     , "finished-tasks" .= finishedTasks
+    , "progress-index" .= progressIndex
     ]
   toEncoding Progress {..} = pairs
     ( "current-task" .= currentTask
    <> "qc-progress" .= currentQc
    <> "finished-tasks" .= finishedTasks
+   <> "progress-index" .= progressIndex
     )
 instance FromJSON Progress where
   parseJSON = withObject "Progress" \o -> Progress
     <$> o .: "current-task"
     <*> o .: "qc-progress"
     <*> o .: "finished-tasks"
+    <*> o .: "progress-index"
 
 -- | A plutus-apps independent representation of an entire certification run
 data CertificationResult = forall a . (ToJSON a) => CertificationResult !a
@@ -167,20 +171,18 @@ instance FromJSON CertificationResult where
 
 -- | A message from the certification process
 data Message
-  = Status !Progress !Integer
+  = Status !Progress
   | Success !CertificationResult
 
 instance ToJSON Message where
-  toJSON (Status p idx) = object
+  toJSON (Status p) = object
     [ "status" .= p
-    , "status-count" .= idx
     ]
   toJSON (Success c) = object
     [ "success" .= c
     ]
-  toEncoding (Status p idx) = pairs
+  toEncoding (Status p) = pairs
     ( "status" .= p
-   <> "status-count" .= idx
     )
   toEncoding (Success c) = pairs
     ( "success" .= c
@@ -190,4 +192,4 @@ instance FromJSON Message where
       success o <|> stat o
     where
       success o = Success <$> o .: "success"
-      stat o = Status <$> o .: "status" <*> o .: "status-count"
+      stat o = Status <$> o .: "status"
