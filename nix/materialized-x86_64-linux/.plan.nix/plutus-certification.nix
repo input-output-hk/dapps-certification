@@ -52,6 +52,7 @@
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
+          (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           ];
         buildable = true;
         modules = [
