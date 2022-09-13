@@ -1,4 +1,5 @@
 import React, { FC } from "react";
+import classNames from "classnames";
 
 import {
   FailedSvg,
@@ -34,7 +35,7 @@ const TimelineItem: FC<ITimelineItem> = ({
   config: { status, text, state },
 }) => {
   return (
-    <li data-value={status} data-testid={status}>
+    <li data-value={status} data-testid={status} className={classNames({ active: (state==="running" || state === "failed" || state === "finished") })}>
       <span className="image" data-testid={state}>{fetchSVG(state)}</span>
       <span className="text" data-testid={text}>{text}</span>
     </li>

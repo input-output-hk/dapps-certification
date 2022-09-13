@@ -27,10 +27,6 @@
       flex-flow: column;
       row-gap: 10px;
 
-      // &:last-child {
-      //   margin-left: 20px;
-      // }
-
       span.image {
         width: 16px;
         height: 16px;
@@ -40,9 +36,50 @@
 
       span.text {
         margin-left: 10px;
-        font-size: 20px;
-        /* color: #002891; for class .success */
+        font-size: 18px;
       }
     }
   }
 }
+
+.error-title {
+  cursor: pointer;
+}
+
+/*
+// TBD media-query (max-width <= 640px)
+#statusTimeline {
+
+  ul {
+    justify-content: center;
+
+    &:before {
+      display: none;
+    }
+
+    li {
+      padding-left: 0.5em;
+      padding-right: 0.5em;
+
+      &:not(.active) span.text {
+        font-size: 8px!important;
+        margin-left: 0 !important;
+      }
+
+      &:not(:last-child):after {
+        background-color: #c9c9c9;
+        bottom: 26px;
+        content: " ";
+        height: 3px;
+        left: 30px;
+        margin-bottom: 20px;
+        position: absolute;
+        right: 0;
+        top: 6px;
+        width: 100%;
+        z-index: -1;
+      }
+    }
+  }
+}
+*/

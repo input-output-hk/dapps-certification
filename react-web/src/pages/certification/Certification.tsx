@@ -27,6 +27,7 @@ const Certification = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
+  const [finishedCertify, setFinishedCertify] = useState(false);
   
   let timeout: any;
 
@@ -80,6 +81,7 @@ const Certification = () => {
                   // Set the previously executed states as passed
                   return setManyStatus(index, config, cfg, status, "passed");
                 });
+                setFinishedCertify(true);
                 processFinishedJson(res.data.result);
                 processStateUpdate(config);
               }
@@ -107,7 +109,7 @@ const Certification = () => {
 
   return (
     <>
-      <div id="searchContainer" className={classNames({ hidden: formSubmitted})}>
+      <div id="searchContainer" className={classNames({ hidden: finishedCertify})}>
         <h2>
           Enter Github repository details of your Dapp to start the
           certification process.
@@ -166,9 +168,13 @@ const Certification = () => {
         <>
           <div id="resultContainer">
 
-            <h2 id="breadcrumb">
-              <a href="https://github.com/shlevy/plutus-apps/tree/certification-test">
-              {form.getValues("username")}/{form.getValues("repoName")}</a>
+            <h2 id="breadcrumb" className={classNames({ hidden: !finishedCertify })}>
+              <a 
+                target="_blank" 
+                rel="noreferrer"
+                href="https://github.com/shlevy/plutus-apps/tree/certification-test">
+                  {form.getValues("username")}/{form.getValues("repoName")}
+              </a>
             </h2>
 
             <Timeline statusConfig={timelineConfig} />

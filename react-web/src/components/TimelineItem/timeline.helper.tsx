@@ -88,7 +88,7 @@ export const processFinishedJson = (result: { [x: string]: any }) => {
       result[key] &&
       result[key].tag === "Failure"
     ) {
-      let template = "<span>" + result[key].reason + "</span>";
+      let template = "<span class='error-title'>" + result[key].reason + "<i class='arrow up'></i></span>";
       result[key].failingTestCase.forEach((val: string) => {
         template += "<span>Test Case: " + val + "</span>";
       });
