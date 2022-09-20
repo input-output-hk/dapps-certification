@@ -167,7 +167,7 @@ const Certification = () => {
             <Button
               type="submit"
               className="btn btn-primary"
-              buttonLabel="Start Certification"
+              buttonLabel="Start Testing"
               disabled={!form.formState.isValid || submitting}
               onClick={(_) => setFormSubmitted(true)}
             /> 

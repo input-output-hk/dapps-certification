@@ -16,7 +16,7 @@ export const TIMELINE_CONFIG = [
   },
   {
     status: "certifying",
-    text: "Certifying",
+    text: "Testing",
     state: "outline",
   },
   {
