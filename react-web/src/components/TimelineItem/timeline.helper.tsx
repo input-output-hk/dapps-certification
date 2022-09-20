@@ -75,7 +75,7 @@ export const setManyStatus = (
     ? {
         ...currentConfig,
         state:
-          currentConfig.state === "running" // update only running status to updated status to avoid failure being overwritten
+          currentConfig.state === "running" || currentConfig.state === "outline" // update only running status to updated status to avoid failure being overwritten
             ? updatedState
             : currentConfig.state,
       }
@@ -88,7 +88,10 @@ export const processFinishedJson = (result: { [x: string]: any }) => {
       result[key] &&
       result[key].tag === "Failure"
     ) {
-      let template = "<span class='error-title'>" + result[key].reason + "<i class='arrow up'></i></span>";
+      let template = "<span class='error-title'>" +
+          "<i>" + result[key].reason + "</i>" +
+          // "<i class='arrow up'></i>" +
+        "</span>";
       result[key].failingTestCase.forEach((val: string) => {
         template += "<span>Test Case: " + val + "</span>";
       });
@@ -98,6 +101,13 @@ export const processFinishedJson = (result: { [x: string]: any }) => {
       failedCase.innerHTML = template;
       failedCase.classList.add("failure");
       document.getElementById("logContainer")!.append(failedCase);
+    }
+    else if (
+      key.endsWith("Result") &&
+      result[key] &&
+      result[key].tag === "Success"
+    ) {
+      // show success results
     }
   }
 };

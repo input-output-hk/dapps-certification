@@ -1,7 +1,6 @@
 import React, { FC } from "react";
 import classNames from "classnames";
 import "./Button.scss";
-import ButtonLoader from "components/ButtonLoader/ButtonLoader";
 
 export interface IButtonProps {
   disabled?: boolean;

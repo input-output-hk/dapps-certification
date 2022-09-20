@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
@@ -17,6 +17,7 @@ import {
   processFinishedJson,
   setManyStatus,
 } from "components/TimelineItem/timeline.helper";
+import LogContainer from "./components/LogContainer";
 
 const Certification = () => {
   const form = useForm({
@@ -28,6 +29,8 @@ const Certification = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
   const [finishedCertify, setFinishedCertify] = useState(false);
+  const [githubLink, setGithubLink] = useState("");
+  const [logData, setLogData] = useState<any>({});
   
   let timeout: any;
 
@@ -46,6 +49,9 @@ const Certification = () => {
       setSubmitting(false);
     };
 
+    setGithubLink(
+      "https://github.com/" + username + "/" + repoName + "/tree/" + branch
+    );
     postData
       .post("/run", "github:" + [username, repoName, branch].join("/"))
       .then((response) => response.data)
@@ -101,15 +107,20 @@ const Certification = () => {
       });
   };
 
+  /**
   const resetForm = (evt: Event) => {
     evt.stopImmediatePropagation();
     form.reset();
     clearTimeout(timeout);
   }
+  */
 
   return (
     <>
-      <div id="searchContainer" className={classNames({ hidden: finishedCertify})}>
+      <div
+        id="searchContainer"
+        className={classNames({ hidden: finishedCertify })}
+      >
         <h2>
           Enter Github repository details of your Dapp to start the
           certification process.
@@ -167,19 +178,19 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
-
-            <h2 id="breadcrumb" className={classNames({ hidden: !finishedCertify })}>
-              <a 
-                target="_blank" 
-                rel="noreferrer"
-                href="https://github.com/shlevy/plutus-apps/tree/certification-test">
+            <h2
+              id="breadcrumb"
+              className={classNames({ hidden: !finishedCertify })}
+            >
+              <a target="_blank" rel="noreferrer" href={githubLink}>
                   {form.getValues("username")}/{form.getValues("repoName")}
               </a>
             </h2>
 
             <Timeline statusConfig={timelineConfig} />
           </div>
-          <div id="logContainer"></div>
+
+          {logData ? <LogContainer result={logData} /> : null}
         </>
       )}
     </>
