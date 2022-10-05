@@ -4,7 +4,7 @@
 module Main where
 
 import Options.Applicative
-import IOHK.Certification.Interface.Actions
+import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import System.FilePath
 import Data.Aeson

@@ -12,7 +12,7 @@ import Observe.Event.Render.JSON
 import Observe.Event
 import Observe.Event.BackendModification
 import IOHK.Certification.Interface
-import IOHK.Certification.Interface.Actions
+import IOHK.Certification.Actions
 import Data.UUID
 import Data.UUID.V4
 import Data.Coerce

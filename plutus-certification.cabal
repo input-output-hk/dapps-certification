@@ -42,7 +42,8 @@ library
     eventuo11y-batteries ^>= 0.2.1,
     filepath,
     temporary,
-    dapps-certification-interface
+    dapps-certification-interface,
+    dapps-certification-helpers
   hs-source-dirs: src
   exposed-modules:
     Plutus.Certification.API

@@ -28,7 +28,7 @@
       detailLevel = "FullDetails";
       licenseFiles = [];
       dataDir = ".";
-      dataFiles = [ "data/Certify.hs" "data/outputs.nix" ];
+      dataFiles = [];
       extraSrcFiles = [];
       extraTmpFiles = [];
       extraDocFiles = [];
@@ -39,73 +39,10 @@
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
-          (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-          (hsPkgs."typed-process" or (errorHandler.buildDepError "typed-process"))
-          (hsPkgs."base16" or (errorHandler.buildDepError "base16"))
-          (hsPkgs."time" or (errorHandler.buildDepError "time"))
-          (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
-          (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
-          (hsPkgs."process" or (errorHandler.buildDepError "process"))
-          (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
-          (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
-          (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
-          (hsPkgs."async" or (errorHandler.buildDepError "async"))
-          (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
-          (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
-          (hsPkgs."resourcet" or (errorHandler.buildDepError "resourcet"))
-          (hsPkgs."conduit" or (errorHandler.buildDepError "conduit"))
-          (hsPkgs."conduit-aeson" or (errorHandler.buildDepError "conduit-aeson"))
           ];
         buildable = true;
-        modules = [
-          "Paths_dapps_certification_interface"
-          "IOHK/Certification/Interface"
-          "IOHK/Certification/Interface/Actions"
-          ];
+        modules = [ "IOHK/Certification/Interface" ];
         hsSourceDirs = [ "src" ];
-        };
-      exes = {
-        "generate-flake" = {
-          depends = [
-            (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
-            (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
-            (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
-            (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
-            (hsPkgs."directory" or (errorHandler.buildDepError "directory"))
-            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-            ];
-          buildable = true;
-          hsSourceDirs = [ "generate-flake" ];
-          mainPath = [ "Main.hs" ];
-          };
-        "build-flake" = {
-          depends = [
-            (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
-            (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
-            (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
-            ];
-          buildable = true;
-          hsSourceDirs = [ "build-flake" ];
-          mainPath = [ "Main.hs" ];
-          };
-        "run-certify" = {
-          depends = [
-            (hsPkgs."base" or (errorHandler.buildDepError "base"))
-            (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
-            (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
-            (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
-            (hsPkgs."conduit" or (errorHandler.buildDepError "conduit"))
-            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
-            (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
-            (hsPkgs."resourcet" or (errorHandler.buildDepError "resourcet"))
-            ];
-          buildable = true;
-          hsSourceDirs = [ "run-certify" ];
-          mainPath = [ "Main.hs" ];
-          };
         };
       };
     } // rec { src = (pkgs.lib).mkDefault ../dapps-certification-interface; }

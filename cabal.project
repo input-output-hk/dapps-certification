@@ -1,10 +1,13 @@
 index-state: 2022-10-05T00:00:00Z
-packages: . dapps-certification-interface
+packages: . dapps-certification-interface dapps-certification-helpers
 
 package plutus-certification
   ghc-options: -Wall
 
 package dapps-certification-interface
+  ghc-options: -Wall
+
+package dapps-certification-helpers
   ghc-options: -Wall
 
 write-ghc-environment-files: never

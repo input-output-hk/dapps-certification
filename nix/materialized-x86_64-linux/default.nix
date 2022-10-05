@@ -348,6 +348,7 @@
       packages = {
         dapps-certification-interface = ./.plan.nix/dapps-certification-interface.nix;
         eventuo11y-batteries = ./.plan.nix/eventuo11y-batteries.nix;
+        dapps-certification-helpers = ./.plan.nix/dapps-certification-helpers.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
         };
       };
@@ -357,6 +358,7 @@
         packages = {
           "dapps-certification-interface" = { flags = {}; };
           "eventuo11y-batteries" = { flags = {}; };
+          "dapps-certification-helpers" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
           };
         })
@@ -388,7 +390,6 @@
           "dec".components.library.planned = lib.mkOverride 900 true;
           "bytestring".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
-          "dapps-certification-interface".components.exes."generate-flake".planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.exes."greet".planned = lib.mkOverride 900 true;
           "strict".components.library.planned = lib.mkOverride 900 true;
@@ -413,6 +414,7 @@
           "x509".components.library.planned = lib.mkOverride 900 true;
           "servant-client-core".components.library.planned = lib.mkOverride 900 true;
           "cicero-api".components.exes."cicero-cli".planned = lib.mkOverride 900 true;
+          "dapps-certification-helpers".components.library.planned = lib.mkOverride 900 true;
           "binary".components.library.planned = lib.mkOverride 900 true;
           "wai-extra".components.library.planned = lib.mkOverride 900 true;
           "ghc-boot-th".components.library.planned = lib.mkOverride 900 true;
@@ -444,6 +446,7 @@
           "network-info".components.library.planned = lib.mkOverride 900 true;
           "uuid".components.library.planned = lib.mkOverride 900 true;
           "time".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-helpers".components.exes."run-certify".planned = lib.mkOverride 900 true;
           "http-api-data".components.library.planned = lib.mkOverride 900 true;
           "network".components.library.planned = lib.mkOverride 900 true;
           "psqueues".components.library.planned = lib.mkOverride 900 true;
@@ -478,7 +481,6 @@
           "split".components.library.planned = lib.mkOverride 900 true;
           "contravariant".components.library.planned = lib.mkOverride 900 true;
           "appar".components.library.planned = lib.mkOverride 900 true;
-          "dapps-certification-interface".components.exes."run-certify".planned = lib.mkOverride 900 true;
           "syb".components.library.planned = lib.mkOverride 900 true;
           "text-short".components.library.planned = lib.mkOverride 900 true;
           "haskell-src-exts".components.library.planned = lib.mkOverride 900 true;
@@ -511,6 +513,7 @@
           "uuid-types".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.library.planned = lib.mkOverride 900 true;
           "x509-validation".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-helpers".components.exes."build-flake".planned = lib.mkOverride 900 true;
           "wai-app-static".components.exes."warp".planned = lib.mkOverride 900 true;
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "attoparsec".components.library.planned = lib.mkOverride 900 true;
@@ -547,6 +550,7 @@
           "colour".components.library.planned = lib.mkOverride 900 true;
           "containers".components.library.planned = lib.mkOverride 900 true;
           "th-reify-many".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-helpers".components.exes."generate-flake".planned = lib.mkOverride 900 true;
           "time-compat".components.library.planned = lib.mkOverride 900 true;
           "basement".components.library.planned = lib.mkOverride 900 true;
           "optparse-applicative".components.library.planned = lib.mkOverride 900 true;
@@ -554,7 +558,6 @@
           "aeson".components.library.planned = lib.mkOverride 900 true;
           "x509-system".components.library.planned = lib.mkOverride 900 true;
           "hourglass".components.library.planned = lib.mkOverride 900 true;
-          "dapps-certification-interface".components.exes."build-flake".planned = lib.mkOverride 900 true;
           "base-compat".components.library.planned = lib.mkOverride 900 true;
           "base64-bytestring".components.library.planned = lib.mkOverride 900 true;
           "hashable".components.library.planned = lib.mkOverride 900 true;

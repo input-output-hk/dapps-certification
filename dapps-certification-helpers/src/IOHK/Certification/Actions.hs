@@ -6,10 +6,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE LambdaCase #-}
-module IOHK.Certification.Interface.Actions where
+module IOHK.Certification.Actions where
 
 import Data.Coerce
-import Paths_dapps_certification_interface
+import Paths_dapps_certification_helpers
 import System.Directory
 import Network.URI hiding (path)
 import Control.Exception

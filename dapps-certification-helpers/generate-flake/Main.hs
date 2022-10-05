@@ -7,7 +7,7 @@ module Main where
 
 import Network.URI
 import Options.Applicative
-import IOHK.Certification.Interface.Actions
+import IOHK.Certification.Actions
 import Observe.Event
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
