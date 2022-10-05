@@ -14,6 +14,7 @@ module Plutus.Certification.Cicero
   , ActionType(..)
   , CiceroCaps(..)
   , ciceroServerCaps
+  , renderRunClientSelector
   ) where
 
 import Conduit
@@ -29,6 +30,7 @@ import Network.URI
 import Servant.Client
 import Servant.Client.Core.HasClient
 import Observe.Event
+import Observe.Event.BackendModification
 import Observe.Event.Render.JSON
 import Observe.Event.Servant.Client
 import Control.Monad.Catch
@@ -79,51 +81,41 @@ data CiceroCaps c m r = CiceroCaps
     actionCache :: !(Cache Cicero.Action.ActionID ActionType m)
   }
 
-data JobEventSelector f where
-  ClientErrored :: JobEventSelector ClientError
-  -- TODO Domain-specific logging
-
 -- | Implement 'ServerCaps' with Cicero as the job engine
 --
 -- Jobs are submitted as new @plutus-certification/generate-flake@ facts.
-ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API) => CiceroCaps c m r -> ServerCaps m r
-ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
+ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API) => EventBackend m r RunClientSelector -> CiceroCaps c m r -> ServerCaps m r
+ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
   where
-    mkClientErrorEv eb parent = do
-      ev <- newEvent eb ClientErrored
-      addParent ev parent
-      pure ev
-
-    submitJob eb parent ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps (mkClientErrorEv eb parent) (setParent clientCaps parent req)
+    submitJob mods ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req
       where
+        backend' = modifyEventBackend mods backend
         uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet
         req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
           { fact = [aesonQQ| { "plutus-certification/generate-flake": { "ref": #{uriToString id uri ""} } } |]
           , artifact = Nothing
           }
 
-    renderJobSel :: RenderSelectorJSON JobEventSelector
-    renderJobSel ClientErrored = ("client-error", clientErrorJSON)
-
-    getRuns eb parent rid = go 0
+    getRuns mods rid = go 0
       where
+        eb = modifyEventBackend mods backend
         rid' = Cicero.Fact.FactID $ rid.uuid
         limit = 10
         go offset = do
-          runs <- lift . runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
-          count <- yieldMany runs .| execStateC 0 (status eb parent)
+          runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
+          count <- yieldMany runs .| execStateC 0 (status eb)
           when (count == limit) $ go (offset + limit)
 
-    status eb parent = await >>= \case
+    status eb = await >>= \case
       Nothing -> pure ()
       Just r ->  do
         modify (+ 1)
         inv <- lift . lift $
-          runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.invocation.get r.invocationId
+          runClientOrDie clientCaps eb $ ciceroClient.invocation.get r.invocationId
         ty <- lift . lift $ actionCache.lookup inv.actionId >>= \case
           Just ty -> pure ty
           Nothing -> do
-            act <- runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.action.get inv.actionId
+            act <- runClientOrDie clientCaps eb $ ciceroClient.action.get inv.actionId
             let ty = getActionType act
             actionCache.register inv.actionId ty
             pure ty
@@ -131,29 +123,29 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
           Unknown -> pure ()
           Known s -> yieldM . lift $ case s of
             Generate -> Incomplete <$>
-              (getIntermediateOutput eb parent r "plutus-certification/generate-flake" <&> \case
+              (getIntermediateOutput eb r "plutus-certification/generate-flake" <&> \case
                 Nothing -> Preparing Running
                 Just False -> Preparing Failed
                 Just True -> Building Running)
             Build -> Incomplete <$>
-              (getIntermediateOutput eb parent r "plutus-certification/build-flake" <&> \case
+              (getIntermediateOutput eb r "plutus-certification/build-flake" <&> \case
                 Nothing -> Building Running
                 Just False -> Building Failed
                 Just True -> Certifying Running Nothing)
             Certify ->
-              getCertifyOutput eb parent r "plutus-certification/run-certify" <&> \case
+              getCertifyOutput eb r "plutus-certification/run-certify" <&> \case
                 Nothing -> Incomplete $ Certifying Running Nothing
                 Just (Intermediate p) -> Incomplete $ Certifying Running (Just p)
                 Just CertifyFailed -> Incomplete $ Certifying Failed Nothing
                 Just (Succeeded cr) -> Finished cr
-        status eb parent
+        status eb
 
-    getRunFacts eb parent r =
-      runClientOrDie clientCaps (mkClientErrorEv eb parent) . setParent clientCaps parent $ ciceroClient.fact.getAll r.nomadJobId
+    getRunFacts eb r =
+      runClientOrDie clientCaps eb $ ciceroClient.fact.getAll r.nomadJobId
 
-    getIntermediateOutput eb parent r name = if isJust r.finishedAt
+    getIntermediateOutput eb r name = if isJust r.finishedAt
       then do
-        facts <- getRunFacts eb parent r
+        facts <- getRunFacts eb r
         let getOutput' (Object o)
               | Just (Object out) <- KM.lookup name o
               , Just _ <- KM.lookup "success"  out = Just True
@@ -168,8 +160,8 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
     progressLater p (Just (Intermediate p')) = p.progressIndex > p'.progressIndex
     progressLater _ _ = False
 
-    getCertifyOutput eb parent r name = do
-      facts <- getRunFacts eb parent r
+    getCertifyOutput eb r name = do
+      facts <- getRunFacts eb r
       pure $ foldr (\f acc -> case f.value of
                        Object o -> case KM.lookup name o of
                          Nothing -> acc
@@ -191,3 +183,6 @@ ciceroServerCaps CiceroCaps {..} = ServerCaps {..}
       | act.name == "plutus-certification/build-flake" = Known Build
       | act.name == "plutus-certification/run-certify" = Known Certify
       | otherwise = Unknown
+
+renderRunClientSelector :: RenderSelectorJSON RunClientSelector
+renderRunClientSelector RunClient = ("running-client", clientErrorJSON)

@@ -46,12 +46,16 @@
           (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+          (hsPkgs."async" or (errorHandler.buildDepError "async"))
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
+          (hsPkgs."eventuo11y-batteries" or (errorHandler.buildDepError "eventuo11y-batteries"))
+          (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
+          (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           ];
         buildable = true;
@@ -62,6 +66,7 @@
           "Plutus/Certification/Cicero"
           "Plutus/Certification/Client"
           "Plutus/Certification/Server"
+          "Plutus/Certification/Local"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -79,6 +84,7 @@
             (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
             (hsPkgs."async" or (errorHandler.buildDepError "async"))
             (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
+            (hsPkgs."eventuo11y-batteries" or (errorHandler.buildDepError "eventuo11y-batteries"))
             (hsPkgs."wai" or (errorHandler.buildDepError "wai"))
             (hsPkgs."wai-cors" or (errorHandler.buildDepError "wai-cors"))
             (hsPkgs."singletons" or (errorHandler.buildDepError "singletons"))

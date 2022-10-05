@@ -20,7 +20,7 @@
 
     project = pkgs.haskell-nix.cabalProject' {
       src = ./.;
-      compiler-nix-name = "ghc922";
+      compiler-nix-name = "ghc924";
       shell.tools.cabal = {};
       materialized = if builtins.pathExists materializedPath then materializedPath else null;
     };
