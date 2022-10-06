@@ -94,6 +94,7 @@ buildFlake backend dir = do
       Right (_ :| tl) -> throw . ExtraBuilds $ L.length tl
   where
     cmd = proc "nix" [ "build"
+                     , "--refresh"
                      , "path:" ++ dir
                      , "--no-link"
                      , "--json"
@@ -279,6 +280,7 @@ lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
         pure lock
   where
     cmd = proc "nix" [ "flake"
+                     , "--refresh"
                      , "metadata"
                      , "--no-update-lock-file"
                      , "--json"
