@@ -8,7 +8,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, haskellNix }: let
-    supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
+    supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
   in flake-utils.lib.eachSystem supportedSystems (system: let
     overlays = [ haskellNix.overlay ];
 
@@ -21,7 +21,11 @@
     project = pkgs.haskell-nix.cabalProject' {
       src = ./.;
       compiler-nix-name = "ghc924";
-      shell.tools.cabal = {};
+      shell.tools = {
+          cabal = {};
+          haskell-language-server = {};
+          hlint = {};
+      };
       materialized = if builtins.pathExists materializedPath then materializedPath else null;
     };
 
