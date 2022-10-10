@@ -51,7 +51,7 @@
         "vector".flags.unsafechecks = false;
         "socks".revision = (((hackage."socks")."0.6.1").revisions).default;
         "http-types".revision = (((hackage."http-types")."0.12.3").revisions).default;
-        "some".revision = (((hackage."some")."1.0.4").revisions).default;
+        "some".revision = (((hackage."some")."1.0.4.1").revisions).default;
         "some".flags.newtype-unsafe = true;
         "temporary".revision = (((hackage."temporary")."1.3").revisions).default;
         "comonad".revision = (((hackage."comonad")."5.0.8").revisions).default;
@@ -143,6 +143,7 @@
         "resourcet".revision = (((hackage."resourcet")."1.2.6").revisions).default;
         "vault".revision = (((hackage."vault")."0.3.1.5").revisions).default;
         "vault".flags.useghc = true;
+        "eventuo11y-batteries".revision = (((hackage."eventuo11y-batteries")."0.2.1.0").revisions).default;
         "unix-compat".revision = (((hackage."unix-compat")."0.6").revisions).default;
         "unix-compat".flags.old-time = false;
         "case-insensitive".revision = (((hackage."case-insensitive")."1.2.1.0").revisions).default;
@@ -347,7 +348,6 @@
     {
       packages = {
         dapps-certification-interface = ./.plan.nix/dapps-certification-interface.nix;
-        eventuo11y-batteries = ./.plan.nix/eventuo11y-batteries.nix;
         dapps-certification-helpers = ./.plan.nix/dapps-certification-helpers.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
         };
@@ -357,7 +357,6 @@
       {
         packages = {
           "dapps-certification-interface" = { flags = {}; };
-          "eventuo11y-batteries" = { flags = {}; };
           "dapps-certification-helpers" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
           };

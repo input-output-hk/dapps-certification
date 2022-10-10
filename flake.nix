@@ -14,9 +14,7 @@
 
     pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
 
-    materializedRelative = "/nix/materialized-${system}";
-
-    materializedPath = ./. + materializedRelative;
+    materializedPath = ./. + "/nix/materialized/${system}";
 
     project = pkgs.haskell-nix.cabalProject' {
       src = ./.;
@@ -47,8 +45,8 @@
           "
           ${builtins.concatStringsSep "\n" (map (system: ''
             script="$(nix build .#packages.${system}.generateMaterialized --json | jq -r '.[0].outputs.out')"
-            echo "Running $script on .${materializedRelative}" >&2
-            "$script" ".${materializedRelative}"
+            echo "Running $script on ./nix/materialized/${system}" >&2
+            "$script" "./nix/materialized/${system}"
           '') supportedSystems)}
         '').outPath;
       };
