@@ -89,7 +89,7 @@ server ServerCaps {..} eb = NamedAPI
           (_, Building _) -> s
           (Building _, _) -> s'
 
-          (Certifying st mp, Certifying st' mp') -> case compare st st' of
+          (Certifying (CertifyingStatus st mp _), Certifying (CertifyingStatus st' mp' _)) -> case compare st st' of
             LT -> s'
             GT -> s
             EQ -> case (mp, mp') of

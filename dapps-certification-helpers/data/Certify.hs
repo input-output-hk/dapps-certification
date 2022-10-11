@@ -33,30 +33,60 @@ taskName t = I.UnknownTask $ show t
 translateCertificationTask :: CertificationTask -> I.CertificationTask
 translateCertificationTask t = I.CertificationTask (taskName t) (fromEnum t)
 
-postProgress :: HasCallStack => Chan CertificationEvent -> Handle -> IO ()
-postProgress eventChan h = do
-    latestEvent <- newEmptyMVar
-    concurrently_ (feed latestEvent) (post latestEvent initState)
+data Skippable a
+  = Skippable !a
+  | Unskippable !a
+
+unskip :: Skippable a -> a
+unskip (Skippable x) = x
+unskip (Unskippable x) = x
+
+-- Assumes single writer!
+type MessageChannel = MVar (Maybe (Skippable I.Message))
+
+withMessageChannel :: Handle -> (MessageChannel -> IO a) -> IO a
+withMessageChannel h go = do
+    latestMessage <- newEmptyMVar
+    fst <$> concurrently (go latestMessage `finally` closeMessageChannel latestMessage) (consume latestMessage)
   where
-    -- Only works if single producer!
-    forcePutMVar v x = do
-      _ <- tryTakeMVar v
-      putMVar v x
+    consume latestMessage = takeMVar latestMessage >>= \case
+      Nothing -> hClose h
+      Just msg -> do
+        BSL8.hPutStrLn h . encode $ unskip msg
+        consume latestMessage
 
-    feed latestEvent = do
-      ev <- readChan eventChan
-      forcePutMVar latestEvent ev
-      case ev of
-        CertificationDone -> pure ()
-        _ -> feed latestEvent
+data EmitAfterClose = EmitAfterClose deriving Show
 
-    post :: HasCallStack => MVar CertificationEvent -> I.Progress -> IO ()
-    post latestEvent st = takeMVar latestEvent >>= \case
+instance Exception EmitAfterClose
+
+emitMessage' :: MessageChannel -> Skippable I.Message -> IO ()
+emitMessage' latestMessage msg = do
+  tryTakeMVar latestMessage >>= \case
+    Just Nothing -> throwIO EmitAfterClose
+    Just v@(Just (Unskippable _)) -> do
+      putMVar latestMessage v
+    _ -> pure ()
+  putMVar latestMessage $ Just msg
+
+emitSkippableMessage :: MessageChannel -> I.Message -> IO ()
+emitSkippableMessage latestMessage = emitMessage' latestMessage . Skippable
+
+emitMessage :: MessageChannel -> I.Message -> IO ()
+emitMessage latestMessage = emitMessage' latestMessage . Unskippable
+
+closeMessageChannel :: MessageChannel -> IO ()
+closeMessageChannel = flip putMVar Nothing
+
+postProgress :: HasCallStack => Chan CertificationEvent -> MessageChannel -> IO ()
+postProgress eventChan msgChan = readEvents initState
+  where
+    readEvents :: HasCallStack => I.Progress -> IO ()
+    readEvents st = readChan eventChan >>= \case
       CertificationDone -> pure ()
       ev -> do
         let st' = updateState ev st
-        BSL8.hPutStrLn h . encode $ I.Status st'
-        post latestEvent st'
+        emitSkippableMessage msgChan $ I.Status st'
+        readEvents st'
 
     initState = I.Progress
       { currentTask = Nothing
@@ -65,7 +95,7 @@ postProgress eventChan h = do
       , progressIndex = 0
       }
 
-    newQc = I.QCProgress 0 0 0
+    newQc = I.QCProgress 0 0 0 Nothing
 
     updateState :: HasCallStack => CertificationEvent -> I.Progress -> I.Progress
     updateState (QuickCheckTestEvent Nothing) st = st
@@ -78,6 +108,10 @@ postProgress eventChan h = do
       }
     updateState (QuickCheckTestEvent (Just False)) st = st
       { I.currentQc = (I.currentQc st) { I.qcFailures = I.qcFailures (I.currentQc st) + 1 }
+      , I.progressIndex = (I.progressIndex st) + 1
+      }
+    updateState (QuickCheckNumTestsEvent ct) st = st
+      { I.currentQc = (I.currentQc st) { I.qcExpected = Just ct }
       , I.progressIndex = (I.progressIndex st) + 1
       }
     updateState (StartCertificationTask ct) st = st
@@ -102,12 +136,15 @@ main = do
   eventChan <- newChan
 
   h <- fdToHandle out
+  hSetBuffering h LineBuffering
 
-  let certOpts = defaultCertificationOptions
-        { certOptOutput = False
-        , certEventChannel = Just eventChan
-        }
-  (res, _) <- concurrently (certifyWithOptions certOpts certification) (postProgress eventChan h)
+  withMessageChannel h $ \msgChan -> do
+    emitMessage msgChan . I.Plan $ translateCertificationTask <$> certificationTasks certification
 
-  BSL8.hPutStrLn h . encode . I.Success $ I.CertificationResult res
-  hClose h
+    let certOpts = defaultCertificationOptions
+          { certOptOutput = False
+          , certEventChannel = Just eventChan
+          }
+    (res, _) <- concurrently (certifyWithOptions certOpts certification) (postProgress eventChan msgChan)
+
+    emitMessage msgChan . I.Success $ I.CertificationResult res

@@ -9,6 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE RecordWildCards #-}
 module Plutus.Certification.API
   ( API
   , NamedAPI(..)
@@ -17,6 +18,7 @@ module Plutus.Certification.API
   , FlakeRefV1(..)
   , RunStatusV1(..)
   , StepState(..)
+  , CertifyingStatus(..)
   , IncompleteRunStatus(..)
   ) where
 
@@ -99,11 +101,17 @@ instance FromJSON StepState where
         | t == "failed" = pure Failed
         | otherwise = fail $ "unknown step state " ++ show t
 
+data CertifyingStatus = CertifyingStatus
+  { certifyingState :: !StepState
+  , certifyingProgress :: !(Maybe Progress)
+  , certifyingPlan :: !(Maybe [CertificationTask])
+  }
+
 data IncompleteRunStatus
   = Queued
   | Preparing !StepState
   | Building !StepState
-  | Certifying !StepState !(Maybe Progress)
+  | Certifying !CertifyingStatus
 
 instance ToJSON IncompleteRunStatus where
   toJSON Queued = object
@@ -117,13 +125,16 @@ instance ToJSON IncompleteRunStatus where
     [ "status" .= ("building" :: Text)
     , "state"  .= s
     ]
-  toJSON (Certifying s mp) = object $
+  toJSON (Certifying (CertifyingStatus {..})) = object $
       [ "status" .= ("certifying" :: Text)
-      , "state"  .= s
-      ] ++ maybeProgress
+      , "state"  .= certifyingState
+      ] ++ maybeProgress ++ maybePlan
     where
       maybeProgress
-        | Just p <- mp = [ "progress" .= p ]
+        | Just p <- certifyingProgress = [ "progress" .= p ]
+        | otherwise = []
+      maybePlan
+        | Just p <- certifyingPlan = [ "plan" .= p ]
         | otherwise = []
 
   toEncoding Queued = pairs
@@ -137,12 +148,11 @@ instance ToJSON IncompleteRunStatus where
     ( "status" .= ("building" :: Text)
    <> "state"  .= s
     )
-  toEncoding (Certifying s mp) = pairs
+  toEncoding (Certifying (CertifyingStatus {..})) = pairs
     ( "status" .= ("certifying" :: Text)
-   <> "state"  .= s
-   <> (case mp of
-        Just p -> "progress" .= p
-        Nothing -> mempty)
+   <> "state"  .= certifyingState
+   <> (maybe mempty ("progress" .=) certifyingProgress)
+   <> (maybe mempty ("plan" .=) certifyingPlan)
     )
 
 instance FromJSON IncompleteRunStatus where
@@ -151,7 +161,10 @@ instance FromJSON IncompleteRunStatus where
     if | status == ("queued" :: Text) -> pure Queued
        | status == "preparing" -> Preparing <$> o .: "state"
        | status == "building" -> Building <$> o .: "state"
-       | status == "certifying" -> Certifying <$> o .: "state" <*> o.:? "progress"
+       | status == "certifying" -> Certifying <$> (CertifyingStatus
+           <$> o .: "state"
+           <*> o .:! "progress"
+           <*> o .:! "plan")
        | otherwise -> fail $ "unknown status " ++ show status
 
 data RunStatusV1
