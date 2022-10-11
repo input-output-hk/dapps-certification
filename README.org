@@ -1,0 +1,17 @@
+* Local instances
+** Without Cicero
+The ~plutus-certification~ program has a ~--local~ flag to run the service locally without using ~Cicero~ as a backend. While this is much faster and easier to set up, it has caveats:
+
+- The code built from submitted runs is run unsandboxed. *Do not submit untrusted code to an instance running in local mode!*
+- There will be divergence from how the service runs in production. We share many code paths (see ~dapps-certification-helpers~), but not all
+** With Cicero
+1. Check out the ~v1-maintenance~ branch
+2. Run ~nix develop --command nixos-shell --flake .~
+3. Log in as root
+4. Run dev-cicero
+5. Open your browser to ~localhost:18080~
+6. Click "Create New Action"
+7. Input ~github.com/input-output-hk/dapps-certification-actions~ (or your own [[https://github.com/hashicorp/go-getter#url-format][go-getter URL]]) and list actions
+8. Click ~plutus-certification/build-flake~, then once loaded go back and click ~plutus-certification/generate-flake~, then once loaded go back and click ~plutus-certification/run-certify~
+
+Now ~Cicero~ is running at http://localhost:18080, which you can pass as ~--cicero-url~ to ~plutus-certification~.
