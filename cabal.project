@@ -1,22 +1,17 @@
-index-state: 2022-03-31T00:00:00Z
-packages: .
+index-state: 2022-10-06T00:00:00Z
+packages: . dapps-certification-interface dapps-certification-helpers
 
 package plutus-certification
+  ghc-options: -Wall
+
+package dapps-certification-interface
+  ghc-options: -Wall
+
+package dapps-certification-helpers
   ghc-options: -Wall
 
 write-ghc-environment-files: never
 tests: true
 test-show-details: streaming
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cicero
-  tag: fe2c57209cea3a7ed24b5083b1dcdd6e2edd8120
-  --sha256: 0wxasdrkxwk0jrp7yz5cz96kfsmyj2i1wpcbia5plhr4x6nyxd2p
-  subdir: cicero-api
-
-source-repository-package
-  type: git
-  location: https://github.com/shlevy/eventuo11y
-  tag: 3c35d00604f55ee8ecda6becc807a1fed82accae
-  --sha256: 0s6zkw640idh53yghird31hf8qkk5v6drlgqklm0xn9dvgmqw6ra
+allow-older: cicero-api:base

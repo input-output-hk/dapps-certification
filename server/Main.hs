@@ -23,23 +23,33 @@ import Servant
 import Servant.Client.Core.BaseUrl
 import System.Exit
 import Observe.Event
+import Observe.Event.BackendModification
+import Observe.Event.Crash
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
 import Observe.Event.Wai
 import Observe.Event.Servant.Client
 import System.IO
+import Control.Concurrent.MVar
+import Control.Monad
+import Control.Concurrent.Async
 
 import Plutus.Certification.API
 import Plutus.Certification.Cache
 import Plutus.Certification.Cicero
 import Plutus.Certification.Client
 import Plutus.Certification.Server
+import Plutus.Certification.Local
 import Paths_plutus_certification qualified as Package
+
+data Backend
+  = Local
+  | Cicero !BaseUrl
 
 data Args = Args
   { port :: !Port
   , host :: !HostPreference
-  , ciceroURL :: !BaseUrl
+  , backend :: !Backend
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -51,6 +61,21 @@ baseUrlReader = do
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
 
+ciceroParser :: Parser Backend
+ciceroParser = Cicero
+  <$> option baseUrlReader
+      ( long "cicero-url"
+     <> metavar "CICERO_URL"
+     <> help "URL of the cicero server"
+     <> showDefaultWith showBaseUrl
+     <> (Opts.value $ BaseUrl Http "localhost" 8080 "")
+      )
+
+localParser :: Parser Backend
+localParser = flag' Local
+  ( long "local"
+ <> help "Run with the local in-process \"job scheduler\""
+  )
 argsParser :: Parser Args
 argsParser =  Args
   <$> option auto
@@ -69,13 +94,7 @@ argsParser =  Args
      <> showDefault
      <> Opts.value "*"
       )
-  <*> option baseUrlReader
-      ( long "cicero-url"
-     <> metavar "CICERO_URL"
-     <> help "URL of the cicero server"
-     <> showDefaultWith showBaseUrl
-     <> (Opts.value $ BaseUrl Http "localhost" 8080 "")
-      )
+  <*> (localParser <|> ciceroParser)
 
 opts :: ParserInfo Args
 opts = info (argsParser <**> helper)
@@ -90,11 +109,14 @@ data InitializingField
 
 data RootEventSelector f where
   Initializing :: RootEventSelector InitializingField
-  OnException :: RootEventSelector OnExceptionField
-  Request :: RootEventSelector RequestField
-  Shutdown :: RootEventSelector Void
-  Client :: RootEventSelector RunRequestField
+  MainOnException :: RootEventSelector Void
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
+  InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
+  InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
+  InjectOnException :: forall f . !(OnException f) -> RootEventSelector f
+  InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
+  InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
+  InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -102,60 +124,71 @@ renderRoot Initializing =
   , \case
       ArgsField args -> ("args", object [ "port" .= args.port
                                         , "host" .= show args.host
-                                        , "cicero-url" .= args.ciceroURL
+                                        , "backend" .= case args.backend of
+                                            Cicero u -> object [ "cicero-url" .= u ]
+                                            Local -> String "local"
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
   )
-renderRoot OnException =
+renderRoot MainOnException =
   ( "handling-exception"
-  , renderOnExceptionField renderJSONException
-  )
-renderRoot Request =
-  ( "handling-request"
-  , renderRequestField
-  )
-renderRoot Shutdown =
-  ( "shutting-down"
   , absurd
-  )
-renderRoot Client =
-  ( "running-client-request"
-  , runRequestFieldJSON
   )
 renderRoot (InjectServerSel serverSel) =
   renderServerEventSelector serverSel
+renderRoot (InjectCrashing s) = renderCrashing s
+renderRoot (InjectRunRequest s) = runRequestJSON s
+renderRoot (InjectOnException s) = renderOnException renderJSONException s
+renderRoot (InjectServeRequest s) = renderServeRequest s
+renderRoot (InjectRunClient s) = renderRunClientSelector s
+renderRoot (InjectLocal s) = renderLocalSelector s
 
 main :: IO ()
 main = do
   args <- execParser opts
 
   eb <- jsonHandleBackend stderr renderJSONException renderRoot
-  withEvent (newEvent eb Initializing) \initEv -> do
+  withEvent eb Initializing \initEv -> do
     addField initEv $ VersionField Package.version
     addField initEv $ ArgsField args
 
-    actionCache <- newCacheMapIO
+    crashVar <- newEmptyMVar
+    closeSocketVar <- newEmptyMVar
+    let doCrash = void $ tryPutMVar crashVar ()
+        waitForCrash = do
+          (closeSocket, ()) <- concurrently (takeMVar closeSocketVar) (takeMVar crashVar)
+          closeSocket
+    withAsync waitForCrash \_ -> withScheduleCrash (narrowEventBackend InjectCrashing eb) doCrash \scheduleCrash -> do
+      caps <- case args.backend of
+        Cicero ciceroUrl -> do
+          actionCache <- newCacheMapIO
 
-    withScheduleShutdownHandler (newEvent eb Shutdown) \scheduleShutdown shutdownHandler -> do
-      clientCaps <- clientCapsIO
-        args.ciceroURL
-        (hoistScheduleShutdown liftIO scheduleShutdown)
-        (newEvent (hoistEventBackend liftIO eb) Client)
-
+          clientCaps <- clientCapsIO
+            ciceroUrl
+            (hoistScheduleCrash liftIO scheduleCrash)
+            ( hoistEventBackend liftIO
+            . narrowEventBackend InjectRunRequest
+            $ eb
+            )
+          pure . ciceroServerCaps ( hoistEventBackend liftIO
+                                  . narrowEventBackend InjectRunClient
+                                  $ eb
+                                  ) $ CiceroCaps {..}
+        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal
+                                                            $ eb
+                                                            )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
-                   & setOnException (eventfulOnException do
-                                        ev <- newEvent eb OnException
-                                        scheduleShutdown (Just (ref ev))
-                                        pure ev)
-                   & setInstallShutdownHandler shutdownHandler
+                   & setOnException (\r e -> withEvent eb MainOnException \ev -> do
+                                        onExceptionCallback (narrowEventBackend InjectOnException $ subEventBackend ev) r e
+                                        schedule scheduleCrash (setAncestor $ reference ev))
+                   & setInstallShutdownHandler (putMVar closeSocketVar)
                    & setBeforeMainLoop (finalize initEv)
-          caps = ciceroServerCaps $ CiceroCaps {..}
           corsPolicy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
 
-      runSettings settings . eventfulApplication (newEvent eb Request) $
+      runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serve (Proxy @API) .
-        server caps (hoistEventBackend liftIO (narrowEventBackend InjectServerSel eb))
+        (\r -> server caps (hoistEventBackend liftIO  $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb))
   exitFailure

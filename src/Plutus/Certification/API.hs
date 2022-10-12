@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE MultiWayIf #-}
 module Plutus.Certification.API
   ( API
   , NamedAPI(..)
@@ -16,8 +17,10 @@ module Plutus.Certification.API
   , FlakeRefV1(..)
   , RunStatusV1(..)
   , StepState(..)
+  , IncompleteRunStatus(..)
   ) where
 
+import Control.Applicative
 import Servant.API
 import Servant.API.Generic
 import Servant.API.Verbs
@@ -28,6 +31,7 @@ import Network.URI
 import Data.UUID
 import Data.ByteString.Lazy.Char8
 import Data.Text hiding (unpack, pack)
+import IOHK.Certification.Interface
 
 type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
@@ -95,14 +99,13 @@ instance FromJSON StepState where
         | t == "failed" = pure Failed
         | otherwise = fail $ "unknown step state " ++ show t
 
-data RunStatusV1
+data IncompleteRunStatus
   = Queued
   | Preparing !StepState
   | Building !StepState
-  | Certifying !StepState
-  | Finished !Value deriving stock (Eq, Ord)
+  | Certifying !StepState !(Maybe Progress)
 
-instance ToJSON RunStatusV1 where
+instance ToJSON IncompleteRunStatus where
   toJSON Queued = object
     [ "status" .= String "queued"
     ]
@@ -114,14 +117,14 @@ instance ToJSON RunStatusV1 where
     [ "status" .= ("building" :: Text)
     , "state"  .= s
     ]
-  toJSON (Certifying s) = object
-    [ "status" .= ("certifying" :: Text)
-    , "state"  .= s
-    ]
-  toJSON (Finished v) = object
-    [ "status" .= ("finished" :: Text)
-    , "result" .= v
-    ]
+  toJSON (Certifying s mp) = object $
+      [ "status" .= ("certifying" :: Text)
+      , "state"  .= s
+      ] ++ maybeProgress
+    where
+      maybeProgress
+        | Just p <- mp = [ "progress" .= p ]
+        | otherwise = []
 
   toEncoding Queued = pairs
     ( "status" .= ("queued" :: Text)
@@ -134,23 +137,46 @@ instance ToJSON RunStatusV1 where
     ( "status" .= ("building" :: Text)
    <> "state"  .= s
     )
-  toEncoding (Certifying s) = pairs
+  toEncoding (Certifying s mp) = pairs
     ( "status" .= ("certifying" :: Text)
    <> "state"  .= s
+   <> (case mp of
+        Just p -> "progress" .= p
+        Nothing -> mempty)
     )
+
+instance FromJSON IncompleteRunStatus where
+  parseJSON = withObject "IncompleteRunStatus" \o -> do
+    status <- o .: "status"
+    if | status == ("queued" :: Text) -> pure Queued
+       | status == "preparing" -> Preparing <$> o .: "state"
+       | status == "building" -> Building <$> o .: "state"
+       | status == "certifying" -> Certifying <$> o .: "state" <*> o.:? "progress"
+       | otherwise -> fail $ "unknown status " ++ show status
+
+data RunStatusV1
+  = Incomplete !IncompleteRunStatus
+  | Finished !CertificationResult
+
+instance ToJSON RunStatusV1 where
+  toJSON (Incomplete i) = toJSON i
+  toJSON (Finished v) = object
+    [ "status" .= ("finished" :: Text)
+    , "result" .= v
+    ]
+
+  toEncoding (Incomplete i) = toEncoding i
   toEncoding (Finished v) = pairs
     ( "status" .= ("finished" :: Text)
    <> "result" .= v
     )
 
 instance FromJSON RunStatusV1 where
-  parseJSON = withObject "RunStatusV1" \o -> do
-    status <- o .: "status"
-    let go
-          | status == ("queued" :: Text) = pure Queued
-          | status == "preparing" = Preparing <$> o .: "state"
-          | status == "building" = Building <$> o .: "state"
-          | status == "certifying" = Certifying <$> o .: "state"
-          | status == "finished" = Finished <$> o.: "result"
-          | otherwise = fail $ "unknown status " ++ show status
-    go
+  parseJSON v = parseIncomplete v <|> parseFinished v
+    where
+      parseIncomplete v' = Incomplete <$> parseJSON v'
+      parseFinished = withObject "RunStatusV1" \o -> do
+        status <- o .: "status"
+        if status == ("finished" :: Text)
+          then Finished <$> o .: "result"
+          else fail $ "unknown status " ++ show status

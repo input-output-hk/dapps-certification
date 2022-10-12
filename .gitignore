@@ -1,5 +1,10 @@
 dist-newstyle
 result
+<<<<<<< HEAD
 react-web/coverage
 react-web/node_modules
 react-web/build
+=======
+flake
+.vim/
+>>>>>>> 65f0897f9bace03085af262bc7ce00afeee96a44

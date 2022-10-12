@@ -8,20 +8,22 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, haskellNix }: let
-    supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
+    supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
   in flake-utils.lib.eachSystem supportedSystems (system: let
     overlays = [ haskellNix.overlay ];
 
     pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
 
-    materializedRelative = "/nix/materialized-${system}";
-
-    materializedPath = ./. + materializedRelative;
+    materializedPath = ./. + "/nix/materialized/${system}";
 
     project = pkgs.haskell-nix.cabalProject' {
       src = ./.;
-      compiler-nix-name = "ghc922";
-      shell.tools.cabal = {};
+      compiler-nix-name = "ghc924";
+      shell.tools = {
+          cabal = {};
+          haskell-language-server = {};
+          hlint = {};
+      };
       materialized = if builtins.pathExists materializedPath then materializedPath else null;
     };
 
@@ -43,8 +45,8 @@
           "
           ${builtins.concatStringsSep "\n" (map (system: ''
             script="$(nix build .#packages.${system}.generateMaterialized --json | jq -r '.[0].outputs.out')"
-            echo "Running $script on .${materializedRelative}" >&2
-            "$script" ".${materializedRelative}"
+            echo "Running $script on ./nix/materialized/${system}" >&2
+            "$script" "./nix/materialized/${system}"
           '') supportedSystems)}
         '').outPath;
       };
