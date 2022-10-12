@@ -6,7 +6,7 @@ The ~plutus-certification~ program has a ~--local~ flag to run the service local
 - There will be divergence from how the service runs in production. We share many code paths (see ~dapps-certification-helpers~), but not all
 ** With Cicero
 1. Check out the ~v1-maintenance~ branch
-2. Run ~nix develop --command nixos-shell --flake .~
+2. Run ~nix develop --command nixos-shell --flake .#vm-bigdisk~
 3. Log in as root
 4. Run dev-cicero
 5. Open your browser to ~localhost:18080~
