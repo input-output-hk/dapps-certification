@@ -1,0 +1,1199 @@
+{
+  "status": "finished",
+  "result": {
+    "_certRes_DLTests": [],
+    "_certRes_coverageIndexReport": {
+      "_coverageMetadata": [
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 23,
+              "_covLocEndLine": 199,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 1,
+              "_covLocStartLine": 191
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 50,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 9,
+              "_covLocStartLine": 193
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 59,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 9,
+              "_covLocStartLine": 193
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 24,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 21,
+              "_covLocStartLine": 193
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 50,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 25,
+              "_covLocStartLine": 193
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 59,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 57,
+              "_covLocStartLine": 193
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 43,
+              "_covLocEndLine": 195,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 30,
+              "_covLocStartLine": 195
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 47,
+              "_covLocEndLine": 195,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 44,
+              "_covLocStartLine": 195
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 23,
+              "_covLocEndLine": 199,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 9,
+              "_covLocStartLine": 195
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 41,
+              "_covLocEndLine": 197,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 30,
+              "_covLocStartLine": 197
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 53,
+              "_covLocEndLine": 197,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 43,
+              "_covLocStartLine": 197
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 66,
+              "_covLocEndLine": 197,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 57,
+              "_covLocStartLine": 197
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 55,
+              "_covLocEndLine": 198,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 17,
+              "_covLocStartLine": 197
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 55,
+              "_covLocEndLine": 198,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 20,
+              "_covLocStartLine": 198
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 40,
+              "_covLocEndLine": 198,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 33,
+              "_covLocStartLine": 198
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 45,
+              "_covLocEndLine": 198,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 42,
+              "_covLocStartLine": 198
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 54,
+              "_covLocEndLine": 198,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 52,
+              "_covLocStartLine": 198
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 23,
+              "_covLocEndLine": 199,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 18,
+              "_covLocStartLine": 199
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 1,
+              "_covLocStartLine": 203
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 5,
+              "_covLocStartLine": 204
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 48,
+              "_covLocEndLine": 206,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 26,
+              "_covLocStartLine": 206
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 64,
+              "_covLocEndLine": 206,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 50,
+              "_covLocStartLine": 206
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 96,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 13,
+              "_covLocStartLine": 206
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 96,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 16,
+              "_covLocStartLine": 207
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 42,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 29,
+              "_covLocStartLine": 207
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 81,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 48,
+              "_covLocStartLine": 207
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 80,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 61,
+              "_covLocStartLine": 207
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 95,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 82,
+              "_covLocStartLine": 207
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 49,
+              "_covLocEndLine": 209,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 26,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 71,
+              "_covLocEndLine": 209,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 51,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 66,
+              "_covLocEndLine": 209,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 52,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 70,
+              "_covLocEndLine": 209,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 69,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 117,
+              "_covLocEndLine": 209,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 81,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 13,
+              "_covLocStartLine": 209
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 16,
+              "_covLocStartLine": 210
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 41,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 29,
+              "_covLocStartLine": 210
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 62,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 43,
+              "_covLocStartLine": 210
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 107,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 76,
+              "_covLocStartLine": 210
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": {
+              "_covLocEndCol": 56,
+              "_covLocEndLine": 366,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 23,
+              "_covLocStartLine": 366
+            },
+            "tag": "CoverLocation"
+          },
+          { "_metadataSet": [] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 59,
+                "_covLocEndLine": 193,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 9,
+                "_covLocStartLine": 193
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["checkBinRel"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 59,
+                "_covLocEndLine": 193,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 9,
+                "_covLocStartLine": 193
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["checkBinRel"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 55,
+                "_covLocEndLine": 198,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 17,
+                "_covLocStartLine": 197
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["equalsByteString"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 55,
+                "_covLocEndLine": 198,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 17,
+                "_covLocStartLine": 197
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["equalsByteString"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 55,
+                "_covLocEndLine": 198,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 20,
+                "_covLocStartLine": 198
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["checkBinRel"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 55,
+                "_covLocEndLine": 198,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 20,
+                "_covLocStartLine": 198
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["checkBinRel"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 96,
+                "_covLocEndLine": 207,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 16,
+                "_covLocStartLine": 207
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["$fFoldable[]_$cfoldMap"] }
+
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 96,
+                "_covLocEndLine": 207,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 16,
+                "_covLocStartLine": 207
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["$fFoldable[]_$cfoldMap"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 108,
+                "_covLocEndLine": 210,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 13,
+                "_covLocStartLine": 209
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["before"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 108,
+                "_covLocEndLine": 210,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 13,
+                "_covLocStartLine": 209
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["before"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 108,
+                "_covLocEndLine": 210,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 16,
+                "_covLocStartLine": 210
+              },
+              false
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["txSignedBy"] }
+        ],
+        [
+          {
+            "contents": [
+              {
+                "_covLocEndCol": 108,
+                "_covLocEndLine": 210,
+                "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+                "_covLocStartCol": 16,
+                "_covLocStartLine": 210
+              },
+              true
+            ],
+            "tag": "CoverBool"
+          },
+          { "_metadataSet": ["txSignedBy"] }
+        ]
+      ]
+    },
+    "_certRes_coverageReport": {
+      "_coveredAnnotations": [
+        {
+          "contents": {
+            "_covLocEndCol": 37,
+            "_covLocEndLine": 177,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 1,
+            "_covLocStartLine": 177
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 23,
+            "_covLocEndLine": 199,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 1,
+            "_covLocStartLine": 191
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 50,
+            "_covLocEndLine": 193,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 9,
+            "_covLocStartLine": 193
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 59,
+            "_covLocEndLine": 193,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 9,
+            "_covLocStartLine": 193
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 24,
+            "_covLocEndLine": 193,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 21,
+            "_covLocStartLine": 193
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 50,
+            "_covLocEndLine": 193,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 25,
+            "_covLocStartLine": 193
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 59,
+            "_covLocEndLine": 193,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 57,
+            "_covLocStartLine": 193
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 108,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 1,
+            "_covLocStartLine": 203
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 108,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 5,
+            "_covLocStartLine": 204
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 64,
+            "_covLocEndLine": 206,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 50,
+            "_covLocStartLine": 206
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 96,
+            "_covLocEndLine": 207,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 13,
+            "_covLocStartLine": 206
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 96,
+            "_covLocEndLine": 207,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 16,
+            "_covLocStartLine": 207
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 81,
+            "_covLocEndLine": 207,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 48,
+            "_covLocStartLine": 207
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 80,
+            "_covLocEndLine": 207,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 61,
+            "_covLocStartLine": 207
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 95,
+            "_covLocEndLine": 207,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 82,
+            "_covLocStartLine": 207
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 71,
+            "_covLocEndLine": 209,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 51,
+            "_covLocStartLine": 209
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 66,
+            "_covLocEndLine": 209,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 52,
+            "_covLocStartLine": 209
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 70,
+            "_covLocEndLine": 209,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 69,
+            "_covLocStartLine": 209
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 117,
+            "_covLocEndLine": 209,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 81,
+            "_covLocStartLine": 209
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 108,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 13,
+            "_covLocStartLine": 209
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 108,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 16,
+            "_covLocStartLine": 210
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 62,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 43,
+            "_covLocStartLine": 210
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 107,
+            "_covLocEndLine": 210,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 76,
+            "_covLocStartLine": 210
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 45,
+            "_covLocEndLine": 215,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 12,
+            "_covLocStartLine": 215
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 41,
+            "_covLocEndLine": 216,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 12,
+            "_covLocStartLine": 216
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 33,
+            "_covLocEndLine": 217,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 5,
+            "_covLocStartLine": 217
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": {
+            "_covLocEndCol": 33,
+            "_covLocEndLine": 217,
+            "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+            "_covLocStartCol": 12,
+            "_covLocStartLine": 217
+          },
+          "tag": "CoverLocation"
+        },
+        {
+          "contents": [
+            {
+              "_covLocEndCol": 59,
+              "_covLocEndLine": 193,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 9,
+              "_covLocStartLine": 193
+            },
+            true
+          ],
+          "tag": "CoverBool"
+        },
+        {
+          "contents": [
+            {
+              "_covLocEndCol": 96,
+              "_covLocEndLine": 207,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 16,
+              "_covLocStartLine": 207
+            },
+            true
+          ],
+          "tag": "CoverBool"
+        },
+        {
+          "contents": [
+            {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 13,
+              "_covLocStartLine": 209
+            },
+            true
+          ],
+          "tag": "CoverBool"
+        },
+        {
+          "contents": [
+            {
+              "_covLocEndCol": 108,
+              "_covLocEndLine": 210,
+              "_covLocFile": "src/Plutus/Contracts/Escrow.hs",
+              "_covLocStartCol": 16,
+              "_covLocStartLine": 210
+            },
+            true
+          ],
+          "tag": "CoverBool"
+        }
+      ]
+    },
+    "_certRes_noLockedFundsLightResult": {
+      "failingClasses": [],
+      "failingLabels": [],
+      "failingTestCase": [
+        "DLScript\n  [Do $ WaitUntil (Slot {getSlot = 2})]\n"
+      ],
+      "numDiscarded": 0,
+      "numShrinkFinal": 1,
+      "numShrinkTries": 0,
+      "numShrinks": 0,
+      "numTests": 1,
+      "output": "*** Failed! Exception: 'No match in record selector varOf' (after 1 test):\nDLScript\n  [Do $ WaitUntil (Slot {getSlot = 2})]\n\n",
+      "reason": "Exception: 'No match in record selector varOf'",
+      "tag": "Failure",
+      "theException": "No match in record selector varOf",
+      "usedSeed": "SMGen 9774346976801972491 137792148606632949",
+      "usedSize": 0
+    },
+    "_certRes_noLockedFundsResult": null,
+    "_certRes_standardCrashToleranceResult": null,
+    "_certRes_standardPropertyResult": {
+      "classes": {
+        "Contract instance for W[1] at endpoint pay-escrow": 59,
+        "Contract instance for W[1] at endpoint redeem-escrow": 20,
+        "Contract instance for W[1] at endpoint refund-escrow": 5,
+        "Contract instance for W[2] at endpoint pay-escrow": 55,
+        "Contract instance for W[2] at endpoint redeem-escrow": 27,
+        "Contract instance for W[2] at endpoint refund-escrow": 2,
+        "Contract instance for W[3] at endpoint pay-escrow": 54,
+        "Contract instance for W[3] at endpoint redeem-escrow": 25,
+        "Contract instance for W[3] at endpoint refund-escrow": 1,
+        "Contract instance for W[4] at endpoint pay-escrow": 62,
+        "Contract instance for W[4] at endpoint redeem-escrow": 30,
+        "Contract instance for W[4] at endpoint refund-escrow": 4,
+        "Contract instance for W[5] at endpoint pay-escrow": 61,
+        "Contract instance for W[5] at endpoint redeem-escrow": 28,
+        "Contract instance for W[5] at endpoint refund-escrow": 1
+      },
+      "labels": [[[], 100]],
+      "numDiscarded": 0,
+      "numTests": 100,
+      "output": "+++ OK, passed 100 tests:\n62% Contract instance for W[4] at endpoint pay-escrow\n61% Contract instance for W[5] at endpoint pay-escrow\n59% Contract instance for W[1] at endpoint pay-escrow\n55% Contract instance for W[2] at endpoint pay-escrow\n54% Contract instance for W[3] at endpoint pay-escrow\n30% Contract instance for W[4] at endpoint redeem-escrow\n28% Contract instance for W[5] at endpoint redeem-escrow\n27% Contract instance for W[2] at endpoint redeem-escrow\n25% Contract instance for W[3] at endpoint redeem-escrow\n20% Contract instance for W[1] at endpoint redeem-escrow\n 5% Contract instance for W[1] at endpoint refund-escrow\n 4% Contract instance for W[4] at endpoint refund-escrow\n 2% Contract instance for W[2] at endpoint refund-escrow\n 1% Contract instance for W[3] at endpoint refund-escrow\n 1% Contract instance for W[5] at endpoint refund-escrow\n\nActions (2476 in total):\n55.82% Pay\n31.54% WaitUntil\n 8.80% Redeem\n 3.31% Init\n 0.53% Refund\n\nActions rejected by precondition (5508 in total):\n58.42% Pay\n27.80% Refund\n13.60% Redeem\n 0.18% Init\n\nWait interval (781 in total):\n34.1% <10\n27.3% 10-19\n18.4% 20-29\n12.8% 30-39\n 6.0% 40-49\n 1.4% 50-59\n\nWait until (781 in total):\n14.2% 1000-1999\n11.4% 100-199\n 9.1% 2000-2999\n 6.8% 10-19\n 5.9% 200-299\n 5.2% <10\n 4.9% 20-29\n 4.7% 300-399\n 4.5% 400-499\n 4.0% 500-599\n 3.7% 30-39\n 3.3% 50-59\n 3.2% 40-49\n 2.9% 600-699\n 2.8% 800-899\n 2.8% 900-999\n 2.7% 60-69\n 2.7% 700-799\n 1.8% 70-79\n 1.8% 80-89\n 1.3% 90-99\n 0.3% 3000-3999\n",
+      "tables": {
+        "Actions": {
+          "Init": 82,
+          "Pay": 1382,
+          "Redeem": 218,
+          "Refund": 13,
+          "WaitUntil": 781
+        },
+        "Actions rejected by precondition": {
+          "Init": 10,
+          "Pay": 3218,
+          "Redeem": 749,
+          "Refund": 1531
+        },
+        "Wait interval": {
+          "10-19": 213,
+          "20-29": 144,
+          "30-39": 100,
+          "40-49": 47,
+          "50-59": 11,
+          "<10": 266
+        },
+        "Wait until": {
+          "10-19": 53,
+          "100-199": 89,
+          "1000-1999": 111,
+          "20-29": 38,
+          "200-299": 46,
+          "2000-2999": 71,
+          "30-39": 29,
+          "300-399": 37,
+          "3000-3999": 2,
+          "40-49": 25,
+          "400-499": 35,
+          "50-59": 26,
+          "500-599": 31,
+          "60-69": 21,
+          "600-699": 23,
+          "70-79": 14,
+          "700-799": 21,
+          "80-89": 14,
+          "800-899": 22,
+          "90-99": 10,
+          "900-999": 22,
+          "<10": 41
+        }
+      },
+      "tag": "Success"
+    },
+    "_certRes_unitTestResults": [],
+    "_certRes_whitelistOk": true,
+    "_certRes_whitelistResult": {
+      "classes": {
+        "Contract instance for W[1] at endpoint pay-escrow": 62,
+        "Contract instance for W[1] at endpoint redeem-escrow": 24,
+        "Contract instance for W[1] at endpoint refund-escrow": 1,
+        "Contract instance for W[2] at endpoint pay-escrow": 64,
+        "Contract instance for W[2] at endpoint redeem-escrow": 23,
+        "Contract instance for W[2] at endpoint refund-escrow": 3,
+        "Contract instance for W[3] at endpoint pay-escrow": 57,
+        "Contract instance for W[3] at endpoint redeem-escrow": 20,
+        "Contract instance for W[3] at endpoint refund-escrow": 4,
+        "Contract instance for W[4] at endpoint pay-escrow": 61,
+        "Contract instance for W[4] at endpoint redeem-escrow": 23,
+        "Contract instance for W[4] at endpoint refund-escrow": 3,
+        "Contract instance for W[5] at endpoint pay-escrow": 55,
+        "Contract instance for W[5] at endpoint redeem-escrow": 24,
+        "Contract instance for W[5] at endpoint refund-escrow": 5
+      },
+      "labels": [[[], 100]],
+      "numDiscarded": 0,
+      "numTests": 100,
+      "output": "+++ OK, passed 100 tests:\n64% Contract instance for W[2] at endpoint pay-escrow\n62% Contract instance for W[1] at endpoint pay-escrow\n61% Contract instance for W[4] at endpoint pay-escrow\n57% Contract instance for W[3] at endpoint pay-escrow\n55% Contract instance for W[5] at endpoint pay-escrow\n24% Contract instance for W[1] at endpoint redeem-escrow\n24% Contract instance for W[5] at endpoint redeem-escrow\n23% Contract instance for W[2] at endpoint redeem-escrow\n23% Contract instance for W[4] at endpoint redeem-escrow\n20% Contract instance for W[3] at endpoint redeem-escrow\n 5% Contract instance for W[5] at endpoint refund-escrow\n 4% Contract instance for W[3] at endpoint refund-escrow\n 3% Contract instance for W[2] at endpoint refund-escrow\n 3% Contract instance for W[4] at endpoint refund-escrow\n 1% Contract instance for W[1] at endpoint refund-escrow\n\nActions (1830 in total):\n54.10% Pay\n32.13% WaitUntil\n 8.20% Redeem\n 4.70% Init\n 0.87% Refund\n\nActions rejected by precondition (3952 in total):\n61.29% Pay\n28.47% Refund\n 9.94% Redeem\n 0.30% Init\n\nWait interval (588 in total):\n37.2% <10\n26.9% 10-19\n19.4% 20-29\n10.4% 30-39\n 5.3% 40-49\n 0.9% 50-59\n\nWait until (588 in total):\n13.3% 100-199\n12.4% 1000-1999\n 8.2% <10\n 7.1% 10-19\n 7.1% 200-299\n 7.0% 300-399\n 6.0% 20-29\n 4.4% 30-39\n 4.3% 400-499\n 3.7% 2000-2999\n 3.7% 40-49\n 3.2% 50-59\n 3.1% 600-699\n 2.7% 500-599\n 2.6% 60-69\n 2.6% 70-79\n 2.6% 700-799\n 1.7% 90-99\n 1.5% 80-89\n 1.5% 800-899\n 1.4% 900-999\n",
+      "tables": {
+        "Actions": {
+          "Init": 86,
+          "Pay": 990,
+          "Redeem": 150,
+          "Refund": 16,
+          "WaitUntil": 588
+        },
+        "Actions rejected by precondition": {
+          "Init": 12,
+          "Pay": 2422,
+          "Redeem": 393,
+          "Refund": 1125
+        },
+        "Wait interval": {
+          "10-19": 158,
+          "20-29": 114,
+          "30-39": 61,
+          "40-49": 31,
+          "50-59": 5,
+          "<10": 219
+        },
+        "Wait until": {
+          "10-19": 42,
+          "100-199": 78,
+          "1000-1999": 73,
+          "20-29": 35,
+          "200-299": 42,
+          "2000-2999": 22,
+          "30-39": 26,
+          "300-399": 41,
+          "40-49": 22,
+          "400-499": 25,
+          "50-59": 19,
+          "500-599": 16,
+          "60-69": 15,
+          "600-699": 18,
+          "70-79": 15,
+          "700-799": 15,
+          "80-89": 9,
+          "800-899": 9,
+          "90-99": 10,
+          "900-999": 8,
+          "<10": 48
+        }
+      },
+      "tag": "Success"
+    }
+  }
+}

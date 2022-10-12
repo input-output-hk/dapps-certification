@@ -13,16 +13,21 @@ import "./Certification.scss";
 import Timeline from "compositions/Timeline/Timeline";
 import { TIMELINE_CONFIG } from "compositions/Timeline/timeline.config";
 import {
-  indexOfExecutingProcess,
   processFinishedJson,
   setManyStatus,
 } from "components/TimelineItem/timeline.helper";
 import LogContainer from "./components/LogContainer";
+import FileCoverageContainer from "./components/FileCoverageContainer";
+import {
+  isAnyTaskFailure,
+  getPlannedCertificationTaskCount,
+} from "./Certification.helper";
+import Toast from "components/Toast/Toast";
 
 const Certification = () => {
   const form = useForm({
     schema: certificationSchema,
-    mode: "onChange"
+    mode: "onChange",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -31,7 +36,9 @@ const Certification = () => {
   const [finishedCertify, setFinishedCertify] = useState(false);
   const [githubLink, setGithubLink] = useState("");
   const [logData, setLogData] = useState<any>({});
-  
+  const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
+  const [errorToast, setErrorToast] = useState(false);
+
   let timeout: any;
 
   const formHandler = (formData: ISearchForm) => {
@@ -41,70 +48,135 @@ const Certification = () => {
 
     // Reset to default process states
     if (formSubmitted) {
-      setTimelineConfig(TIMELINE_CONFIG)
+      setTimelineConfig(TIMELINE_CONFIG);
     }
-
-    const processStateUpdate = (config: any) => {
-      setTimelineConfig(config);
-      setSubmitting(false);
-    };
 
     setGithubLink(
       "https://github.com/" + username + "/" + repoName + "/tree/" + branch
     );
-    postData
-      .post("/run", "github:" + [username, repoName, branch].join("/"))
-      .then((response) => response.data)
-      .then((uid) => {
-        const triggerFetchRunStatus = async () => {
-          await fetchData
-            .get("/run/" + uid)
-            .then((res) => {
-              const status = res.data.status,
-                state = res.hasOwnProperty("state") ? res.data.state : "";
 
-              if (status !== "finished") {
-                // Update current status of process
-                config = config.map((cfg, index) => {
-                  if (cfg.status === status) {
-                    return { ...cfg, state: state || "running" };
+    const handleErrorScenario = () => {
+      // show an api error toast
+      setErrorToast(true);
+      setTimeout(() => {
+        setErrorToast(false);
+      }, 5000); // hide after 5 seconds
+      setSubmitting(false);
+      setTimelineConfig(TIMELINE_CONFIG);
+    };
+
+    const triggerAPI = () => {
+      postData
+        .post("/run", "github:" + [username, repoName, branch].join("/"))
+        .then((response) => response.data)
+        .then((uid) => {
+          const triggerFetchRunStatus = async () => {
+            await fetchData
+              .get("/run/" + uid)
+              .then((res) => {
+                const status = res.data.status,
+                  state = res.hasOwnProperty("state") ? res.data.state : "";
+
+                config = config.map((item, index) => {
+                  if (item.status === status) {
+                    const currentState =
+                      status === "finished" ? "passed" : state || "running";
+                    let returnObj = { ...item, state: currentState };
+                    if (
+                      status === "certifying" &&
+                      currentState === "running" &&
+                      res.data.progress &&
+                      res.data.plan
+                    ) {
+                      returnObj["progress"] = Math.trunc(
+                        (res.data.progress["finished-tasks"].length /
+                          getPlannedCertificationTaskCount(res.data.plan)) *
+                          100
+                      );
+                    }
+                    return returnObj;
                   }
                   // Set the previously executed states as passed
-                  return setManyStatus(index, config, cfg, status, "passed");
+                  return setManyStatus(index, config, item, status, "passed");
                 });
+                if (status === "finished") {
+                  const unitTestResult = processFinishedJson(res.data.result);
+                  setFinishedCertify(unitTestResult);
+                  setUnitTestSuccess(unitTestResult);
+                  setLogData(res.data.result);
+                }
+                if (state === "failed" || status === "finished") {
+                  setSubmitting(false);
+                }
                 setTimelineConfig(config);
 
-                const timeOffset = 60 * 1000, refetchMins = 2;
-                timeout = setTimeout(() => {
-                  clearTimeout(timeout);
-                  triggerFetchRunStatus();
-                }, refetchMins * timeOffset);
-              } else {
-                config = config.map((cfg, index) => {
-                  if (cfg.status === status) {
-                    return { ...cfg, state: "passed" };
+                if (state === "running" || state === "passed") {
+                  const timeOffset = 60 * 1000;
+                  let refetchMins = 1;
+                  if (status === "certifying") {
+                    refetchMins = 0.2;
                   }
-                  // Set the previously executed states as passed
-                  return setManyStatus(index, config, cfg, status, "passed");
-                });
-                setFinishedCertify(true);
-                processFinishedJson(res.data.result);
-                processStateUpdate(config);
+                  timeout = setTimeout(() => {
+                    clearTimeout(timeout);
+                    triggerFetchRunStatus();
+                  }, refetchMins * timeOffset);
+                }
+              })
+              .catch((error) => {
+                handleErrorScenario();
+                console.log(error);
+              });
+          };
+          triggerFetchRunStatus();
+        })
+        .catch((error) => {
+          handleErrorScenario();
+          console.log(error);
+        });
+    };
+    triggerAPI();
+
+    /** 
+    const fetchMockData = () => {
+      postData
+        .get("static/data/run")
+        .then((response) => response.data)
+        .then((uuid) => {
+          // await fetchData.get("/run/" + uid)
+          fetchData.get("static/data/finished-escrow-fail.json").then((res) => {
+
+            const status = res.data.status,
+              state = res.data.hasOwnProperty("state") ? res.data.state : "";
+
+            // TBD -- save this state into useState and based on state changes useEffect and handle the logic there
+            
+            config = config.map((item, index) => {
+              if (item.status === status) {
+                const currentState = status === "finished" ? "passed" : (state || "running")
+                let returnObj = { ...item, state: currentState };
+                if (status === 'certifying' && currentState === 'running' && res.data.progress && res.data.plan) {
+                  returnObj['progress'] = Math.trunc((res.data.progress['finished-tasks'].length / getPlannedCertificationTaskCount(res.data.plan)) * 100)
+                }
+                return returnObj;
               }
-            })
-            .catch((error) => {
-              config[indexOfExecutingProcess(config, "outline")].state = "failed";
-              processStateUpdate(config);
-              console.log(error);
+              // Set the previously executed states as passed
+              return setManyStatus(index, config, item, status, "passed");
             });
-        };
-        triggerFetchRunStatus();
-      })
-      .catch((error) => {
-        config[indexOfExecutingProcess(config, "queued")].state = "failed";
-        processStateUpdate(config);
-        console.log(error);
-      });
+            if (status === 'finished') {
+              const unitTestResult = processFinishedJson(res.data.result)
+              setFinishedCertify(unitTestResult);
+              setUnitTestSuccess(unitTestResult);
+              setLogData(res.data.result);
+            }
+            if (state === 'failed' || status === 'finished') {
+              setSubmitting(false);
+            }
+            setTimelineConfig(config);
+          });
+        });
+    };
+    fetchMockData();
+    */
   };
 
   /**
@@ -148,29 +220,13 @@ const Certification = () => {
               disabled={submitting}
               {...form.register("branch")}
             />
-            {/* {!submitting ?
-            <Button
-              type="submit"
-              className="btn btn-primary"
-              buttonLabel="Start Certification"
-              disabled={!form.formState.isValid}
-              onClick={(_) => setFormSubmitted(true)}
-            /> 
-            :
-            <Button
-              type="reset"
-              className="btn btn-primary"
-              buttonLabel="Abort"
-              onClick={(e) => resetForm(e)}
-            />
-            } */}
             <Button
               type="submit"
               className="btn btn-primary"
               buttonLabel="Start Testing"
               disabled={!form.formState.isValid || submitting}
               onClick={(_) => setFormSubmitted(true)}
-            /> 
+            />
           </Form>
         </div>
       </div>
@@ -183,16 +239,27 @@ const Certification = () => {
               className={classNames({ hidden: !finishedCertify })}
             >
               <a target="_blank" rel="noreferrer" href={githubLink}>
-                  {form.getValues("username")}/{form.getValues("repoName")}
+                {form.getValues("username")}/{form.getValues("repoName")}
               </a>
             </h2>
 
-            <Timeline statusConfig={timelineConfig} />
+            <Timeline
+              statusConfig={timelineConfig}
+              unitTestSuccess={unitTestSuccess}
+              hasFailedTasks={isAnyTaskFailure(logData)}
+            />
           </div>
 
-          {logData ? <LogContainer result={logData} /> : null}
+          {unitTestSuccess && Object.keys(logData).length ? (
+            <>
+              <FileCoverageContainer githubLink={githubLink} result={logData} />
+              <LogContainer result={logData} />
+            </>
+          ) : null}
         </>
       )}
+
+      {errorToast ? <Toast /> : null}
     </>
   );
 };

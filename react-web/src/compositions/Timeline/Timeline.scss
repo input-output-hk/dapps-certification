@@ -27,24 +27,37 @@
       flex-flow: column;
       row-gap: 10px;
 
-      span.image {
+      .image {
         width: 16px;
         height: 16px;
         background: #fff;
-        padding: 0 3px;
+        padding: 3px;
+        border-radius: 16px;
+        margin-top: -3px;
+        
+        &.anim-rotate.certifying {
+          height: auto;
+          width: 50px;
+          margin-top: -19px;
+          border-radius: 50px;
+        }
       }
 
       span.text {
         margin-left: 10px;
         font-size: 18px;
       }
+
+      span.progress-percentage {
+        position: absolute;
+        top: 2px;
+        color: #DBAB0A;
+        font-weight: bold;
+      }
     }
   }
 }
 
-.error-title {
-  cursor: pointer;
-}
 
 /*
 // TBD media-query (max-width <= 640px)

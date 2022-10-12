@@ -19,6 +19,13 @@ export const postData = axios.create({
   },
 });
 
+export const fetchImage = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Cache-Control': 'private'
+  }
+})
+
 fetchData.interceptors.request.use(
   (config: AxiosRequestConfig) => onRequest(config),
   onRequestError

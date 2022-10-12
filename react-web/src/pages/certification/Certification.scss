@@ -24,24 +24,90 @@
   }
 }
 
+#coverageIndicator {
+  margin: 100px 0 50px;
+
+  .coverage-file {
+    display: flex;
+    justify-content: space-between;
+    column-gap: 50px;
+
+    & > div {
+      display: flex;
+      width: 100%;
+      justify-content: space-evenly;
+      column-gap: 20px;
+
+      .meter-bar {
+        width: 100%;
+        background-color: #cf222e;
+        height: 14px;
+
+        .progress {
+          background-color: #009168;
+          height: inherit;
+        }
+      }
+    }
+  }
+}
+
 #logContainer {
   margin-top: 60px;
 
-  .failure {
+  .result-card {
     margin-bottom: 15px;
     padding: 8px;
     overflow: auto;
-    background-color: #f2dede;
-    border: 1px solid #ebccd1;
+    border: 1px solid;
     border-radius: 5px;
   }
 
-  .failure > span {
+  .failure {
+    border-color: #ebccd1;
+    background-color: #f2dede;
+    .error-title {
+      color: #a94442;
+    }
+  }
+
+  .result-card span {
     display: block;
     margin-bottom: 10px;
-    
-    &:first-child {
-      color: #a94442;
+  }
+
+  .result-card label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #5a5a5a;
+  }
+  .failing-testcase {
+    margin-left: 10px;
+  }
+  .failure-output {
+    margin-top: 20px;
+    white-space: pre;
+  }
+
+  .success {
+    background-color: #dff0d8;
+    border-color: #e2eee2;
+  }
+
+
+  .accordion-title {
+    cursor: pointer;
+  }
+  .accordion-content {
+    margin-top: 20px;
+  }
+
+  .chart-container {
+    display: flex;
+    flex-wrap: wrap;
+    .chart-wrapper {
+      width: 33%;
     }
   }
 }

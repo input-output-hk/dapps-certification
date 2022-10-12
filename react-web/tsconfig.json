@@ -29,7 +29,7 @@
       "@constants/*": ["src/constants/*"],
       "@assets/*": ["src/assets/*"],
       "@styles/*": ["src/styles/*"],
-      "@hooks/*": ["src/hooks/*"],
+      "@hooks/*": ["src/hooks/*"]
     }
   },
   "include": [

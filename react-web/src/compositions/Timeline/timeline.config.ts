@@ -2,7 +2,7 @@ export const TIMELINE_CONFIG = [
   {
     status: "queued",
     text: "Queued",
-    state: "running",
+    state: "outline",
   },
   {
     status: "preparing",
@@ -18,6 +18,7 @@ export const TIMELINE_CONFIG = [
     status: "certifying",
     text: "Testing",
     state: "outline",
+    progress: {}
   },
   {
     status: "finished",

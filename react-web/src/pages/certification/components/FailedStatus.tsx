@@ -1,26 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 
 const FailedStatus: React.FC<{
-  tag: string;
+  certTask: string;
   reason: string;
   output: string;
   failingTestCase: any[];
-}> = ({ tag, reason, output, failingTestCase }) => {
+}> = ({ certTask, reason, output, failingTestCase }) => {
+  const [isOpen, setIsOpen] = useState(true);
+  
+  const toggleAccordion = () => {
+    setIsOpen(!isOpen)
+  }
+
   return (
-    <div className="failure">
-      <div
-        className="error-title"
-        onClick={(_) => console.log("handle accordion")}
+    <div className="result-card failure">
+      <label>Task: {certTask}</label>
+      <span
+        className={`error-title accordion-title ${isOpen ? 'open' : ''}`}
+        onClick={(_) => toggleAccordion()}
       >
         <i>{reason}</i>
-      </div>
+        <i className={`arrow ${isOpen ? 'up' : 'down'}`}></i>
+      </span>
 
-      <div className="accordion-content">
+      <div className={`accordion-content ${isOpen ? '' : 'hidden'}`}>
+        <span>Failing TestCase(s):</span>
         {failingTestCase.length
-          ? failingTestCase.map((val) => <span>{val}</span>)
+          ? failingTestCase.map((val, index) => <span className="failing-testcase" key={index}>{index + 1}. {val}</span>)
           : null}
 
-        <span>{output}</span>
+        <span className="failure-output">{output}</span>
       </div>
     </div>
   );

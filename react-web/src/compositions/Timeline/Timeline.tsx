@@ -5,14 +5,14 @@ import TimelineItem from "components/TimelineItem/TimelineItem";
 import "./Timeline.scss";
 
 const Timeline = (props: any) => {
-  const { statusConfig } = props;
+  const { statusConfig, unitTestSuccess, hasFailedTasks } = props;
 
   return (
     <div id="statusTimeline" data-testid="statusTimeline">
       <ul>
         {statusConfig.map(
           (config: any, index: React.Key | null | undefined) => (
-            <TimelineItem key={index} config={config} />
+            <TimelineItem key={index} config={config} unitTestSuccess={unitTestSuccess} hasFailedTasks={hasFailedTasks}/>
           )
         )}
       </ul>
