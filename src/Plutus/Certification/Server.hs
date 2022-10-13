@@ -74,6 +74,7 @@ server ServerCaps {..} eb = NamedAPI
         $ getRuns (setAncestor $ reference ev) rid
        .| evalStateC Queued consumeRuns
   , abortRun = \rid -> withEvent eb AbortRun \ev -> do
+     addField ev rid
      const NoContent <$> (runConduit $ abortRuns (setAncestor $ reference ev) rid .| await)
   }
   where
