@@ -88,6 +88,8 @@ localServerCaps backend = do
     getRuns _ (RunID jobId) =
       getStatuses <$> Map.findWithDefault emptyJobState jobId <$> (lift $ readIORef jobs) >>= yieldMany
 
+    abortRuns = error "not implemented"
+
   pure $ ServerCaps {..}
 
 data LocalSelector f where
