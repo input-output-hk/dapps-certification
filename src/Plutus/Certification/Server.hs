@@ -29,12 +29,15 @@ data ServerCaps m r = ServerCaps
     submitJob :: !(EventBackendModifiers r r -> FlakeRefV1 -> m RunIDV1)
   , -- | Get the status of all runs associated with a job
     getRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () RunStatusV1 m ())
+  , -- | Delete all runs associated with a job
+    abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () () m ())
   }
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   { submitJob = \mods -> nt . submitJob mods
   , getRuns = \mods -> transPipe nt . getRuns mods
+  , abortRuns = \mods -> transPipe nt . abortRuns mods
   }
 
 data CreateRunField
@@ -45,6 +48,7 @@ data ServerEventSelector f where
   Version :: ServerEventSelector Void
   CreateRun :: ServerEventSelector CreateRunField
   GetRun :: ServerEventSelector Void
+  AbortRun :: ServerEventSelector RunIDV1
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -53,6 +57,7 @@ renderServerEventSelector CreateRun = ("create-run", \case
                                             CreateRunID rid -> ("run-id", toJSON rid)
                                         )
 renderServerEventSelector GetRun = ("get-run", absurd)
+renderServerEventSelector AbortRun = ("abort-run", \rid -> ("run-id",toJSON rid))
 
 -- | An implementation of 'API'
 server :: (MonadMask m) => ServerCaps m r -> EventBackend m r ServerEventSelector -> ServerT API m
@@ -68,6 +73,8 @@ server ServerCaps {..} eb = NamedAPI
      runConduit
         $ getRuns (setAncestor $ reference ev) rid
        .| evalStateC Queued consumeRuns
+  , abortRun = \rid -> withEvent eb AbortRun \ev -> do
+     const NoContent <$> (runConduit $ abortRuns (setAncestor $ reference ev) rid .| await)
   }
   where
     consumeRuns = await >>= \case

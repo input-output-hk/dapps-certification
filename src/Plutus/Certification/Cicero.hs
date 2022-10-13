@@ -42,6 +42,8 @@ import IOHK.Cicero.API.Run qualified as Cicero.Run
 import IOHK.Cicero.API.Action qualified as Cicero.Action
 import IOHK.Cicero.API.Invocation qualified as Cicero.Invocation
 
+import Data.List qualified as List
+
 import Plutus.Certification.API
 import Plutus.Certification.Cache
 import Plutus.Certification.Client
@@ -105,6 +107,22 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
           runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
           count <- yieldMany runs .| execStateC 0 (status eb)
           when (count == limit) $ go (offset + limit)
+    abortRuns mods rid = go 0
+      where
+        eb = modifyEventBackend mods backend
+        rid' = Cicero.Fact.FactID $ rid.uuid
+        limit = 10
+        go offset = do
+          runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
+          let count = List.genericLength runs
+          yieldMany runs
+            .| filterC (isNothing . (.finishedAt))
+            .| mapM_C (abort eb)
+          when (count == limit) $ go (offset + limit)
+    abort eb = void
+        . runClientOrDie clientCaps eb
+        . ciceroClient.run.abort
+        . (.nomadJobId)
 
     status eb = await >>= \case
       Nothing -> pure ()

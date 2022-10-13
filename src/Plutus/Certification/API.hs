@@ -41,6 +41,7 @@ data NamedAPI mode = NamedAPI
   , versionHead :: mode :- "version" :> HeadNoContent
   , createRun :: mode :- "run" :> ReqBody '[PlainText] FlakeRefV1 :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
   , getRun :: mode :- "run" :> Capture "id" RunIDV1 :> Get '[JSON] RunStatusV1
+  , abortRun :: mode :- "run" :> Capture "id" RunIDV1 :> DeleteNoContent
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version }

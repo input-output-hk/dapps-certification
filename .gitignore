@@ -2,3 +2,5 @@ dist-newstyle
 result
 flake
 .vim/
+gentags.sh
+tags
