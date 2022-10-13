@@ -30,14 +30,14 @@ data ServerCaps m r = ServerCaps
   , -- | Get the status of all runs associated with a job
     getRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () RunStatusV1 m ())
   , -- | Delete all runs associated with a job
-    abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () () m ())
+    abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> m ())
   }
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   { submitJob = \mods -> nt . submitJob mods
   , getRuns = \mods -> transPipe nt . getRuns mods
-  , abortRuns = \mods -> transPipe nt . abortRuns mods
+  , abortRuns = \mods -> nt . abortRuns mods
   }
 
 data CreateRunField
@@ -75,7 +75,7 @@ server ServerCaps {..} eb = NamedAPI
        .| evalStateC Queued consumeRuns
   , abortRun = \rid -> withEvent eb AbortRun \ev -> do
      addField ev rid
-     const NoContent <$> (runConduit $ abortRuns (setAncestor $ reference ev) rid .| await)
+     const NoContent <$> (abortRuns (setAncestor $ reference ev) rid)
   }
   where
     consumeRuns = await >>= \case

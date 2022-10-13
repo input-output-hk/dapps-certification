@@ -107,7 +107,7 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
           runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
           count <- yieldMany runs .| execStateC 0 (status eb)
           when (count == limit) $ go (offset + limit)
-    abortRuns mods rid = go 0
+    abortRuns mods rid = runConduit $ go 0
       where
         eb = modifyEventBackend mods backend
         rid' = Cicero.Fact.FactID $ rid.uuid
