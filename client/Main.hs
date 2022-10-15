@@ -56,14 +56,22 @@ getRunInfo = info getRunParser
  <> header "plutus-certification-client run get — Get the status of a run"
   )
 
+abortRunInfo :: ParserInfo RunIDV1
+abortRunInfo = info getRunParser
+  ( fullDesc
+ <> header "plutus-certification-client run abort — Abort a run"
+  )
+
 data RunCommand
   = Create !FlakeRefV1
   | Get !RunIDV1
+  | Abort !RunIDV1
 
 runCommandParser :: Parser RunCommand
 runCommandParser = hsubparser
   ( command "create" (Create <$> createRunInfo)
  <> command "get" (Get <$> getRunInfo)
+ <> command "abort" (Abort <$> abortRunInfo)
   )
 
 runCommandInfo :: ParserInfo RunCommand
@@ -147,3 +155,4 @@ main = do
     CmdVersion -> handle $ apiClient.version
     CmdRun (Create ref) -> handle $ apiClient.createRun ref
     CmdRun (Get ref) -> handle $ apiClient.getRun ref
+    CmdRun (Abort ref) -> handle $ (const True <$> apiClient.abortRun ref)
