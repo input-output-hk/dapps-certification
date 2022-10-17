@@ -60,11 +60,13 @@ const Certification = () => {
       setErrorToast(true);
       setTimeout(() => {
         setErrorToast(false);
+        form.reset();
       }, 5000); // hide after 5 seconds
       setSubmitting(false);
+      setFormSubmitted(false);
       setTimelineConfig(TIMELINE_CONFIG);
     };
-
+    
     const triggerAPI = () => {
       postData
         .post("/run", "github:" + [username, repoName, branch].join("/"))
@@ -135,8 +137,8 @@ const Certification = () => {
         });
     };
     triggerAPI();
-
-    /** 
+     
+    /**
     const fetchMockData = () => {
       postData
         .get("static/data/run")
