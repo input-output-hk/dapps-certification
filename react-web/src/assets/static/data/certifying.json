@@ -1,0 +1,44 @@
+{
+  "status": "certifying",
+  "state": "running",
+  "progress": {
+    "current-task": { "name": "double-satisfaction", "index": 2 },
+    "qc-progress": { "successes": 3, "failures": 1, "discarded": 0 },
+    "finished-tasks": [
+      {
+        "task": { "name": "standard-property", "index": 1 },
+        "qc-result": { "successes": 7, "failures": 2, "discarded": 0 },
+        "succeeded": false
+      },
+      {
+        "task": { "name": "unit-tests", "index": 0 },
+        "qc-result": { "successes": 0, "failures": 0, "discarded": 0 },
+        "succeeded": true
+      },
+      {
+        "task": { "name": "standard-property", "index": 1 },
+        "qc-result": { "successes": 7, "failures": 2, "discarded": 0 },
+        "succeeded": false
+      },
+      {
+        "task": { "name": "unit-tests", "index": 0 },
+        "qc-result": { "successes": 0, "failures": 0, "discarded": 0 },
+        "succeeded": true
+      },{
+        "task": { "name": "standard-property", "index": 1 },
+        "qc-result": { "successes": 7, "failures": 2, "discarded": 0 },
+        "succeeded": false
+      },
+      {
+        "task": { "name": "unit-tests", "index": 0 },
+        "qc-result": { "successes": 0, "failures": 0, "discarded": 0 },
+        "succeeded": true
+      },{
+        "task": { "name": "standard-property", "index": 1 },
+        "qc-result": { "successes": 7, "failures": 2, "discarded": 0 },
+        "succeeded": false
+      }
+    ],
+    "progress-index": 18
+  }
+}

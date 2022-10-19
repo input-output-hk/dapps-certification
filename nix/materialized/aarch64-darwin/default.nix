@@ -76,7 +76,7 @@
         "Cabal".revision = (((hackage."Cabal")."3.6.3.0").revisions).default;
         "sop-core".revision = (((hackage."sop-core")."0.5.0.2").revisions).default;
         "assoc".revision = (((hackage."assoc")."1.0.2").revisions).default;
-        "cicero-api".revision = (((hackage."cicero-api")."0.1.1.3").revisions).default;
+        "cicero-api".revision = (((hackage."cicero-api")."0.1.2.0").revisions).default;
         "unliftio".revision = (((hackage."unliftio")."0.2.22.0").revisions).default;
         "data-fix".revision = (((hackage."data-fix")."0.3.2").revisions).default;
         "tls".revision = (((hackage."tls")."1.6.0").revisions).default;
@@ -192,7 +192,7 @@
         "cereal".revision = (((hackage."cereal")."0.5.8.3").revisions).default;
         "cereal".flags.bytestring-builder = false;
         "utf8-string".revision = (((hackage."utf8-string")."1.0.2").revisions).default;
-        "conduit".revision = (((hackage."conduit")."1.3.4.2").revisions).default;
+        "conduit".revision = (((hackage."conduit")."1.3.4.3").revisions).default;
         "transformers-base".revision = (((hackage."transformers-base")."0.4.6").revisions).default;
         "transformers-base".flags.orphaninstances = true;
         "aeson-qq".revision = (((hackage."aeson-qq")."0.8.4").revisions).default;

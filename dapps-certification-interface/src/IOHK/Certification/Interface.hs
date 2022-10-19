@@ -57,6 +57,7 @@ instance FromJSON CertificationTaskName where
            | nm == "no-locked-funds" -> pure NoLockedFundsTask
            | nm == "no-locked-funds-light" -> pure NoLockedFundsLightTask
            | nm == "crash-tolerance" -> pure CrashToleranceTask
+           | nm == "white-list" -> pure WhitelistTask
            | nm == "dl-tests" -> pure DLTestsTask
            | otherwise -> fail $ "unknown task name " ++ unpack nm
 
@@ -86,18 +87,20 @@ data QCProgress = QCProgress
   { qcSuccesses :: !Integer
   , qcFailures :: !Integer
   , qcDiscarded :: !Integer
+  , qcExpected :: !(Maybe Int)
   }
 
 instance ToJSON QCProgress where
-  toJSON QCProgress {..} = object
+  toJSON QCProgress {..} = object $
     [ "successes" .= qcSuccesses
     , "failures" .= qcFailures
     , "discarded" .= qcDiscarded
-    ]
+    ] <> (maybe mempty (pure . ("expected" .=)) qcExpected)
   toEncoding QCProgress {..} = pairs
     ( "successes" .= qcSuccesses
    <> "failures" .= qcFailures
    <> "discarded" .= qcDiscarded
+   <> (maybe mempty ("expected" .=) qcExpected)
     )
 
 instance FromJSON QCProgress where
@@ -105,6 +108,7 @@ instance FromJSON QCProgress where
     <$> o .: "successes"
     <*> o .: "failures"
     <*> o .: "discarded"
+    <*> o .:! "expected"
 
 -- | The result of a certification task.
 data TaskResult = TaskResult
@@ -173,6 +177,7 @@ instance FromJSON CertificationResult where
 data Message
   = Status !Progress
   | Success !CertificationResult
+  | Plan ![CertificationTask]
 
 instance ToJSON Message where
   toJSON (Status p) = object
@@ -181,15 +186,22 @@ instance ToJSON Message where
   toJSON (Success c) = object
     [ "success" .= c
     ]
+  toJSON (Plan tasks) = object
+    [ "plan" .= tasks
+    ]
   toEncoding (Status p) = pairs
     ( "status" .= p
     )
   toEncoding (Success c) = pairs
     ( "success" .= c
     )
+  toEncoding (Plan tasks) = pairs
+    ( "plan" .= tasks
+    )
 instance FromJSON Message where
   parseJSON = withObject "Message" \o ->
-      success o <|> stat o
+      success o <|> stat o <|> plan o
     where
       success o = Success <$> o .: "success"
       stat o = Status <$> o .: "status"
+      plan o = Plan <$> o .: "plan"
