@@ -1,7 +1,7 @@
 {
   "name": "react-web",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "proxy": "https://testing.dapps.iog.io/",
   "homepage": "https://input-output-hk.github.io/dapps-certification/",
   "dependencies": {
