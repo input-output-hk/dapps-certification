@@ -36,7 +36,7 @@ export const processFinishedJson = (result: { [x: string]: any }): boolean => {
       // item.tag === 'failure'
       if (key === '_certRes_DLTests' && item[1].tag === 'Failure') {
         return CertTaskRef
-      } else if (key === '_certRes_unitTestResults' && item.indexOf('resultOutcome = Failure TestFailed,') !== -1) {
+      } else if (key === '_certRes_unitTestResults' && item.resultOutcome.tag === 'Failure') {
         return CertTaskRef
       }
       return false;

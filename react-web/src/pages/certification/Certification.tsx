@@ -23,6 +23,8 @@ import {
   getPlannedCertificationTaskCount,
 } from "./Certification.helper";
 import Toast from "components/Toast/Toast";
+import { exportObjectToJsonFile } from "../../utils/utils";
+import DownloadIcon from "assets/images/download.svg";
 
 const Certification = () => {
   const form = useForm({
@@ -66,6 +68,7 @@ const Certification = () => {
       setFormSubmitted(false);
       setTimelineConfig(TIMELINE_CONFIG);
     };
+    
     
     const triggerAPI = () => {
       postData
@@ -137,7 +140,7 @@ const Certification = () => {
         });
     };
     triggerAPI();
-     
+    
     /**
     const fetchMockData = () => {
       postData
@@ -145,7 +148,7 @@ const Certification = () => {
         .then((response) => response.data)
         .then((uuid) => {
           // await fetchData.get("/run/" + uid)
-          fetchData.get("static/data/finished-escrow-fail.json").then((res) => {
+          fetchData.get("static/data/finished-error.json").then((res) => {
 
             const status = res.data.status,
               state = res.data.hasOwnProperty("state") ? res.data.state : "";
@@ -188,6 +191,10 @@ const Certification = () => {
     clearTimeout(timeout);
   }
   */
+
+  const handleDownloadLogData = (logData: any) => {
+    exportObjectToJsonFile(logData);
+  };
 
   return (
     <>
@@ -243,6 +250,16 @@ const Certification = () => {
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}
               </a>
+              {unitTestSuccess && Object.keys(logData).length ? (
+                <>
+                  <Button
+                    className="report-download"
+                    onClick={(e) => handleDownloadLogData(logData)}
+                    buttonLabel="Download Report"
+                    iconUrl={DownloadIcon}
+                  />
+                </>
+              ) : null}
             </h2>
 
             <Timeline

@@ -42,6 +42,15 @@
     }
   }
 
+  .icon-image {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-top: -3px;
+  }
+
   &[disabled] {
     opacity: 0.5;
     cursor: default;

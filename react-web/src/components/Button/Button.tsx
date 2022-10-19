@@ -7,6 +7,7 @@ export interface IButtonProps {
   className?: string;
   buttonLabel?: string;
   isLoading?: boolean;
+  iconUrl?: any;
   type?: "button" | "reset" | "submit" | undefined;
   onClick?: (e: any) => any;
 }
@@ -17,6 +18,7 @@ const Button: FC<IButtonProps> = ({
   buttonLabel = "Submit",
   isLoading = false,
   type = "submit",
+  iconUrl,
   onClick,
 }) => {
   return (
@@ -26,6 +28,7 @@ const Button: FC<IButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
     >
+      {iconUrl && <img className="icon-image" src={iconUrl} alt="icon-img" />}
       <span className="button-label">{buttonLabel}</span>
     </button>
   );
