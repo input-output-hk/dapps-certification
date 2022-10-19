@@ -7,4 +7,5 @@ react-web/build
 
 flake
 .vim/
-
+gentags.sh
+tags

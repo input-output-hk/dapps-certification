@@ -42,6 +42,8 @@ import IOHK.Cicero.API.Run qualified as Cicero.Run
 import IOHK.Cicero.API.Action qualified as Cicero.Action
 import IOHK.Cicero.API.Invocation qualified as Cicero.Invocation
 
+import Data.List qualified as List
+
 import Plutus.Certification.API
 import Plutus.Certification.Cache
 import Plutus.Certification.Client
@@ -105,6 +107,22 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
           runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
           count <- yieldMany runs .| execStateC 0 (status eb)
           when (count == limit) $ go (offset + limit)
+    abortRuns mods rid = runConduit $ go 0
+      where
+        eb = modifyEventBackend mods backend
+        rid' = Cicero.Fact.FactID $ rid.uuid
+        limit = 10
+        go offset = do
+          runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] (Just offset) (Just limit)
+          let count = List.genericLength runs
+          yieldMany runs
+            .| filterC (isNothing . (.finishedAt))
+            .| mapM_C (abort eb)
+          when (count == limit) $ go (offset + limit)
+    abort eb = void
+        . runClientOrDie clientCaps eb
+        . ciceroClient.run.abort
+        . (.nomadJobId)
 
     status eb = await >>= \case
       Nothing -> pure ()
@@ -131,13 +149,13 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
               (getIntermediateOutput eb r "plutus-certification/build-flake" <&> \case
                 Nothing -> Building Running
                 Just False -> Building Failed
-                Just True -> Certifying Running Nothing)
+                Just True -> Certifying $ CertifyingStatus Running Nothing Nothing)
             Certify ->
               getCertifyOutput eb r "plutus-certification/run-certify" <&> \case
-                Nothing -> Incomplete $ Certifying Running Nothing
-                Just (Intermediate p) -> Incomplete $ Certifying Running (Just p)
-                Just CertifyFailed -> Incomplete $ Certifying Failed Nothing
-                Just (Succeeded cr) -> Finished cr
+                (Nothing, plan) -> Incomplete . Certifying $ CertifyingStatus Running Nothing plan
+                (Just (Intermediate p), plan) -> Incomplete . Certifying $ CertifyingStatus Running (Just p) plan
+                (Just CertifyFailed, plan) -> Incomplete . Certifying $ CertifyingStatus Failed Nothing plan
+                (Just (Succeeded cr), _) -> Finished cr
         status eb
 
     getRunFacts eb r =
@@ -162,20 +180,21 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
 
     getCertifyOutput eb r name = do
       facts <- getRunFacts eb r
-      pure $ foldr (\f acc -> case f.value of
+      pure $ foldr (\f (acc, plan) -> case f.value of
                        Object o -> case KM.lookup name o of
-                         Nothing -> acc
+                         Nothing -> (acc, plan)
                          Just v -> case fromJSON v of
+                           Success (I.Plan plan') -> (acc, Just plan')
                            Success (I.Status p) -> if progressLater p acc
-                             then Just $ Intermediate p
-                             else acc
-                           Success (I.Success cr) -> Just $ Succeeded cr
+                             then (Just $ Intermediate p, plan)
+                             else (acc, plan)
+                           Success (I.Success cr) -> (Just $ Succeeded cr, plan)
                            Error _ -> if
                              | Just (Object out) <- KM.lookup name o
-                             , Just _ <- KM.lookup "failure"  out -> Just CertifyFailed
-                             | otherwise -> acc
-                       _ -> acc
-                   ) Nothing facts
+                             , Just _ <- KM.lookup "failure"  out -> (Just CertifyFailed, plan)
+                             | otherwise -> (acc, plan)
+                       _ -> (acc, plan)
+                   ) (Nothing, Nothing) facts
 
     getActionType :: Cicero.Action.ActionV2 -> ActionType
     getActionType act
