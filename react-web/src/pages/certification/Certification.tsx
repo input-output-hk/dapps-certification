@@ -169,7 +169,7 @@ const Certification = () => {
             });
             if (status === 'finished') {
               const unitTestResult = processFinishedJson(res.data.result)
-              setFinishedCertify(unitTestResult);
+              setFinishedCertify(true); //unitTestResult
               setUnitTestSuccess(unitTestResult);
               setLogData(res.data.result);
             }
@@ -250,7 +250,7 @@ const Certification = () => {
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}
               </a>
-              {unitTestSuccess && Object.keys(logData).length ? (
+              {Object.keys(logData).length ? (
                 <>
                   <Button
                     className="report-download"
@@ -268,6 +268,11 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(logData)}
             />
           </div>
+          {unitTestSuccess === false && Object.keys(logData).length ? (
+            <>
+              <LogContainer unitTestSuccess={unitTestSuccess} result={logData} />
+            </>
+          ) : null}
 
           {unitTestSuccess && Object.keys(logData).length ? (
             <>
