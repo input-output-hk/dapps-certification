@@ -2,9 +2,14 @@ import React from "react";
 import FailedStatus from "./FailedStatus";
 import { CertificationTasks } from "../Certification.helper";
 import SuccessCard from "./SuccessCard";
+import UnitTestFailureCard from "./UnitTestFailureCard";
 
-const LogContainer: React.FC<{ result: { [x: string]: any } }> = ({
+const LogContainer: React.FC<{ 
+  result: { [x: string]: any },
+  unitTestSuccess?: boolean 
+}> = ({
   result,
+  unitTestSuccess = true
 }) => {
 
   const filterKeys = (type: string) => {
@@ -23,43 +28,69 @@ const LogContainer: React.FC<{ result: { [x: string]: any } }> = ({
     <div id="logContainer">
       <>
         {/* Unit Test results */}
-        {unitTestKeys.length
+        {unitTestSuccess === false && unitTestKeys.length
           ? unitTestKeys
               .filter(key => result[key].length)
-              .forEach(key => {
+              .map(unitTestKey => {
                 // output of each entry in unit test
+                if (unitTestKey === '_certRes_unitTestResults') {
+                  return result[unitTestKey].map((item: any, index: number) => {
+                    return item.resultOutcome.tag === 'Failure' ? (
+                      <UnitTestFailureCard
+                        resultObj={item}
+                        key={index}
+                      />)
+                    : <></>
+                  })
+                } else if (unitTestKey === '_certRes_DLTests') {
+                  return result[unitTestKey].map((item: Array<any>, index: number) => {
+                    return item[1].tag === 'Failure' ? (
+                      <FailedStatus
+                        certTask='DLUnitTest'
+                        reason={item[1].reason}
+                        output={item[1].output}
+                        failingTestCase={item[1].failingTestCase}
+                        key={index}
+                      />)
+                    : <></>
+                  })
+                }
               })
           : null}
 
-        {/* Failure container */}
-        {resultKeys.length
-          ? resultKeys
-              .filter((key) => result[key] && result[key].tag === "Failure")
-              .map((key, index) => {
-                let certTaskName = getCertificationTaskName(key);
+        {unitTestSuccess ? (
+          <>
+            {/* Failure container */}
+            {resultKeys.length
+              ? resultKeys
+                  .filter((key) => result[key] && result[key].tag === "Failure")
+                  .map((key, index) => {
+                    let certTaskName = getCertificationTaskName(key);
 
-                return <FailedStatus
-                  certTask={certTaskName}
-                  reason={result[key].reason}
-                  output={result[key].output}
-                  failingTestCase={result[key].failingTestCase}
-                  key={index}
-                />
-              })
-          : null}
+                    return <FailedStatus
+                      certTask={certTaskName}
+                      reason={result[key].reason}
+                      output={result[key].output}
+                      failingTestCase={result[key].failingTestCase}
+                      key={index}
+                    />
+                  })
+              : null}
 
-        {/* Success container */}
-        { resultKeys
-              .filter((key) => result[key] && result[key].tag === "Success")
-              .map((key, index) => {
-                let certTaskName = getCertificationTaskName(key);
-                return <SuccessCard 
-                  resultObj={result[key]}
-                  certTask={certTaskName}
-                  key={index}
-                />
-              })
-        }
+            {/* Success container */}
+            { resultKeys
+                  .filter((key) => result[key] && result[key].tag === "Success")
+                  .map((key, index) => {
+                    let certTaskName = getCertificationTaskName(key);
+                    return <SuccessCard 
+                      resultObj={result[key]}
+                      certTask={certTaskName}
+                      key={index}
+                    />
+                  })
+            }
+          </>
+        ) : null}
       </>
     </div>
   );
