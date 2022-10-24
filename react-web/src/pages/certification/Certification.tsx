@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
@@ -27,7 +27,7 @@ import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
 
 const Certification = () => {
-  const form = useForm({
+  const form: any = useForm({
     schema: certificationSchema,
     mode: "onChange",
   });
@@ -44,7 +44,7 @@ const Certification = () => {
   let timeout: any;
 
   const formHandler = (formData: ISearchForm) => {
-    const { username, repoName, branch } = formData;
+    const { username, repoName, branch, commit } = formData;
     setSubmitting(true);
     let config = timelineConfig;
 
@@ -53,8 +53,9 @@ const Certification = () => {
       setTimelineConfig(TIMELINE_CONFIG);
     }
 
+    let githubBranchOrCommitHash = branch || commit;
     setGithubLink(
-      "https://github.com/" + username + "/" + repoName + "/tree/" + branch
+      "https://github.com/" + username + "/" + repoName + "/tree/" + githubBranchOrCommitHash
     );
 
     const handleErrorScenario = () => {
@@ -69,10 +70,11 @@ const Certification = () => {
       setTimelineConfig(TIMELINE_CONFIG);
     };
     
+    const githubRef = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
     
     const triggerAPI = () => {
       postData
-        .post("/run", "github:" + [username, repoName, branch].join("/"))
+        .post("/run", githubRef)
         .then((response) => response.data)
         .then((uid) => {
           const triggerFetchRunStatus = async () => {
@@ -80,7 +82,7 @@ const Certification = () => {
               .get("/run/" + uid)
               .then((res) => {
                 const status = res.data.status,
-                  state = res.hasOwnProperty("state") ? res.data.state : "";
+                  state = res.data.hasOwnProperty("state") ? res.data.state : "";
 
                 config = config.map((item, index) => {
                   if (item.status === status) {
@@ -143,12 +145,13 @@ const Certification = () => {
     
     /**
     const fetchMockData = () => {
+      console.log(githubRef)
       postData
         .get("static/data/run")
         .then((response) => response.data)
         .then((uuid) => {
           // await fetchData.get("/run/" + uid)
-          fetchData.get("static/data/finished-error.json").then((res) => {
+          fetchData.get("static/data/finished-escrow-UTFail.json").then((res) => {
 
             const status = res.data.status,
               state = res.data.hasOwnProperty("state") ? res.data.state : "";
@@ -223,10 +226,18 @@ const Certification = () => {
             />
 
             <Input
+              label="Commit Hash"
+              type="text"
+              id="commit"
+              disabled={submitting || form.watch("branch")?.length}
+              {...form.register("commit")}
+            />
+            <div className="or-separator-text">Or</div>
+            <Input
               label="Branch"
               type="text"
               id="branch"
-              disabled={submitting}
+              disabled={submitting || form.watch("commit")?.length}
               {...form.register("branch")}
             />
             <Button

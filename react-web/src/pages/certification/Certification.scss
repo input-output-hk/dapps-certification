@@ -9,7 +9,12 @@
     display: flex;
     flex-flow: column;
     position: relative;
-
+    .or-separator-text {
+      text-align: center;
+      vertical-align: middle;
+      margin-bottom: 20px;
+      color: #878e9e;
+    }
     .btn {
       display: flex;
       margin: 0 auto;
