@@ -8,10 +8,10 @@ export const certificationSchema = yup.object().shape(
       is: "",
       then: yup
         .string()
-        .min(6)
+        .min(7)
         .max(40)
         .required("This field is required.")
-        .matches(/[a-z0-9]{6}/),
+        .matches(/[0-9a-f]{7,40}/),
     }),
     branch: yup.string().when("commit", {
       is: (commit: string | any[]) => commit?.length === 0,
