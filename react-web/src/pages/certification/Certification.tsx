@@ -61,9 +61,10 @@ const Certification = () => {
     const handleErrorScenario = () => {
       // show an api error toast
       setErrorToast(true);
+      form.reset();
       setTimeout(() => {
         setErrorToast(false);
-        form.reset();
+        // TBD - blur out of input fields 
       }, 5000); // hide after 5 seconds
       setSubmitting(false);
       setFormSubmitted(false);
@@ -155,8 +156,6 @@ const Certification = () => {
 
             const status = res.data.status,
               state = res.data.hasOwnProperty("state") ? res.data.state : "";
-
-            // TBD -- save this state into useState and based on state changes useEffect and handle the logic there
             
             config = config.map((item, index) => {
               if (item.status === status) {
@@ -166,9 +165,10 @@ const Certification = () => {
                   returnObj['progress'] = Math.trunc((res.data.progress['finished-tasks'].length / getPlannedCertificationTaskCount(res.data.plan)) * 100)
                 }
                 return returnObj;
+              } else {
+                // Set the previously executed states as passed
+                return setManyStatus(index, config, item, status, "passed");
               }
-              // Set the previously executed states as passed
-              return setManyStatus(index, config, item, status, "passed");
             });
             if (status === 'finished') {
               const unitTestResult = processFinishedJson(res.data.result)
@@ -186,14 +186,6 @@ const Certification = () => {
     fetchMockData();
     */
   };
-
-  /**
-  const resetForm = (evt: Event) => {
-    evt.stopImmediatePropagation();
-    form.reset();
-    clearTimeout(timeout);
-  }
-  */
 
   const handleDownloadLogData = (logData: any) => {
     exportObjectToJsonFile(logData);
