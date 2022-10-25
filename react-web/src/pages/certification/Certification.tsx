@@ -212,7 +212,7 @@ const Certification = () => {
         <div className="search-form common-top">
           <Form form={form} onSubmit={formHandler}>
             <Input
-              label="Github Username"
+              label="Owner"
               type="text"
               disabled={submitting}
               {...form.register("username")}
