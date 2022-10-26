@@ -180,7 +180,7 @@ main = do
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
-                   & setOnException (\r e -> withEvent eb MainOnException \ev -> do
+                   & setOnException (\r e -> when (defaultShouldDisplayException e) $ withEvent eb MainOnException \ev -> do
                                         onExceptionCallback (narrowEventBackend InjectOnException $ subEventBackend ev) r e
                                         schedule scheduleCrash (setAncestor $ reference ev))
                    & setInstallShutdownHandler (putMVar closeSocketVar)
