@@ -1,24 +1,13 @@
 import {
-  useForm as useHookForm,
-  UseFormProps as UseHookFormProps,
+  useForm as useHookForm
 } from "react-hook-form";
 
-// Form validator library: zod
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ZodSchema, TypeOf } from "zod";
+// Form validator library: yup
+import { yupResolver } from "@hookform/resolvers/yup";
 
-// Provide additional option that would be custom zod schema.
-interface UseFormProps<T extends ZodSchema<any>>
-  extends UseHookFormProps<TypeOf<T>> {
-  schema: T;
-}
-
-export const useForm = <T extends ZodSchema<any>>({
-  schema,
-  ...formConfig
-}: UseFormProps<T>) => {
+export const useForm = ({ schema, ...formConfig }: any) => {
   return useHookForm({
     ...formConfig,
-    resolver: zodResolver(schema),
+    resolver: yupResolver(schema),
   });
 };

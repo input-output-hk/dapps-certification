@@ -35,7 +35,7 @@ const LogContainer: React.FC<{
                 // output of each entry in unit test
                 if (unitTestKey === '_certRes_unitTestResults') {
                   return result[unitTestKey].map((item: any, index: number) => {
-                    return item.resultOutcome.tag === 'Failure' ? (
+                    return typeof item !== 'string' && item.resultOutcome.tag === 'Failure' ? (
                       <UnitTestFailureCard
                         resultObj={item}
                         key={index}
