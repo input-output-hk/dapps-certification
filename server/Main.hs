@@ -15,7 +15,6 @@ import Data.Aeson
 import Data.Function
 import Data.Singletons
 import Data.Version
-import Data.Void
 import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.Cors
 import Options.Applicative as Opts
@@ -27,7 +26,7 @@ import Observe.Event.BackendModification
 import Observe.Event.Crash
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
-import Observe.Event.Wai
+import Observe.Event.Wai hiding (OnException)
 import Observe.Event.Servant.Client
 import System.IO
 import Control.Concurrent.MVar
@@ -109,11 +108,10 @@ data InitializingField
 
 data RootEventSelector f where
   Initializing :: RootEventSelector InitializingField
-  MainOnException :: RootEventSelector Void
+  OnException :: RootEventSelector OnExceptionField
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
   InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
-  InjectOnException :: forall f . !(OnException f) -> RootEventSelector f
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
@@ -130,15 +128,14 @@ renderRoot Initializing =
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
   )
-renderRoot MainOnException =
+renderRoot OnException =
   ( "handling-exception"
-  , absurd
+  , renderOnExceptionField renderJSONException
   )
 renderRoot (InjectServerSel serverSel) =
   renderServerEventSelector serverSel
 renderRoot (InjectCrashing s) = renderCrashing s
 renderRoot (InjectRunRequest s) = runRequestJSON s
-renderRoot (InjectOnException s) = renderOnException renderJSONException s
 renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
@@ -180,8 +177,8 @@ main = do
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
-                   & setOnException (\r e -> when (defaultShouldDisplayException e) $ withEvent eb MainOnException \ev -> do
-                                        onExceptionCallback (narrowEventBackend InjectOnException $ subEventBackend ev) r e
+                   & setOnException (\r e -> when (defaultShouldDisplayException e) $ withEvent eb OnException \ev -> do
+                                        addField ev $ OnExceptionField r e
                                         schedule scheduleCrash (setAncestor $ reference ev))
                    & setInstallShutdownHandler (putMVar closeSocketVar)
                    & setBeforeMainLoop (finalize initEv)
