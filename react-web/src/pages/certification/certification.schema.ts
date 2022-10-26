@@ -12,7 +12,7 @@ export const certificationSchema = yup.object().shape(
         .max(40, "Please enter a commit hash with length upto 40")
         .required("This field is required.")
         .matches(
-          /[0-9a-f]{7,8}/,
+          /[0-9a-f]{7,40}/,
           "Invalid entry. Commit hash must be combination of only lowercase letters and numbers"
         ),
     }),
