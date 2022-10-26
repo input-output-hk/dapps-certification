@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
@@ -22,9 +22,12 @@ import {
   isAnyTaskFailure,
   getPlannedCertificationTaskCount,
 } from "./Certification.helper";
+import { useDelayedApi } from "hooks/useDelayedApi";
 import Toast from "components/Toast/Toast";
 import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
+
+const TIMEOFFSET = 60 * 1000;
 
 const Certification = () => {
   const form: any = useForm({
@@ -37,16 +40,18 @@ const Certification = () => {
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
   const [finishedCertify, setFinishedCertify] = useState(false);
   const [githubLink, setGithubLink] = useState("");
+  const [uid, setUid] = useState("");
   const [logData, setLogData] = useState<any>({});
   const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
   const [errorToast, setErrorToast] = useState(false);
-
-  let timeout: any;
+  const [runStatus, setRunStatus] = useState("");
+  const [runState, setRunState] = useState("");
+  const [refetchMin, setRefetchMin] = useState(0.1);
+  const [apiFetching, setApiFetching] = useState(false);
 
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch, commit } = formData;
     setSubmitting(true);
-    let config = timelineConfig;
 
     // Reset to default process states
     if (formSubmitted) {
@@ -57,139 +62,120 @@ const Certification = () => {
     setGithubLink(
       "https://github.com/" + username + "/" + repoName + "/tree/" + githubBranchOrCommitHash
     );
-
-    const handleErrorScenario = () => {
-      // show an api error toast
-      setErrorToast(true);
-      form.reset();
-      setTimeout(() => {
-        setErrorToast(false);
-        // TBD - blur out of input fields 
-      }, 5000); // hide after 5 seconds
-      setSubmitting(false);
-      setFormSubmitted(false);
-      setTimelineConfig(TIMELINE_CONFIG);
-    };
     
-    const githubRef = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
-    
-    const triggerAPI = () => {
-      postData
-        .post("/run", githubRef)
-        .then((response) => response.data)
-        .then((uid) => {
-          const triggerFetchRunStatus = async () => {
-            await fetchData
-              .get("/run/" + uid)
-              .then((res) => {
-                const status = res.data.status,
-                  state = res.data.hasOwnProperty("state") ? res.data.state : "";
+    const triggerAPI = async () => {
+      try {
+        const response = await postData.post(
+          "/run",
+          "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
+        );
 
-                config = config.map((item, index) => {
-                  if (item.status === status) {
-                    const currentState =
-                      status === "finished" ? "passed" : state || "running";
-                    let returnObj = { ...item, state: currentState };
-                    if (
-                      status === "certifying" &&
-                      currentState === "running" &&
-                      res.data.progress &&
-                      res.data.plan
-                    ) {
-                      returnObj["progress"] = Math.trunc(
-                        (res.data.progress["finished-tasks"].length /
-                          getPlannedCertificationTaskCount(res.data.plan)) *
-                          100
-                      );
-                    }
-                    return returnObj;
-                  }
-                  // Set the previously executed states as passed
-                  return setManyStatus(index, config, item, status, "passed");
-                });
-                if (status === "finished") {
-                  const unitTestResult = processFinishedJson(res.data.result);
-                  setFinishedCertify(unitTestResult);
-                  setUnitTestSuccess(unitTestResult);
-                  setLogData(res.data.result);
-                }
-                if (state === "failed" || status === "finished") {
-                  setSubmitting(false);
-                }
-                setTimelineConfig(config);
-
-                if (state === "running" || state === "passed") {
-                  const timeOffset = 60 * 1000;
-                  let refetchMins = 1;
-                  if (status === "certifying") {
-                    refetchMins = 0.2;
-                  }
-                  timeout = setTimeout(() => {
-                    clearTimeout(timeout);
-                    triggerFetchRunStatus();
-                  }, refetchMins * timeOffset);
-                }
-              })
-              .catch((error) => {
-                handleErrorScenario();
-                console.log(error);
-              });
-          };
-          triggerFetchRunStatus();
-        })
-        .catch((error) => {
-          handleErrorScenario();
-          console.log(error);
-        });
+        /** For mock */ 
+        // const response = await postData.get('static/data/run')
+        
+        setUid(response.data);
+      } catch (e) {
+        handleErrorScenario();
+        console.log(e);
+      }
     };
     triggerAPI();
-    
-    /**
-    const fetchMockData = () => {
-      console.log(githubRef)
-      postData
-        .get("static/data/run")
-        .then((response) => response.data)
-        .then((uuid) => {
-          // await fetchData.get("/run/" + uid)
-          fetchData.get("static/data/finished-escrow-UTFail.json").then((res) => {
+  };
 
-            const status = res.data.status,
-              state = res.data.hasOwnProperty("state") ? res.data.state : "";
-            
-            config = config.map((item, index) => {
-              if (item.status === status) {
-                const currentState = status === "finished" ? "passed" : (state || "running")
-                let returnObj = { ...item, state: currentState };
-                if (status === 'certifying' && currentState === 'running' && res.data.progress && res.data.plan) {
-                  returnObj['progress'] = Math.trunc((res.data.progress['finished-tasks'].length / getPlannedCertificationTaskCount(res.data.plan)) * 100)
-                }
-                return returnObj;
-              } else {
-                // Set the previously executed states as passed
-                return setManyStatus(index, config, item, status, "passed");
-              }
-            });
-            if (status === 'finished') {
-              const unitTestResult = processFinishedJson(res.data.result)
-              setFinishedCertify(true); //unitTestResult
-              setUnitTestSuccess(unitTestResult);
-              setLogData(res.data.result);
-            }
-            if (state === 'failed' || status === 'finished') {
-              setSubmitting(false);
-            }
-            setTimelineConfig(config);
-          });
-        });
-    };
-    fetchMockData();
-    */
+  const triggerFetchRunStatus = async () => {
+    let config = timelineConfig;
+    try {
+      const res = await fetchData.get("/run/" + uid);
+      /** For mock */ 
+      // const res = await fetchData.get("static/data/finished-certification.json")
+      const status = res.data.status;
+      const state = res.data.hasOwnProperty("state") ? res.data.state : "";
+      setRunStatus(status);
+      setRunState(state);
+      config = config.map((item, index) => {
+        if (item.status === status) {
+          const currentState =
+            status === "finished" ? "passed" : state || "running";
+          let returnObj = { ...item, state: currentState };
+          if (
+            status === "certifying" &&
+            currentState === "running" &&
+            res.data.progress &&
+            res.data.plan
+          ) {
+            returnObj["progress"] = Math.trunc(
+              (res.data.progress["finished-tasks"].length /
+                getPlannedCertificationTaskCount(res.data.plan)) *
+                100
+            );
+          }
+          return returnObj;
+        }
+        // Set the previously executed states as passed
+        return setManyStatus(index, config, item, status, "passed");
+      });
+      if (status === "finished") {
+        const unitTestResult = processFinishedJson(res.data.result);
+        setFinishedCertify(true); // to hide form even when UT-Failure
+        setUnitTestSuccess(unitTestResult);
+        setLogData(res.data.result);
+      }
+      if (state === "failed" || status === "finished") {
+        setSubmitting(false);
+      }
+      setTimelineConfig(config);
+    } catch (e) {
+      handleErrorScenario();
+      console.log(e);
+    }
+  };
+
+  const handleErrorScenario = () => {
+    // show an api error toast
+    setErrorToast(true);
+    form.reset();
+    setTimeout(() => {
+      setErrorToast(false);
+      // TBD - blur out of input fields 
+    }, 5000); // hide after 5 seconds
+    setSubmitting(false);
+    setFormSubmitted(false);
+    setTimelineConfig(TIMELINE_CONFIG);
   };
 
   const handleDownloadLogData = (logData: any) => {
     exportObjectToJsonFile(logData);
   };
+
+  useEffect(() => {
+    if (uid.length) {
+      triggerFetchRunStatus();
+    }
+    // eslint-disable-next-line
+  }, [uid]);
+
+  useEffect(() => {
+    runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(0.1);
+    if (
+      runStatus === "certifying" ||
+      runStatus === "building" ||
+      runStatus === "preparing" ||
+      runStatus === "queued" ||
+      (runStatus === "finished" && runState === "running")
+    ) {
+      setApiFetching(true);
+    } else {
+      setApiFetching(false);
+    }
+  }, [runStatus, runState]);
+
+  useDelayedApi(
+    async () => {
+      triggerFetchRunStatus();
+    },
+    refetchMin * TIMEOFFSET, // delay in milliseconds
+    runState === "running" || runState === "passed" // set to false to stop polling
+  );
 
   return (
     <>
@@ -232,13 +218,21 @@ const Certification = () => {
               disabled={submitting || form.watch("commit")?.length}
               {...form.register("branch")}
             />
-            <Button
-              type="submit"
-              className="btn btn-primary"
-              buttonLabel="Start Testing"
-              disabled={!form.formState.isValid || submitting}
-              onClick={(_) => setFormSubmitted(true)}
-            />
+            {false && apiFetching ? (
+              <Button
+                className="btn btn-abort"
+                buttonLabel="Abort"
+                // onClick={(_) => abortApi()}
+              />
+            ) : (
+              <Button
+                type="submit"
+                className="btn btn-primary"
+                buttonLabel="Start Testing"
+                disabled={!form.formState.isValid || submitting}
+                onClick={(_) => setFormSubmitted(true)}
+              />
+            )}
           </Form>
         </div>
       </div>
