@@ -1,6 +1,5 @@
 import React, { FC } from "react";
 import classNames from "classnames";
-// TBD -  import PassedImg from 'assets/images/passed.svg' - while moving to assets instead of public
 
 export interface ITimelineItem {
   config: {
@@ -26,8 +25,13 @@ const TimelineItem: FC<ITimelineItem> = ({
     } else if (!unitTestSuccess && (status === "finished" || status === 'certifying')) {
       state = 'failed'
     }
-    // TBD - return PassedImg
     return "images/" + state + ".svg";
+  };
+
+  const renderProgressPercentage = () => {
+    if (state === "running" && status === "certifying") {
+      return <span className="progress-percentage">{progress}%</span>
+    }
   };
 
   return (
@@ -49,11 +53,7 @@ const TimelineItem: FC<ITimelineItem> = ({
         src={getURLFor(state)}
         alt={state}
       />
-      {
-        (state === 'running' && status === 'certifying') ?
-        <span className="progress-percentage">{progress}%</span>
-        : null
-      }
+      {renderProgressPercentage()}
       <span className="text" data-testid={text}>
         {text}
       </span>

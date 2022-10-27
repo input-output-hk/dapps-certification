@@ -92,15 +92,17 @@ const Certification = () => {
                     let returnObj = { ...item, state: currentState };
                     if (
                       status === "certifying" &&
-                      currentState === "running" &&
-                      res.data.progress &&
-                      res.data.plan
+                      currentState === "running"
                     ) {
+                      if (res.data.progress && res.data.plan) {
                       returnObj["progress"] = Math.trunc(
                         (res.data.progress["finished-tasks"].length /
                           getPlannedCertificationTaskCount(res.data.plan)) *
                           100
                       );
+                      } else {
+                        returnObj["progress"] = 0
+                      }
                     }
                     return returnObj;
                   }
@@ -152,7 +154,7 @@ const Certification = () => {
         .then((response) => response.data)
         .then((uuid) => {
           // await fetchData.get("/run/" + uid)
-          fetchData.get("static/data/finished-escrow-UTFail.json").then((res) => {
+          fetchData.get("static/data/certifying.json").then((res) => {
 
             const status = res.data.status,
               state = res.data.hasOwnProperty("state") ? res.data.state : "";
@@ -161,8 +163,19 @@ const Certification = () => {
               if (item.status === status) {
                 const currentState = status === "finished" ? "passed" : (state || "running")
                 let returnObj = { ...item, state: currentState };
-                if (status === 'certifying' && currentState === 'running' && res.data.progress && res.data.plan) {
-                  returnObj['progress'] = Math.trunc((res.data.progress['finished-tasks'].length / getPlannedCertificationTaskCount(res.data.plan)) * 100)
+                if (
+                  status === "certifying" &&
+                  currentState === "running"
+                ) {
+                  if (res.data.progress && res.data.plan) {
+                    returnObj["progress"] = Math.trunc(
+                      (res.data.progress["finished-tasks"].length /
+                        getPlannedCertificationTaskCount(res.data.plan)) *
+                        100
+                    );
+                  } else {
+                    returnObj["progress"] = 0
+                  }
                 }
                 return returnObj;
               } else {
