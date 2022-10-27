@@ -20,8 +20,9 @@ import Observe.Event.Render.JSON
 import Network.URI
 import IOHK.Certification.Interface
 
-import Plutus.Certification.API
+import Plutus.Certification.API as API
 import Paths_plutus_certification qualified as Package
+import Data.Time.LocalTime
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -31,6 +32,8 @@ data ServerCaps m r = ServerCaps
     getRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () RunStatusV1 m ())
   , -- | Delete all runs associated with a job
     abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> m ())
+  , -- | Get the logs for all runs associated with a job
+    getLogs :: !(EventBackendModifiers r r -> Maybe KnownActionType -> RunIDV1 -> ConduitT () RunLog m ())
   }
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
@@ -38,6 +41,7 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   { submitJob = \mods -> nt . submitJob mods
   , getRuns = \mods -> transPipe nt . getRuns mods
   , abortRuns = \mods -> nt . abortRuns mods
+  , getLogs = \mods act -> transPipe nt . getLogs mods act
   }
 
 data CreateRunField
@@ -49,6 +53,7 @@ data ServerEventSelector f where
   CreateRun :: ServerEventSelector CreateRunField
   GetRun :: ServerEventSelector Void
   AbortRun :: ServerEventSelector RunIDV1
+  GetRunLogs :: ServerEventSelector RunIDV1
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -58,6 +63,7 @@ renderServerEventSelector CreateRun = ("create-run", \case
                                         )
 renderServerEventSelector GetRun = ("get-run", absurd)
 renderServerEventSelector AbortRun = ("abort-run", \rid -> ("run-id",toJSON rid))
+renderServerEventSelector GetRunLogs = ("get-run-logs", \rid -> ("run-id",toJSON rid))
 
 -- | An implementation of 'API'
 server :: (MonadMask m) => ServerCaps m r -> EventBackend m r ServerEventSelector -> ServerT API m
@@ -76,6 +82,16 @@ server ServerCaps {..} eb = NamedAPI
   , abortRun = \rid -> withEvent eb AbortRun \ev -> do
      addField ev rid
      const NoContent <$> (abortRuns (setAncestor $ reference ev) rid)
+  , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do
+      addField ev rid
+      let dropCond = case afterM of
+            (Just after) ->
+              let afterUtc = zonedTimeToUTC after
+              in ((<= afterUtc) . zonedTimeToUTC . time)
+            Nothing -> const False
+      runConduit
+         $ getLogs (setAncestor $ reference ev) actionTypeM rid
+        .| (dropWhileC dropCond >> sinkList)
   }
   where
     consumeRuns = await >>= \case

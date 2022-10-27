@@ -98,6 +98,9 @@ localServerCaps backend = do
      readIORef cancellations >>= sequence_ . Map.lookup jobId
      freeCancellation jobId
 
+    -- TODO: implement for Local also
+    getLogs = \_ _ _ -> yieldMany []
+
   pure $ ServerCaps {..}
 
 data LocalSelector f where
