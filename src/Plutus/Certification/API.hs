@@ -20,6 +20,8 @@ module Plutus.Certification.API
   , StepState(..)
   , CertifyingStatus(..)
   , IncompleteRunStatus(..)
+  , Cicero.Run.RunLog(..)
+  , KnownActionType(..)
   ) where
 
 import Control.Applicative
@@ -32,8 +34,10 @@ import Data.Aeson.Encoding
 import Network.URI
 import Data.UUID
 import Data.ByteString.Lazy.Char8
+import Data.Time.LocalTime
 import Data.Text hiding (unpack, pack)
 import IOHK.Certification.Interface
+import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
 type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
@@ -42,6 +46,12 @@ data NamedAPI mode = NamedAPI
   , createRun :: mode :- "run" :> ReqBody '[PlainText] FlakeRefV1 :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
   , getRun :: mode :- "run" :> Capture "id" RunIDV1 :> Get '[JSON] RunStatusV1
   , abortRun :: mode :- "run" :> Capture "id" RunIDV1 :> DeleteNoContent
+  , getLogs :: mode :- "run"
+      :> Capture "id" RunIDV1
+      :> "logs"
+      :> QueryParam "after" ZonedTime
+      :> QueryParam "action-type" KnownActionType
+      :> Get '[JSON] [Cicero.Run.RunLog]
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version }
@@ -184,7 +194,6 @@ instance ToJSON RunStatusV1 where
     ( "status" .= ("finished" :: Text)
    <> "result" .= v
     )
-
 instance FromJSON RunStatusV1 where
   parseJSON v = parseIncomplete v <|> parseFinished v
     where
@@ -194,3 +203,40 @@ instance FromJSON RunStatusV1 where
         if status == ("finished" :: Text)
           then Finished <$> o .: "result"
           else fail $ "unknown status " ++ show status
+--
+-- | Types of Cicero actions we know and care about
+data KnownActionType
+  = -- | @plutus-certification/generate-flake@
+    Generate
+  | -- | @plutus-certification/build-flake@
+    Build
+  | -- | @plutus-certification/run-certify@
+    Certify
+  deriving stock (Read,Show,Eq,Generic)
+
+instance FromHttpApiData KnownActionType where
+  parseUrlPiece "generate" = Right Generate
+  parseUrlPiece "build"    = Right Build
+  parseUrlPiece "certify"  = Right Certify
+  parseUrlPiece _          = Left "Unknown ActionType"
+
+instance ToHttpApiData KnownActionType where
+  toUrlPiece Generate = "generate"
+  toUrlPiece Build    = "build"
+  toUrlPiece Certify  = "certify"
+
+
+--NOTE: we keep Enum derivation explicitly to nail down the right action order 
+-- and also make it future-proof for any data constructors rearrangements
+instance Enum KnownActionType where
+  fromEnum Generate = 0
+  fromEnum Build    = 1
+  fromEnum Certify  = 2
+
+  toEnum 0 = Generate
+  toEnum 1 = Build
+  toEnum 2 = Certify
+  toEnum _ = errorWithoutStackTrace "Plutus.Certification.API.KnownActionType.toEnum: bad argument"
+
+instance Ord KnownActionType where
+  a <= b = fromEnum a <= fromEnum b

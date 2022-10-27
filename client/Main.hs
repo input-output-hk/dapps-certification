@@ -19,9 +19,12 @@ import Data.ByteString.Lazy.Char8 (hPutStrLn)
 import Data.Coerce
 import Network.URI hiding (scheme)
 import Servant.API.BasicAuth
+import Servant.API
 import Servant.Client.Core.BasicAuth
 import Data.Aeson
 import System.IO (stdout)
+import Data.Time.LocalTime
+import Data.Text as Text
 
 flakeRefReader :: ReadM FlakeRefV1
 flakeRefReader = do
@@ -62,17 +65,52 @@ abortRunInfo = info getRunParser
  <> header "plutus-certification-client run abort — Abort a run"
   )
 
+getLogsParser :: Parser GetLogsArgs
+getLogsParser = GetLogsArgs
+  <$> getRunParser
+  <*> optional (option zonedTimeReader
+        ( long "after"
+       <> metavar "AFTER"
+       <> help "getting all the logs following a certain timestamp"
+        ))
+  <*> optional (option auto
+        ( long "action-type"
+       <> metavar "TYPE"
+       <> help "filter logs by action-type (Generate/Build/Certify)"
+        ))
+
+zonedTimeReader :: ReadM ZonedTime
+zonedTimeReader = do
+  urlStr <- str
+  case parseUrlPiece urlStr of
+    Right u -> pure u
+    Left t -> readerError $ Text.unpack t
+
+getLogsInfo :: ParserInfo GetLogsArgs
+getLogsInfo = info getLogsParser
+  ( fullDesc
+ <> header "plutus-certification-client run get-logs — Get the logs for a run"
+  )
+
 data RunCommand
   = Create !FlakeRefV1
   | Get !RunIDV1
   | Abort !RunIDV1
+  | GetLogs !GetLogsArgs
 
 runCommandParser :: Parser RunCommand
 runCommandParser = hsubparser
   ( command "create" (Create <$> createRunInfo)
  <> command "get" (Get <$> getRunInfo)
  <> command "abort" (Abort <$> abortRunInfo)
+ <> command "get-logs" (GetLogs <$> getLogsInfo)
   )
+
+data GetLogsArgs = GetLogsArgs
+  { runId :: !RunIDV1
+  , after :: !(Maybe ZonedTime)
+  , actionType :: !(Maybe KnownActionType)
+  }
 
 runCommandInfo :: ParserInfo RunCommand
 runCommandInfo = info runCommandParser
@@ -156,3 +194,5 @@ main = do
     CmdRun (Create ref) -> handle $ apiClient.createRun ref
     CmdRun (Get ref) -> handle $ apiClient.getRun ref
     CmdRun (Abort ref) -> handle $ (const True <$> apiClient.abortRun ref)
+    --TODO: investigate why ZonedTime doesn't serialize properly
+    CmdRun (GetLogs (GetLogsArgs ref zt act)) -> handle $ apiClient.getLogs ref zt act

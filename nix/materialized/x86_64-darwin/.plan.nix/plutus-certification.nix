@@ -54,6 +54,7 @@
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
           (hsPkgs."eventuo11y-batteries" or (errorHandler.buildDepError "eventuo11y-batteries"))
+          (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
@@ -111,6 +112,8 @@
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."time" or (errorHandler.buildDepError "time"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
           buildable = true;
