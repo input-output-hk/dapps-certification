@@ -1,3 +1,5 @@
+@import "styles/colors.scss";
+
 #statusTimeline {
   ul {
     display: flex;
@@ -10,7 +12,7 @@
     &:before {
       position: absolute;
       content: " ";
-      background-color: #c9c9c9;
+      background-color: $lighter-gray;
       height: 3px;
       top: 6px;
       bottom: 26px;
@@ -30,7 +32,7 @@
       .image {
         width: 16px;
         height: 16px;
-        background: #fff;
+        background: $white;
         padding: 3px;
         border-radius: 16px;
         margin-top: -3px;
@@ -51,7 +53,7 @@
       span.progress-percentage {
         position: absolute;
         top: 2px;
-        color: #DBAB0A;
+        color: $yellow;
         font-weight: bold;
       }
     }
@@ -80,7 +82,7 @@
       }
 
       &:not(:last-child):after {
-        background-color: #c9c9c9;
+        background-color: $lighter-gray;
         bottom: 26px;
         content: " ";
         height: 3px;

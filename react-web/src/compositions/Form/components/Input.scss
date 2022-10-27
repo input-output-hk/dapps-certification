@@ -11,10 +11,10 @@
     display: flex;
     flex-flow: column;
     cursor: text;
-    border: 1.5px solid $border-grey;
+    border: 1.5px solid $border-gray;
 
     &:hover {
-      background: $muted-grey;
+      background: $muted-gray;
     }
 
     &.active {
@@ -40,7 +40,7 @@
     }
 
     &.disabled {
-      background: $muted-grey;
+      background: $muted-gray;
       border-color: transparent;
       pointer-events: none;
       cursor: default;
@@ -48,7 +48,7 @@
     }
 
     label {
-      color: #6f7786;
+      color: $input-label-gray;
       cursor: text;
       z-index: 1;
     }
@@ -57,7 +57,7 @@
       border: 0;
       background: inherit;
       outline: none;
-      color: $text-grey;
+      color: $input-gray;
       font-size: 18px;
       line-height: 24px;
       cursor: text;
@@ -67,6 +67,6 @@
   }
 
   ::placeholder {
-    color: $text-grey;
+    color: $input-gray;
   }
 }

@@ -1,3 +1,5 @@
+@import "styles/colors.scss";
+
 #searchContainer {
   margin: 0 auto;
   max-width: 65%;
@@ -13,7 +15,7 @@
       text-align: center;
       vertical-align: middle;
       margin-bottom: 20px;
-      color: #878e9e;
+      color: $body-text-gray;
     }
     .btn {
       display: flex;
@@ -24,7 +26,7 @@
   h2 {
     font-size: 16px;
     line-height: 24px;
-    color: #878e9e;
+    color: $body-text-gray;
     text-align: center;
   }
 }
@@ -45,11 +47,11 @@
 
       .meter-bar {
         width: 100%;
-        background-color: #cf222e;
+        background-color: $red;
         height: 14px;
 
         .progress {
-          background-color: #009168;
+          background-color: $green;
           height: inherit;
         }
       }
@@ -58,8 +60,8 @@
 }
 
 .btn-abort {
-  background-color: #cf222e;
-  color: #f2dede;
+  background-color: $red;
+  color: $dark-bg-text-color;
 }
 
 #logContainer {
@@ -74,10 +76,10 @@
   }
 
   .failure {
-    border-color: #ebccd1;
-    background-color: #f2dede;
+    border-color: $light-red;
+    background-color: $light-red;
     .error-title {
-      color: #a94442;
+      color: $dark-red;
     }
   }
 
@@ -90,7 +92,7 @@
     display: block;
     margin-bottom: 10px;
     font-weight: 600;
-    color: #5a5a5a;
+    color: $dark-gray;
   }
   .failing-testcase {
     margin-left: 10px;
@@ -101,8 +103,8 @@
   }
 
   .success {
-    background-color: #dff0d8;
-    border-color: #e2eee2;
+    background-color: $lighter-green;
+    border-color: $light-green;
   }
 
 
@@ -126,11 +128,11 @@ h2 {
   font-size: 30px;
 }
 a {
-  color: #428bca;
+  color: $blue;
   text-decoration: none;
   &:hover,
   &:focus {
-    color: #2a6496;
+    color: $darker-blue;
     text-decoration: underline;
   }
 }
