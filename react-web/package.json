@@ -33,9 +33,7 @@
     "build:production": "REACT_APP_ENV=production yarn build",
     "test": "react-scripts test",
     "test:coverage": "react-scripts test --coverage",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
@@ -54,8 +52,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "gh-pages": "^4.0.0"
   }
 }
