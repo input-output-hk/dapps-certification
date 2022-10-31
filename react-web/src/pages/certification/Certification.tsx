@@ -46,7 +46,7 @@ const Certification = () => {
   const [errorToast, setErrorToast] = useState(false);
   const [runStatus, setRunStatus] = useState("");
   const [runState, setRunState] = useState("");
-  const [refetchMin, setRefetchMin] = useState(0.1);
+  const [refetchMin, setRefetchMin] = useState(1);
   const [apiFetching, setApiFetching] = useState(false);
 
   const formHandler = (formData: ISearchForm) => {
@@ -155,7 +155,7 @@ const Certification = () => {
   }, [uid]);
 
   useEffect(() => {
-    runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(0.1);
+    runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(1);
     if (
       runStatus === "certifying" ||
       runStatus === "building" ||
