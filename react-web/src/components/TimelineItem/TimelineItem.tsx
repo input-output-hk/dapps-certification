@@ -21,7 +21,7 @@ const TimelineItem: FC<ITimelineItem> = ({
   // TBD - useCallback to cache
   const getURLFor = (state: string = "outline") => {
     if (hasFailedTasks && state === "passed" && status === "finished") {
-      state += '-error' // load grey check
+      state += '-error' // load gray check
     } else if (!unitTestSuccess && (status === "finished" || status === 'certifying')) {
       state = 'failed'
     }
