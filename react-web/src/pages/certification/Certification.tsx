@@ -41,7 +41,7 @@ const Certification = () => {
   const [finishedCertify, setFinishedCertify] = useState(false);
   const [githubLink, setGithubLink] = useState("");
   const [uid, setUid] = useState("");
-  const [logData, setLogData] = useState<any>({});
+  const [resultData, setResultData] = useState<any>({});
   const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
   const [errorToast, setErrorToast] = useState(false);
   const [runStatus, setRunStatus] = useState("");
@@ -118,7 +118,7 @@ const Certification = () => {
         const unitTestResult = processFinishedJson(res.data.result);
         setFinishedCertify(true); // to hide form even when UT-Failure
         setUnitTestSuccess(unitTestResult);
-        setLogData(res.data.result);
+        setResultData(res.data.result);
       }
       if (state === "failed" || status === "finished") {
         setSubmitting(false);
@@ -143,8 +143,8 @@ const Certification = () => {
     setTimelineConfig(TIMELINE_CONFIG);
   };
 
-  const handleDownloadLogData = (logData: any) => {
-    exportObjectToJsonFile(logData);
+  const handleDownloadResultData = (resultData: any) => {
+    exportObjectToJsonFile(resultData);
   };
 
   useEffect(() => {
@@ -247,11 +247,11 @@ const Certification = () => {
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}
               </a>
-              {Object.keys(logData).length ? (
+              {Object.keys(resultData).length ? (
                 <>
                   <Button
                     className="report-download"
-                    onClick={(e) => handleDownloadLogData(logData)}
+                    onClick={(e) => handleDownloadResultData(resultData)}
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
@@ -262,19 +262,21 @@ const Certification = () => {
             <Timeline
               statusConfig={timelineConfig}
               unitTestSuccess={unitTestSuccess}
-              hasFailedTasks={isAnyTaskFailure(logData)}
+              hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
           {unitTestSuccess === false && Object.keys(logData).length ? (
             <>
-              <LogContainer unitTestSuccess={unitTestSuccess} result={logData} />
+          {unitTestSuccess === false && Object.keys(resultData).length ? (
+            <>
+              <LogContainer unitTestSuccess={unitTestSuccess} result={resultData} />
             </>
           ) : null}
 
-          {unitTestSuccess && Object.keys(logData).length ? (
+          {unitTestSuccess && Object.keys(resultData).length ? (
             <>
-              <FileCoverageContainer githubLink={githubLink} result={logData} />
-              <LogContainer result={logData} />
+              <FileCoverageContainer githubLink={githubLink} result={resultData} />
+              <LogContainer result={resultData} />
             </>
           ) : null}
         </>
