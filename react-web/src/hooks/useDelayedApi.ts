@@ -11,15 +11,14 @@ export const useDelayedApi = (
   }, [callback]);
 
   useEffect(() => {
-    const tick = () => {
-      return savedCallback.current;
-    };
-    let id: any;
+    let timeout: any;
     if (enabled && delay !== null) {
-      id = setTimeout(tick, delay);
+      timeout = setTimeout(savedCallback.current, delay);
+    } else {
+      clearTimeout(timeout);
     }
     return () => {
-      clearTimeout(id);
+      clearTimeout(timeout);
     };
   }, [enabled, delay]);
 };
