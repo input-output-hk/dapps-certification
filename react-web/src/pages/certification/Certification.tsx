@@ -47,6 +47,7 @@ const Certification = () => {
   const [runStatus, setRunStatus] = useState("");
   const [runState, setRunState] = useState("");
   const [refetchMin, setRefetchMin] = useState(1);
+  const [fetchRunStatus, setFetchRunStatus] = useState(false);
   const [apiFetching, setApiFetching] = useState(false);
 
   const formHandler = (formData: ISearchForm) => {
@@ -87,11 +88,12 @@ const Certification = () => {
     try {
       const res = await fetchData.get("/run/" + uid);
       /** For mock */ 
-      // const res = await fetchData.get("static/data/finished-certification.json")
+      // const res = await fetchData.get("static/data/certifying.json")
       const status = res.data.status;
       const state = res.data.hasOwnProperty("state") ? res.data.state : "";
       setRunStatus(status);
       setRunState(state);
+      setFetchRunStatus(state === "running" || state === "passed");
       config = config.map((item, index) => {
         if (item.status === status) {
           const currentState =
@@ -171,10 +173,11 @@ const Certification = () => {
 
   useDelayedApi(
     async () => {
+      setFetchRunStatus(false); // to clear timeout until api response
       triggerFetchRunStatus();
     },
     refetchMin * TIMEOFFSET, // delay in milliseconds
-    runState === "running" || runState === "passed" // set to false to stop polling
+    fetchRunStatus // set to false to stop polling
   );
 
   return (
