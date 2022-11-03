@@ -15,7 +15,7 @@ import {
   processFinishedJson,
   setManyStatus,
 } from "components/TimelineItem/timeline.helper";
-import LogContainer from "./components/LogContainer";
+import ResultContainer from "./components/ResultContainer";
 import FileCoverageContainer from "./components/FileCoverageContainer";
 import {
   isAnyTaskFailure,
@@ -271,14 +271,14 @@ const Certification = () => {
             <>
           {unitTestSuccess === false && Object.keys(resultData).length ? (
             <>
-              <LogContainer unitTestSuccess={unitTestSuccess} result={resultData} />
+              <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />
             </>
           ) : null}
 
           {unitTestSuccess && Object.keys(resultData).length ? (
             <>
               <FileCoverageContainer githubLink={githubLink} result={resultData} />
-              <LogContainer result={resultData} />
+              <ResultContainer result={resultData} />
             </>
           ) : null}
         </>
