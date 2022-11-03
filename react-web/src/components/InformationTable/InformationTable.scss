@@ -1,0 +1,38 @@
+@import "styles/colors.scss";
+
+#viewLogsBtn {
+    margin-right: 1rem;
+}
+.log-information {
+    max-height: calc(100vh - 270px);
+    overflow-y: scroll;
+    margin: 0;
+    word-break: break-all;
+    background-color: #424242;
+    color: #ccc;
+    .log-header {
+        height: 30px;
+        position: sticky;
+        top: 0;
+        padding: 0 10px;
+        background-color: #585858;
+        color: #e8e8e8;
+        font-weight: bold;
+        line-height: 30px;
+        h6 {
+            float: left;
+        }
+        .minimize-btn {
+            cursor: pointer;
+            font-size: xxx-large;
+        }
+    }
+    .log-content {
+        div.log {
+            padding: 5px 5px;
+            .log-time {
+                margin-right: 15px;
+            }
+        }
+    }
+}

@@ -124,20 +124,6 @@
   }
 }
 
-h2 {
-  font-size: 30px;
-}
-a {
-  color: $blue;
-  text-decoration: none;
-  &:hover,
-  &:focus {
-    color: $darker-blue;
-    text-decoration: underline;
-  }
-}
-
-
 button.report-download {
   float: right;
   padding: 5px 14px;

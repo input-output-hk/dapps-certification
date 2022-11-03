@@ -25,6 +25,7 @@ import { useDelayedApi } from "hooks/useDelayedApi";
 import Toast from "components/Toast/Toast";
 import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
+import InformationTable from "components/InformationTable/InformationTable";
 
 const TIMEOFFSET = 60 * 1000;
 
@@ -48,6 +49,10 @@ const Certification = () => {
   const [refetchMin, setRefetchMin] = useState(1);
   const [fetchRunStatus, setFetchRunStatus] = useState(false);
   const [apiFetching, setApiFetching] = useState(false);
+  const [fetchLogs, setFetchLogs] = useState(false);
+  const [refetchLogsOffset] = useState(0.1);
+  const [logInfo, setLogInfo] = useState([]);
+  const [lastLogTimestamp, setLastLogTimestamp] = useState('')
 
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch, commit } = formData;
@@ -69,10 +74,8 @@ const Certification = () => {
           "/run",
           "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
         );
-
         /** For mock */ 
         // const response = await postData.get('static/data/run')
-        
         setUid(response.data);
       } catch (e) {
         handleErrorScenario();
@@ -123,6 +126,7 @@ const Certification = () => {
       }
       if (state === "failed" || status === "finished") {
         setSubmitting(false);
+        setFetchLogs(false);
       }
       setTimelineConfig(config);
     } catch (e) {
@@ -148,8 +152,27 @@ const Certification = () => {
     exportObjectToJsonFile(resultData);
   };
 
+  const fetchLogInformation = async () => {
+    try {
+      const queryAfter = lastLogTimestamp ? '?after=' + encodeURIComponent(lastLogTimestamp) : '';
+      const res: any = await fetchData.get("/run/" + uid + "/logs" + queryAfter);
+      /** For mock */ 
+      // const res: any = await fetchData.get("static/data/build-logs.json")
+      setFetchLogs(!submitting);
+      setLogInfo(res.data.logs)
+    } catch(e) {
+      handleErrorScenario();
+      console.log(e);
+    }
+  }
+
+  const emittedLastLogTimestamp = (time: string) => {
+    setLastLogTimestamp(time)
+  }
+
   useEffect(() => {
     if (uid.length) {
+      fetchLogInformation()
       triggerFetchRunStatus();
     }
     // eslint-disable-next-line
@@ -178,6 +201,15 @@ const Certification = () => {
     refetchMin * TIMEOFFSET, // delay in milliseconds
     fetchRunStatus // set to false to stop polling
   );
+
+  useDelayedApi(
+    async () => {
+      setFetchLogs(false); // to clear timeout until api response
+      fetchLogInformation();
+    },
+    refetchLogsOffset * TIMEOFFSET,
+    fetchLogs
+  )
 
   return (
     <>
@@ -241,7 +273,7 @@ const Certification = () => {
 
       {formSubmitted && (
         <>
-          <div id="resultContainer">
+          <div id="resultContainer">         
             <h2
               id="breadcrumb"
               className={finishedCertify ? "" : "hidden"}
@@ -267,8 +299,11 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {unitTestSuccess === false && Object.keys(logData).length ? (
+          {logInfo && logInfo.length ? (
             <>
+              <InformationTable logs={logInfo} emitLastLogTimestamp={emittedLastLogTimestamp}/>
+            </>
+          ) : null}
           {unitTestSuccess === false && Object.keys(resultData).length ? (
             <>
               <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />
