@@ -1,5 +1,4 @@
 import React, { FC } from "react";
-import classNames from "classnames";
 import "./Button.scss";
 
 export interface IButtonProps {
@@ -23,7 +22,7 @@ const Button: FC<IButtonProps> = ({
 }) => {
   return (
     <button
-      className={classNames("btn", className, { "is-loading": isLoading })}
+      className={`btn ${className} ${isLoading ? "is-loading" : ""}`}
       type={type}
       onClick={onClick}
       disabled={disabled}

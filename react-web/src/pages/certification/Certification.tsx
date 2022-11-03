@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -184,7 +183,7 @@ const Certification = () => {
     <>
       <div
         id="searchContainer"
-        className={classNames({ hidden: finishedCertify })}
+        className={finishedCertify ? "hidden" : ""}
       >
         <h2>
           Enter Github repository details of your Dapp to start the
@@ -245,7 +244,7 @@ const Certification = () => {
           <div id="resultContainer">
             <h2
               id="breadcrumb"
-              className={classNames({ hidden: !finishedCertify })}
+              className={finishedCertify ? "" : "hidden"}
             >
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}

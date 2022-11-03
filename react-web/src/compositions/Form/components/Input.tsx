@@ -1,5 +1,4 @@
 import React, { ComponentProps, forwardRef, useEffect, useState } from "react";
-import classNames from "classnames";
 
 import { FieldError } from "./FieldError";
 import "./Input.scss";
@@ -37,12 +36,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   return (
     <div
-      className={classNames("input-wrapper", className)}
+      className={`input-wrapper ${className}`}
       onBlur={(e: any) => !e.target.value && setActive(false)}
       onClick={(e: any) => setActive(true)}
     >
       <div
-        className={classNames("input", { active: active, error: errorMsg, disabled: disabled })}
+        className={`input ${active ? "active" : ""} ${errorMsg ? "error" : ""} ${disabled ? "disabled" : ""}`}
         onClick={(_) => {
           setActive(true);
           document.getElementById(name || "")?.focus();

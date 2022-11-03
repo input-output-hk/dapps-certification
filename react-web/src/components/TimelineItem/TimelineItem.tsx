@@ -1,5 +1,4 @@
 import React, { FC } from "react";
-import classNames from "classnames";
 
 export interface ITimelineItem {
   config: {
@@ -38,17 +37,10 @@ const TimelineItem: FC<ITimelineItem> = ({
     <li
       data-value={status}
       data-testid={status}
-      className={classNames({
-        active:
-          state === "running" || state === "failed" || state === "passed",
-      })}
+      className={(state === "running" || state === "failed" || state === "passed") ? "active" : ""}
     >
       <img
-        className={classNames({
-          image: true,
-          "anim-rotate": state === "running",
-          "certifying": status === 'certifying'
-        })}
+        className={`image ${state==="running" ? "anim-rotate" : ""} ${status==="certifying" ? "certifying" : ""}`}
         data-testid={state}
         src={getURLFor(state)}
         alt={state}
