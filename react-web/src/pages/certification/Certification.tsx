@@ -158,7 +158,7 @@ const Certification = () => {
       const res: any = await fetchData.get("/run/" + uid + "/logs" + queryAfter);
       /** For mock */ 
       // const res: any = await fetchData.get("static/data/build-logs.json")
-      setFetchLogs(!submitting);
+      setFetchLogs(!finishedCertify || !submitting);
       setLogInfo(res.data.logs)
     } catch(e) {
       handleErrorScenario();
