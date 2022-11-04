@@ -68,6 +68,9 @@ const InformationTable: FC<{logs: any, emitLastLogTimestamp?: (e: any) => any;}>
                                 }
                             } catch(e) {
                                 // do nothing
+                                if (typeof item.Text == 'string' && item.Text.length) {
+                                    logData = item.Text
+                                }
                             }
                             return logData.length ? (
                                 <InformationTableEntry key={index} time={item.Time} log={logData} />

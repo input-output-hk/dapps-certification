@@ -1,6 +1,4 @@
-{
-  "logs": [
-    {
+[{
       "Time": "2022-10-24T17:03:42.802242986Z",
       "Source": "stderr",
       "Text": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current"
@@ -10211,4 +10209,3 @@
       "Text": "/nix/store/9mnp06qsi5hxq7vg82i9ih44n7749p5c-workflow-action-script-bash: line 20: grep: command not found"
     }
   ]
-}

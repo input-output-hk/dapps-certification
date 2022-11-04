@@ -159,7 +159,7 @@ const Certification = () => {
       /** For mock */ 
       // const res: any = await fetchData.get("static/data/build-logs.json")
       setFetchLogs(!finishedCertify || !submitting);
-      setLogInfo(res.data.logs)
+      setLogInfo(res.data)
     } catch(e) {
       handleErrorScenario();
       console.log(e);
