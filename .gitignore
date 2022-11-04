@@ -4,3 +4,4 @@ flake
 .vim/
 gentags.sh
 tags
+docker/
