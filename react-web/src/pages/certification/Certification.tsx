@@ -241,32 +241,20 @@ const Certification = () => {
               label="Commit Hash"
               type="text"
               id="commit"
-              disabled={submitting || form.watch("branch")?.length}
+              disabled={submitting}
               {...form.register("commit")}
             />
-            <div className="or-separator-text">Or</div>
-            <Input
-              label="Branch"
-              type="text"
-              id="branch"
-              disabled={submitting || form.watch("commit")?.length}
-              {...form.register("branch")}
-            />
-            {false && apiFetching ? (
-              <Button
-                className="btn btn-abort"
-                buttonLabel="Abort"
-                // onClick={(_) => abortApi()}
-              />
-            ) : (
               <Button
                 type="submit"
                 className="btn btn-primary"
-                buttonLabel="Start Testing"
+              buttonLabel={"Start Testing"}
+              showLoader={
+                submitting &&
+                (runStatus !== "finished" && runState !== "failed")
+              }
                 disabled={!form.formState.isValid || submitting}
                 onClick={(_) => setFormSubmitted(true)}
               />
-            )}
           </Form>
         </div>
       </div>

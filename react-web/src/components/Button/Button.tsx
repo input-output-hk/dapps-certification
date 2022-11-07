@@ -1,12 +1,14 @@
 import React, { FC } from "react";
 import "./Button.scss";
+import Loader from "components/Loader/Loader";
 
 export interface IButtonProps {
   disabled?: boolean;
   className?: string;
-  buttonLabel?: string;
+  buttonLabel?: any;
   isLoading?: boolean;
   iconUrl?: any;
+  showLoader?: boolean;
   type?: "button" | "reset" | "submit" | undefined;
   onClick?: (e: any) => any;
 }
@@ -18,6 +20,7 @@ const Button: FC<IButtonProps> = ({
   isLoading = false,
   type = "submit",
   iconUrl,
+  showLoader = false,
   onClick,
 }) => {
   return (
@@ -27,8 +30,16 @@ const Button: FC<IButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
     >
-      {iconUrl && <img className="icon-image" src={iconUrl} alt="icon-img" />}
-      <span className="button-label">{buttonLabel}</span>
+      {showLoader ? (
+        <Loader />
+      ) : (
+        <>
+          {iconUrl && (
+            <img className="icon-image" src={iconUrl} alt="icon-img" />
+          )}
+          <span className="button-label">{buttonLabel}</span>
+        </>
+      )}
     </button>
   );
 };
