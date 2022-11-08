@@ -3,25 +3,14 @@ import React, { FC, useState, useEffect, useRef } from "react";
 import "./InformationTable.scss";
 import InformationTableEntry from "./InformationTableEntry";
 
-const InformationTable: FC<{logs: any, emitLastLogTimestamp?: (e: any) => any;}> = ({ logs, emitLastLogTimestamp }) => {
+const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
     const [showLogs, setShowLogs] = useState(false);
-    const [dataCollection, setDataCollection] = useState<any>([])
     const bottomRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        setDataCollection((prevState: any) => {
-            if (prevState.length) {
-                emitLastLogTimestamp && emitLastLogTimestamp(prevState[prevState.length - 1]['Time'])
-            }
-            return [...prevState, ...logs]
-        })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [logs])
 
     useEffect(() => {
         // scroll to bottom 
         bottomRef.current?.scrollIntoView({behavior: 'smooth'});
-    }, [dataCollection])
+    }, [logs])
 
     const showLogView = () => {
         setShowLogs(true)
@@ -55,7 +44,7 @@ const InformationTable: FC<{logs: any, emitLastLogTimestamp?: (e: any) => any;}>
                         </span>
                     </div>
                     <div className="log-content">
-                        {dataCollection.map((item: any, index: number) => {
+                        {logs.map((item: any, index: number) => {
                             let logData = ''
                             try {
                                 const data = JSON.parse(item.Text)
@@ -72,6 +61,7 @@ const InformationTable: FC<{logs: any, emitLastLogTimestamp?: (e: any) => any;}>
                                     logData = item.Text
                                 }
                             }
+                            logData = !logData.length ? item.Text : logData
                             return logData.length ? (
                                 <InformationTableEntry key={index} time={item.Time} log={logData} />
                             ) : null
