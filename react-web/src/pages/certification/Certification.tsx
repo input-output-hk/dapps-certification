@@ -38,10 +38,8 @@ const Certification = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
-  const [finishedCertify, setFinishedCertify] = useState(false); //TODO:  can't be this inferred from runStatus?
-  const [failed, setFailed] = useState(false); //TODO: can't be this inferred from runStatus?
   const [githubLink, setGithubLink] = useState("");
-  const [uid, setUid] = useState("");
+  const [uuid, setUuid] = useState("");
   const [resultData, setResultData] = useState<any>({});
   const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
   const [errorToast, setErrorToast] = useState(false);
@@ -73,7 +71,7 @@ const Certification = () => {
         );
         /** For mock */
         // const response = await postData.get('static/data/run')
-        setUid(response.data);
+        setUuid(response.data);
       } catch (e) {
         handleErrorScenario();
         console.log(e);
@@ -85,7 +83,7 @@ const Certification = () => {
   const triggerFetchRunStatus = async () => {
     let config = timelineConfig;
     try {
-      const res = await fetchData.get("/run/" + uid);
+      const res = await fetchData.get("/run/" + uuid);
       /** For mock */
       // const res = await fetchData.get("static/data/certifying.json")
       const status = res.data.status;
@@ -117,12 +115,8 @@ const Certification = () => {
       });
       if (status === "finished") {
         const unitTestResult = processFinishedJson(res.data.result);
-        setFinishedCertify(true); // to hide form even when UT-Failure
         setUnitTestSuccess(unitTestResult);
         setResultData(res.data.result);
-      }
-      if(state === 'failed'){
-        setFailed(true)
       }
       if (state === "failed" || status === "finished") {
         setSubmitting(false);
@@ -152,11 +146,11 @@ const Certification = () => {
   };
 
   useEffect(() => {
-    if (uid.length) {
+    if (uuid.length) {
       triggerFetchRunStatus();
     }
     // eslint-disable-next-line
-  }, [uid]);
+  }, [uuid]);
 
   useEffect(() => {
     runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(1);
@@ -182,17 +176,16 @@ const Certification = () => {
     fetchRunStatus // set to false to stop polling
   );
   const {logInfo} = useLogs(
-      uid,
-      finishedCertify || failed,
-      handleErrorScenario,
-      TIMEOFFSET,
+      uuid,
+      runStatus === "finished" || runState === "failed",
+      handleErrorScenario
   )
 
   return (
     <>
       <div
         id="searchContainer"
-        className={finishedCertify ? "hidden" : ""}
+        className={runStatus === "finished" ? "hidden" : ""}
       >
         <h2>
           Enter Github repository details of your Dapp to start the
@@ -241,7 +234,7 @@ const Certification = () => {
           <div id="resultContainer">
             <h2
               id="breadcrumb"
-              className={finishedCertify ? "" : "hidden"}
+              className={runStatus === "finished" ? "" : "hidden"}
             >
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}

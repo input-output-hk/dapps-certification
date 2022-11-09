@@ -6,30 +6,30 @@ type Log = {
     Time: string,
 }
 
+const TIMEOFFSET = 60 * 1000;
+
 export const useLogs = (
-    uid: string,
-    finishedCertify: boolean,
-    handleErrorScenario: () => void,
-    timeOffset: number,
+    uuid: string,
+    testEnded: boolean,
+    handleErrorScenario: () => void
 ) => {
     const [logInfo, setLogInfo] = useState<Log[]>([])
     const [fetchingLogs, setFetchingLogs] = useState(false);
     const [refetchLogsOffset] = useState(0.1);
-    //reset log if uid changed
+    //reset log if uuid changed
     useEffect(()=>{
         setLogInfo([])
-    },[uid])
+    },[uuid])
 
     const fetchLog = React.useCallback(async ()=>{
-        if(!uid) return
+        if(!uuid) return
         const lastLogTimestamp = logInfo[logInfo.length - 1]?.Time
         setFetchingLogs(true)
         try {
             const queryAfter = lastLogTimestamp ? '?after=' + encodeURIComponent(lastLogTimestamp) : '';
-            const res: any = await fetchData.get("/run/" + uid + "/logs" + queryAfter);
+            const res: any = await fetchData.get("/run/" + uuid + "/logs" + queryAfter);
             /** For mock */
             // const res: any = await fetchData.get("static/data/build-logs.json")
-            //setFetchLogs(!finishedCertify || !submitting);
             if(res.data.length) setLogInfo((prev)=> prev.concat(res.data))
         } catch(e) {
             handleErrorScenario();
@@ -39,14 +39,14 @@ export const useLogs = (
         }
     },[
         logInfo,
-        uid,
+        uuid,
         handleErrorScenario,
     ])
 
-  const enabled = !fetchingLogs && !finishedCertify && !!uid
+  const enabled = !fetchingLogs && !testEnded && !!uuid
   useDelayedApi(
       fetchLog,
-      refetchLogsOffset * timeOffset,
+      refetchLogsOffset * TIMEOFFSET,
       enabled
   )
   return { logInfo,fetchingLogs}

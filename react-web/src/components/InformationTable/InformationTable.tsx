@@ -8,17 +8,12 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
     const bottomRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // scroll to bottom 
-        bottomRef.current?.scrollIntoView({behavior: 'smooth'});
+        bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
     }, [logs])
 
     const showLogView = () => {
-        setShowLogs(true)
-        // scroll to bottom once visible
-        const timeout = setTimeout(()=> {
-            clearTimeout(timeout)
-            bottomRef.current?.scrollIntoView({behavior: 'smooth'});
-        }, 0)
+        setShowLogs(true);
+        bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
     }
 
     const hideLogView = () => {
