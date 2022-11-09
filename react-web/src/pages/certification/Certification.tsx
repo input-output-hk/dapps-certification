@@ -47,7 +47,8 @@ const Certification = () => {
   const [runState, setRunState] = useState("");
   const [refetchMin, setRefetchMin] = useState(1);
   const [fetchRunStatus, setFetchRunStatus] = useState(false);
-  const [apiFetching, setApiFetching] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [apiFetching, setApiFetching] = useState(false); // to be used for 'Abort'
 
   const formHandler = (formData: ISearchForm) => {
     const { username, repoName, branch, commit } = formData;
@@ -95,7 +96,7 @@ const Certification = () => {
         if (item.status === status) {
           const currentState =
             status === "finished" ? "passed" : state || "running";
-          let returnObj = { ...item, state: currentState };
+          let returnObj: any = { ...item, state: currentState };
           if (
             status === "certifying" &&
             currentState === "running" &&
