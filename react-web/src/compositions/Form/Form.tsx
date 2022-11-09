@@ -11,7 +11,6 @@ import {
   SubmitHandler,
 } from "react-hook-form";
 
-import classNames from "classnames";
 import "./Form.scss";
 
 interface FormProps<T extends FieldValues = any>
@@ -33,7 +32,7 @@ export const Form = <T extends FieldValues>({
       <form
         autoComplete="off"
         onSubmit={form.handleSubmit(onSubmit)}
-        className={classNames("form", className)}
+        className={`form ${className}`}
         {...props}
       >
         {/* Disable form modification while submission */}

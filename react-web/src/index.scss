@@ -5,7 +5,7 @@ body {
   color: #40485e;
   margin: 0;
   font-family: monospace;
-  font-size: 14px;
+  font-size: 16px;
   background-color: $white;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -58,4 +58,38 @@ code {
     transform: rotate(45deg);
     -webkit-transform: rotate(45deg);
   }
+}
+
+h1 {
+  font-size: 32px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 28px;
+}
+h4 {
+  font-size: 22px;
+}
+h5 {
+  font-size: 18px;
+}
+h6 {
+  font-size: 16px;
+}
+
+a, .link {
+  cursor: pointer;
+  color: $blue;
+  text-decoration: none;
+  &:hover,
+  &:focus {
+    color: $darker-blue;
+    text-decoration: underline;
+  }
+}
+
+.text-right {
+  float: right;
 }

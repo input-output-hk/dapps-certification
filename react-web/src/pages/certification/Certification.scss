@@ -20,6 +20,7 @@
     .btn {
       display: flex;
       margin: 0 auto;
+      min-width: 160px;
     }
   }
 
@@ -64,7 +65,7 @@
   color: $dark-bg-text-color;
 }
 
-#logContainer {
+#resultContainer {
   margin-top: 60px;
 
   .result-card {
@@ -123,20 +124,6 @@
     }
   }
 }
-
-h2 {
-  font-size: 30px;
-}
-a {
-  color: $blue;
-  text-decoration: none;
-  &:hover,
-  &:focus {
-    color: $darker-blue;
-    text-decoration: underline;
-  }
-}
-
 
 button.report-download {
   float: right;

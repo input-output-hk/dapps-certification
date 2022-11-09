@@ -4,7 +4,7 @@ import { CertificationTasks } from "../Certification.helper";
 import SuccessCard from "./SuccessCard";
 import UnitTestFailureCard from "./UnitTestFailureCard";
 
-const LogContainer: React.FC<{ 
+const ResultContainer: React.FC<{ 
   result: { [x: string]: any },
   unitTestSuccess?: boolean 
 }> = ({
@@ -25,7 +25,7 @@ const LogContainer: React.FC<{
   };
 
   return (
-    <div id="logContainer">
+    <div id="resultContainer">
       <>
         {/* Unit Test results */}
         {unitTestSuccess === false && unitTestKeys.length
@@ -98,4 +98,4 @@ const LogContainer: React.FC<{
   );
 };
 
-export default LogContainer;
+export default ResultContainer;

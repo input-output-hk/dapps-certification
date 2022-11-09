@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import classNames from "classnames";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -8,7 +7,7 @@ import { Form } from "compositions/Form/Form";
 import { ISearchForm } from "./certification.interface";
 import { certificationSchema } from "./certification.schema";
 import { useForm } from "hooks/useForm";
-
+import { useLogs } from "hooks/useLogs";
 import "./Certification.scss";
 import Timeline from "compositions/Timeline/Timeline";
 import { TIMELINE_CONFIG } from "compositions/Timeline/timeline.config";
@@ -16,7 +15,7 @@ import {
   processFinishedJson,
   setManyStatus,
 } from "components/TimelineItem/timeline.helper";
-import LogContainer from "./components/LogContainer";
+import ResultContainer from "./components/ResultContainer";
 import FileCoverageContainer from "./components/FileCoverageContainer";
 import {
   isAnyTaskFailure,
@@ -26,6 +25,7 @@ import { useDelayedApi } from "hooks/useDelayedApi";
 import Toast from "components/Toast/Toast";
 import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
+import InformationTable from "components/InformationTable/InformationTable";
 
 const TIMEOFFSET = 60 * 1000;
 
@@ -38,10 +38,9 @@ const Certification = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
-  const [finishedCertify, setFinishedCertify] = useState(false);
   const [githubLink, setGithubLink] = useState("");
-  const [uid, setUid] = useState("");
-  const [logData, setLogData] = useState<any>({});
+  const [uuid, setUuid] = useState("");
+  const [resultData, setResultData] = useState<any>({});
   const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
   const [errorToast, setErrorToast] = useState(false);
   const [runStatus, setRunStatus] = useState("");
@@ -63,18 +62,16 @@ const Certification = () => {
     setGithubLink(
       "https://github.com/" + username + "/" + repoName + "/tree/" + githubBranchOrCommitHash
     );
-    
+
     const triggerAPI = async () => {
       try {
         const response = await postData.post(
           "/run",
           "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
         );
-
-        /** For mock */ 
+        /** For mock */
         // const response = await postData.get('static/data/run')
-        
-        setUid(response.data);
+        setUuid(response.data);
       } catch (e) {
         handleErrorScenario();
         console.log(e);
@@ -86,8 +83,8 @@ const Certification = () => {
   const triggerFetchRunStatus = async () => {
     let config = timelineConfig;
     try {
-      const res = await fetchData.get("/run/" + uid);
-      /** For mock */ 
+      const res = await fetchData.get("/run/" + uuid);
+      /** For mock */
       // const res = await fetchData.get("static/data/certifying.json")
       const status = res.data.status;
       const state = res.data.hasOwnProperty("state") ? res.data.state : "";
@@ -118,9 +115,8 @@ const Certification = () => {
       });
       if (status === "finished") {
         const unitTestResult = processFinishedJson(res.data.result);
-        setFinishedCertify(true); // to hide form even when UT-Failure
         setUnitTestSuccess(unitTestResult);
-        setLogData(res.data.result);
+        setResultData(res.data.result);
       }
       if (state === "failed" || status === "finished") {
         setSubmitting(false);
@@ -132,29 +128,29 @@ const Certification = () => {
     }
   };
 
-  const handleErrorScenario = () => {
+  const handleErrorScenario = React.useCallback(() => {
     // show an api error toast
     setErrorToast(true);
     form.reset();
     setTimeout(() => {
       setErrorToast(false);
-      // TBD - blur out of input fields 
+      // TBD - blur out of input fields
     }, 5000); // hide after 5 seconds
     setSubmitting(false);
     setFormSubmitted(false);
     setTimelineConfig(TIMELINE_CONFIG);
-  };
+  },[form])
 
-  const handleDownloadLogData = (logData: any) => {
-    exportObjectToJsonFile(logData);
+  const handleDownloadResultData = (resultData: any) => {
+    exportObjectToJsonFile(resultData);
   };
 
   useEffect(() => {
-    if (uid.length) {
+    if (uuid.length) {
       triggerFetchRunStatus();
     }
     // eslint-disable-next-line
-  }, [uid]);
+  }, [uuid]);
 
   useEffect(() => {
     runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(1);
@@ -179,12 +175,17 @@ const Certification = () => {
     refetchMin * TIMEOFFSET, // delay in milliseconds
     fetchRunStatus // set to false to stop polling
   );
+  const {logInfo} = useLogs(
+      uuid,
+      runStatus === "finished" || runState === "failed",
+      handleErrorScenario
+  )
 
   return (
     <>
       <div
         id="searchContainer"
-        className={classNames({ hidden: finishedCertify })}
+        className={runStatus === "finished" ? "hidden" : ""}
       >
         <h2>
           Enter Github repository details of your Dapp to start the
@@ -210,32 +211,20 @@ const Certification = () => {
               label="Commit Hash"
               type="text"
               id="commit"
-              disabled={submitting || form.watch("branch")?.length}
+              disabled={submitting}
               {...form.register("commit")}
             />
-            <div className="or-separator-text">Or</div>
-            <Input
-              label="Branch"
-              type="text"
-              id="branch"
-              disabled={submitting || form.watch("commit")?.length}
-              {...form.register("branch")}
-            />
-            {false && apiFetching ? (
-              <Button
-                className="btn btn-abort"
-                buttonLabel="Abort"
-                // onClick={(_) => abortApi()}
-              />
-            ) : (
               <Button
                 type="submit"
                 className="btn btn-primary"
-                buttonLabel="Start Testing"
+              buttonLabel={"Start Testing"}
+              showLoader={
+                submitting &&
+                (runStatus !== "finished" && runState !== "failed")
+              }
                 disabled={!form.formState.isValid || submitting}
                 onClick={(_) => setFormSubmitted(true)}
               />
-            )}
           </Form>
         </div>
       </div>
@@ -245,16 +234,16 @@ const Certification = () => {
           <div id="resultContainer">
             <h2
               id="breadcrumb"
-              className={classNames({ hidden: !finishedCertify })}
+              className={runStatus === "finished" ? "" : "hidden"}
             >
               <a target="_blank" rel="noreferrer" href={githubLink}>
                 {form.getValues("username")}/{form.getValues("repoName")}
               </a>
-              {Object.keys(logData).length ? (
+              {Object.keys(resultData).length ? (
                 <>
                   <Button
                     className="report-download"
-                    onClick={(e) => handleDownloadLogData(logData)}
+                    onClick={(e) => handleDownloadResultData(resultData)}
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
@@ -265,19 +254,24 @@ const Certification = () => {
             <Timeline
               statusConfig={timelineConfig}
               unitTestSuccess={unitTestSuccess}
-              hasFailedTasks={isAnyTaskFailure(logData)}
+              hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {unitTestSuccess === false && Object.keys(logData).length ? (
+          {logInfo && logInfo.length ? (
             <>
-              <LogContainer unitTestSuccess={unitTestSuccess} result={logData} />
+              <InformationTable logs={logInfo} />
+            </>
+          ) : null}
+          {unitTestSuccess === false && Object.keys(resultData).length ? (
+            <>
+              <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />
             </>
           ) : null}
 
-          {unitTestSuccess && Object.keys(logData).length ? (
+          {unitTestSuccess && Object.keys(resultData).length ? (
             <>
-              <FileCoverageContainer githubLink={githubLink} result={logData} />
-              <LogContainer result={logData} />
+              <FileCoverageContainer githubLink={githubLink} result={resultData} />
+              <ResultContainer result={resultData} />
             </>
           ) : null}
         </>
