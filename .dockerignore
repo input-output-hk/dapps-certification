@@ -7,5 +7,6 @@ gentags.sh
 getLogs.sh
 run.sh
 .vim
-docker-files/build_and_run.sh
-
+docker-compose.yml
+Dockerfile.web
+Dockerfile.ws
