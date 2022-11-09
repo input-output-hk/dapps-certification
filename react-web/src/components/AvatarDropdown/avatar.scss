@@ -1,0 +1,50 @@
+@import "styles/colors.scss";
+.wrapper {
+    position: relative;
+    text-align: right;
+  }
+  .avatar {
+    vertical-align: middle;
+    width: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  input#toggler {
+    opacity: 0;
+    pointer-events: none;
+    touch-action: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .dropdown {
+    background-color: $white;
+    z-index: 10;
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    flex-direction: column;
+    padding: 20px;
+    gap: 5px;
+    right: 0;
+    text-align: justify;
+    min-width: 10rem;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .logout-btn {
+    cursor: pointer;
+    color: $blue;
+    padding: 20px 20px;
+    font-size: 16px;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    &:hover {
+      background-color: #f4f4f4;
+    }
+  }
+  input#toggler:checked ~ .dropdown {
+    display: flex;
+  }

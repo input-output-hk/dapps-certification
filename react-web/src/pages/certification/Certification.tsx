@@ -27,6 +27,9 @@ import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
 import InformationTable from "components/InformationTable/InformationTable";
 
+import { useAppDispatch, useAppSelector } from "store/store";
+import { setUuid } from "./slices/certification.slice";
+
 const TIMEOFFSET = 60 * 1000;
 
 const Certification = () => {
@@ -35,11 +38,12 @@ const Certification = () => {
     mode: "onChange",
   });
 
+  const { uuid } = useAppSelector((state) => state.certification);
+  const dispatch = useAppDispatch();
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
   const [githubLink, setGithubLink] = useState("");
-  const [uuid, setUuid] = useState("");
   const [resultData, setResultData] = useState<any>({});
   const [unitTestSuccess, setUnitTestSuccess] = useState(true); // assuming unit tests will pass
   const [errorToast, setErrorToast] = useState(false);
@@ -72,7 +76,7 @@ const Certification = () => {
         );
         /** For mock */
         // const response = await postData.get('static/data/run')
-        setUuid(response.data);
+        dispatch(setUuid(response.data));
       } catch (e) {
         handleErrorScenario();
         console.log(e);

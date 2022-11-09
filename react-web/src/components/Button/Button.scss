@@ -57,4 +57,20 @@
     cursor: default;
     pointer-events: none;
   }
+
+  &.btn-primary-outline {
+    background-color: $white;
+    color: $primary-btn-color;
+    border: 1px solid $primary-btn-color;
+    font-weight: inherit;
+    &:active,
+    &:focus,
+    &:hover {
+      box-shadow: none;
+      background-color: $primary-btn-color;
+      color: $white;
+      border: 0;
+      font-weight: 600;
+    }
+  }
 }

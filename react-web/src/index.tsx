@@ -5,14 +5,19 @@ import App from "./app/App";
 import "./index.scss";
 import reportWebVitals from "./reportWebVitals";
 
+import { Provider } from "react-redux";
+import store from "store/store";
+
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <BrowserRouter basename={process.env.PUBLIC_URL}>
-      <App />
-    </BrowserRouter>
+    <Provider store={store}>
+      <BrowserRouter basename={process.env.PUBLIC_URL}>
+        <App />
+      </BrowserRouter>
+    </Provider>
   </React.StrictMode>
 );
 

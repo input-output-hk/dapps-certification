@@ -1,15 +1,19 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { BASE_URL } from "constants/route";
 
 import "./App.scss";
-import Certification from "pages/certification/Certification";
+import Header from "components/Header/Header";
+import Loader from "components/Loader/Loader";
+
+const Certification = lazy(
+  () => import("../pages/certification/Certification")
+);
 
 const PageLayout = () => {
   return (
     <>
-      <header></header>
-
+      <Header />
       {/* Load page content here */}
       <section data-testid="contentWrapper" id="contentWrapper">
         <Outlet />
@@ -20,11 +24,13 @@ const PageLayout = () => {
 
 const App = () => {
   return (
-    <Routes>
-      <Route path={BASE_URL} element={<PageLayout />}>
-        <Route index element={<Certification />}></Route>
-      </Route>
-    </Routes>
+    <Suspense fallback={<Loader />}>
+      <Routes>
+        <Route path={BASE_URL} element={<PageLayout />}>
+          <Route path="/" element={<Certification />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
 

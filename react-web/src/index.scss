@@ -14,10 +14,6 @@ body {
   position: relative;
 }
 
-header {
-  height: 80px;
-}
-
 #contentWrapper {
   margin: 0 auto;
   padding: 40px;
@@ -88,6 +84,9 @@ a, .link {
     color: $darker-blue;
     text-decoration: underline;
   }
+}
+button.link {
+  font-family: monospace;
 }
 
 .text-right {
