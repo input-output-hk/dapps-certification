@@ -6,7 +6,7 @@ type Log = {
     Time: string,
 }
 
-const TIMEOFFSET = 60 * 1000;
+const TIMEOFFSET = 1000;
 
 export const useLogs = (
     uuid: string,
@@ -15,7 +15,7 @@ export const useLogs = (
 ) => {
     const [logInfo, setLogInfo] = useState<Log[]>([])
     const [fetchingLogs, setFetchingLogs] = useState(false);
-    const [refetchLogsOffset] = useState(0.1);
+    const [refetchLogsOffset] = useState(1);
     //reset log if uuid changed
     useEffect(()=>{
         setLogInfo([])
