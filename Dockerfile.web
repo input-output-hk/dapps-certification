@@ -6,14 +6,12 @@ WORKDIR /app/
 RUN git checkout develop
 WORKDIR /app/react-web
 COPY ./docker-files/.env.local .
-RUN yarn install
+RUN npm install
 
-#"proxy": "https://testing.dapps.iog.io/"
 #"homepage": "https://input-output-hk.github.io/dapps-certification/"
-
-#/dapps-certification/"
-RUN sed -i 's/https:\/\/input-output-hk.github.io/http:\/\/localhost:3000/g' package.json
+RUN sed -i 's/https:\/\/input-output-hk.github.io\/dapps-certification/http:\/\/localhost:3000/g' package.json
+#"proxy": "https://testing.dapps.iog.io/"
 RUN sed -i 's/https:\/\/testing.dapps.iog.io/http:\/\/localhost:3000/g'  package.json
 
 #ENTRYPOINT [ "/bin/sh" ]
-CMD [ "yarn","start" ]
+CMD [ "npm","start" ]
