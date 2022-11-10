@@ -258,7 +258,7 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {logInfo && logInfo.length ? (
+          {runState ? (
             <>
               <InformationTable logs={logInfo} />
             </>
