@@ -11,7 +11,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   max-width: 1440px;
   margin: 0 auto;
-  position: relative;
+  // position: relative;
 }
 
 header {
@@ -92,4 +92,10 @@ a, .link {
 
 .text-right {
   float: right;
+}
+
+.disabled, [disabled] {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
 }

@@ -1,0 +1,60 @@
+.modal-wrapper {
+    z-index: 999;
+    .modal {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        .modal-body {
+            background-color: white;
+            color: black;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            margin-top: 10%;
+            word-break: break-all;
+        }
+    }
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: #000;
+        opacity: 0.5;
+    }
+}
+
+
+#walletsContainer {
+    display: flex;
+    justify-content: space-evenly;
+}
+.card {
+    cursor: pointer;
+    /* Add shadows to create the "card" effect */
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    border-radius: 5px;
+    width: 155px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+      
+    /* On mouse-over, add a deeper shadow */
+    &:hover {
+        box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    }
+
+    img {
+        width: 30px;
+        margin-right: 5px;
+    }
+
+    span {
+        padding: 2px 16px;
+    }
+}

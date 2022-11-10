@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "proxy": "https://testing.dapps.iog.io/",
-  "homepage": "https://input-output-hk.github.io/dapps-certification/",
+  "homepage": "https://localhost:3000",
   "dependencies": {
     "@hookform/resolvers": "^2.9.7",
     "@testing-library/jest-dom": "^5.16.4",

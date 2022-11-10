@@ -51,10 +51,4 @@
     vertical-align: middle;
     margin-top: -3px;
   }
-
-  &[disabled] {
-    opacity: 0.5;
-    cursor: default;
-    pointer-events: none;
-  }
 }
