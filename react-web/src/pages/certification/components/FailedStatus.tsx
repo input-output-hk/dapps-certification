@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 
 const FailedStatus: React.FC<{
-  certTask: string;
+  taskName: string;
   reason: string;
   output: string;
   failingTestCase: any[];
-}> = ({ certTask, reason, output, failingTestCase }) => {
+}> = ({ taskName, reason, output, failingTestCase }) => {
   const [isOpen, setIsOpen] = useState(true);
   
   const toggleAccordion = () => {
@@ -14,7 +14,7 @@ const FailedStatus: React.FC<{
 
   return (
     <div className="result-card failure">
-      <label>Task: {certTask}</label>
+      <label>Task: {taskName}</label>
       <span
         className={`error-title accordion-title ${isOpen ? 'open' : ''}`}
         onClick={(_) => toggleAccordion()}

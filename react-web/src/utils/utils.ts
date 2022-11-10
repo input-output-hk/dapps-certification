@@ -22,3 +22,9 @@ export const exportObjectToJsonFile = (objectData: any) => {
       document.body.removeChild(a);
     }
   };
+
+export const formatToTitleCase = (value: string) => {
+  return value.toLowerCase().split(' ').map((word) => {
+    return word.replace(word[0], word[0].toUpperCase());
+  }).join(' ');
+}

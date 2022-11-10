@@ -46,7 +46,7 @@ const ResultContainer: React.FC<{
                   return result[unitTestKey].map((item: Array<any>, index: number) => {
                     return item[1].tag === 'Failure' ? (
                       <FailedStatus
-                        certTask='DLUnitTest'
+                        taskName='DLUnitTest'
                         reason={item[1].reason}
                         output={item[1].output}
                         failingTestCase={item[1].failingTestCase}
@@ -70,7 +70,7 @@ const ResultContainer: React.FC<{
                     let certTaskName = getCertificationTaskName(key);
 
                     return <FailedStatus
-                      certTask={certTaskName}
+                      taskName={certTaskName}
                       reason={result[key].reason}
                       output={result[key].output}
                       failingTestCase={result[key].failingTestCase}
@@ -79,6 +79,19 @@ const ResultContainer: React.FC<{
                   })
               : null}
 
+            {/* UnitTest success cards */}
+            {unitTestKeys
+              .filter(key => result[key].length)
+              .map((unitTestKey, index) => {
+                return <SuccessCard 
+                  resultObj={result[unitTestKey]}
+                  taskName={getCertificationTaskName(unitTestKey)}
+                  key={index}
+                  unitTest={unitTestKey}
+                />
+              })
+            }
+
             {/* Success container */}
             { resultKeys
                   .filter((key) => result[key] && result[key].tag === "Success")
@@ -86,7 +99,7 @@ const ResultContainer: React.FC<{
                     let certTaskName = getCertificationTaskName(key);
                     return <SuccessCard 
                       resultObj={result[key]}
-                      certTask={certTaskName}
+                      taskName={certTaskName}
                       key={index}
                     />
                   })
