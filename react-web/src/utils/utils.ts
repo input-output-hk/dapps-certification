@@ -22,3 +22,15 @@ export const exportObjectToJsonFile = (objectData: any) => {
       document.body.removeChild(a);
     }
   };
+
+export const formatToTitleCase = (value: string) => {
+  if (value.indexOf(' ') !== -1) {
+    return value.toLowerCase().split(' ').map((word) => {
+      return word.replace(word[0], word[0].toUpperCase());
+    }).join(' ');
+  } else {
+    const result = value.replace(/([A-Z])/g, " $1");
+    const finalResult = result.charAt(0).toUpperCase() + result.slice(1);
+    return finalResult.trim();
+  }
+}
