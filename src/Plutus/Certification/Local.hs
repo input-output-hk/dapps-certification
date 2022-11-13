@@ -5,6 +5,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Plutus.Certification.Local where
 
 import Plutus.Certification.Server
@@ -100,9 +101,12 @@ localServerCaps backend = do
       let runJob = withSubEvent ev RunningJob \rEv -> withSystemTempDirectory "generate-flake" \dir -> do
             addField rEv $ TempDir dir
             addStatus' . const $ Incomplete (Preparing Running)
-            onException
-              (generateFlake (narrowEventBackend InjectGenerate $ subEventBackend rEv) uri dir)
-              (addStatus' . const $ Incomplete (Preparing Failed))
+            catch
+              (generateFlake (narrowEventBackend InjectGenerate $ subEventBackend rEv) (addLogEntry Generate) uri dir)
+              (\(ex :: SomeException) -> do
+                addLogEntry Generate (T.pack $ show ex)
+                addStatus' . const $ Incomplete (Preparing Failed)
+              )
             addStatus' . const $ Incomplete (Building Running)
             certifyOut <- onException
               (buildFlake (narrowEventBackend InjectBuild $ subEventBackend rEv) (addLogEntry Build) dir)
