@@ -48,8 +48,8 @@ import IOHK.Certification.Interface hiding (Success)
 import Conduit
 import Data.Conduit.Aeson
 
-generateFlake :: EventBackend IO r GenerateFlakeSelector -> URI -> FilePath -> IO ()
-generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> do
+generateFlake :: EventBackend IO r GenerateFlakeSelector ->(Text -> IO ()) -> URI -> FilePath -> IO ()
+generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFlake \ev -> do
   addField ev $ GenerateRef flakeref
   addField ev $ GenerateDir output
 
@@ -57,6 +57,7 @@ generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> d
                   $ subEventBackend ev
   lock <- lockRef lockBackend flakeref
 
+  let logWrittenFile fname = addLogEntry $ T.pack $ fname ++ " written at " ++ output
   withSubEvent ev WriteFlakeNix \_ -> withFile (output </> "flake.nix") WriteMode \h -> do
     hPutStrLn h "{"
     hPutStrLn h "  inputs = {"
@@ -74,20 +75,26 @@ generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> d
     hPutStrLn h "  outputs = args: import ./outputs.nix args;"
     hPutStrLn h "}"
 
+  logWrittenFile "flake.nix"
+
   withSubEvent ev CopyOutputsNix \_ -> do
     outputsNix <- getDataFileName "data/outputs.nix"
     copyFile outputsNix (output </> "outputs.nix")
+
+  logWrittenFile "outputs.nix"
 
   withSubEvent ev CopyCertify \_ -> do
     certify <- getDataFileName "data/Certify.hs"
     copyFile certify (output </> "Certify.hs")
 
+  logWrittenFile "Certify.nix"
+
 buildFlake :: EventBackend IO r BuildFlakeSelector -> (Text -> IO ()) -> FilePath -> IO FilePath
-buildFlake backend extractLog dir = do
+buildFlake backend addLogEntry dir = do
     buildJson <- withEvent backend BuildingFlake \ev -> do
       let backend' = narrowEventBackend ReadNixBuild
                    $ subEventBackend ev
-      readProcessLogStderr_ backend' cmd extractLog
+      readProcessLogStderr_ backend' cmd addLogEntry
     case eitherDecodeWith jsonEOF decodeBuild buildJson of
       Left (path, err) -> throw $ DecodeBuild path err
       Right (BuildResult {..} :| []) -> case Map.lookup "out" outputs of
@@ -104,17 +111,17 @@ buildFlake backend extractLog dir = do
                      ]
 
 runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
-runCertify extractLog certify = do
+runCertify addLogEntry certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
             Error s -> liftIO $ fail s
             Success m -> do
-              liftIO $ extractLog $ LT.toStrict $ encodeToLazyText v
+              liftIO $ addLogEntry $ LT.toStrict $ encodeToLazyText v
               yield m
               toMessage
           Just (Left e) -> do
-            liftIO $ extractLog $ T.pack $ show e
+            liftIO $ addLogEntry $ T.pack $ show e
             liftIO $ throw e
           Nothing -> release k
     sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
@@ -201,7 +208,7 @@ logHandleText :: (MonadUnliftIO m)
               -> (Text -> m ())
               -> Handle
               -> m ()
-logHandleText backend extractLog h = go
+logHandleText backend addLogEntry h = go
   where
     go = do
       acqEv <- acquireEvent backend ReadingHandleLog
@@ -211,7 +218,7 @@ logHandleText backend extractLog h = go
           then pure $ pure ()
           else do
             addField ev chunk
-            extractLog chunk
+            addLogEntry chunk
             pure go
 
 logDrainHandle :: (MonadUnliftIO m)
@@ -240,7 +247,7 @@ readProcessLogStderr_
   -> ProcessConfig stdin stdoutIgnored stderrIgnored
   -> (Text -> m() )
   -> m LBS.ByteString
-readProcessLogStderr_ backend cfg extractLog  = withEvent backend LaunchingProcess \launchEv -> do
+readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProcess \launchEv -> do
     addField launchEv $ LaunchConfig cfg
 
     withProcessWait cfg' \p -> do
@@ -255,7 +262,7 @@ readProcessLogStderr_ backend cfg extractLog  = withEvent backend LaunchingProce
           readStderrBackend = narrowEventBackend ReadingStderr
                             $ backend'
 
-          readStderr = logHandleText readStderrBackend extractLog $ getStderr p
+          readStderr = logHandleText readStderrBackend addLogEntry $ getStderr p
 
           readStdoutBackend = narrowEventBackend ReadingStdout
                             $ backend'
