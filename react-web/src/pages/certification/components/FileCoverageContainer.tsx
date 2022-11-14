@@ -6,8 +6,8 @@ const FileCoverageContainer: React.FC<{
 }> = ({ result, githubLink }) => {
     const coverageIndexFiles: Array<string> = [];
     const coverageIndexReport: any = {};
-    if (result["_certRes_coverageIndexReport"] && result["_certRes_coverageIndexReport"]["_coverageMetadata"]) {
-        result["_certRes_coverageIndexReport"]["_coverageMetadata"].forEach(
+    if (result._certRes_coverageReport?._coverageIndex?._coverageMetadata) {
+        result._certRes_coverageReport?._coverageIndex?._coverageMetadata.forEach(
             (item: any) => {
                 // Find out all files upon which coverage is handled
                 const parentLoc =
@@ -28,8 +28,8 @@ const FileCoverageContainer: React.FC<{
 
     const coverageFiles: Array<string> = [];
     const coverageReport: any = {};
-    if (result["_certRes_coverageReport"] && result["_certRes_coverageReport"]["_coveredAnnotations"]) {
-        result["_certRes_coverageReport"]["_coveredAnnotations"].forEach(
+    if (result._certRes_coverageReport?._coverageData?._coveredAnnotations) {
+        result._certRes_coverageReport?._coverageData?._coveredAnnotations.forEach(
             (item: any) => {
                 const parentLoc =
                     item["tag"] === "CoverLocation"
