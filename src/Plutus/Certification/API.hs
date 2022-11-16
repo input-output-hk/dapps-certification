@@ -43,9 +43,15 @@ type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
   { version :: mode :- "version" :> Get '[JSON] VersionV1
   , versionHead :: mode :- "version" :> HeadNoContent
-  , createRun :: mode :- "run" :> ReqBody '[PlainText] FlakeRefV1 :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
+  , createRun :: mode :- "run"
+      :> AuthProtect "public-key"
+      :> ReqBody '[PlainText] FlakeRefV1
+      :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
   , getRun :: mode :- "run" :> Capture "id" RunIDV1 :> Get '[JSON] RunStatusV1
-  , abortRun :: mode :- "run" :> Capture "id" RunIDV1 :> DeleteNoContent
+  , abortRun :: mode :- "run"
+      :> AuthProtect "public-key"
+      :> Capture "id" RunIDV1
+      :> DeleteNoContent
   , getLogs :: mode :- "run"
       :> Capture "id" RunIDV1
       :> "logs"
@@ -226,7 +232,7 @@ instance ToHttpApiData KnownActionType where
   toUrlPiece Certify  = "certify"
 
 
---NOTE: we keep Enum derivation explicitly to nail down the right action order 
+--NOTE: we keep Enum derivation explicitly to nail down the right action order
 -- and also make it future-proof for any data constructors rearrangements
 instance Enum KnownActionType where
   fromEnum Generate = 0

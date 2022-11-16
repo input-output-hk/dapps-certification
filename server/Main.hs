@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
@@ -7,21 +8,27 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 module Main where
 
 import Control.Exception hiding (Handler)
 import Control.Monad.IO.Class
 import Data.Aeson
+import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
+import Data.Bits
 import Data.Function
 import Data.Singletons
 import Data.Version
 import Network.Wai.Handler.Warp
+import Data.Foldable
 import Network.Wai.Middleware.Cors
 import Options.Applicative as Opts
 import Servant
 import Servant.Client.Core.BaseUrl
 import System.Exit
 import Observe.Event
+import Servant.Server.Experimental.Auth
 import Observe.Event.BackendModification
 import Observe.Event.Crash
 import Observe.Event.Render.JSON
@@ -32,9 +39,9 @@ import System.IO
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Concurrent.Async
-
+import Network.Wai
 import Plutus.Certification.API
-import Plutus.Certification.Cache
+import Plutus.Certification.Cache hiding (lookup)
 import Plutus.Certification.Cicero
 import Plutus.Certification.Client
 import Plutus.Certification.Server
@@ -140,6 +147,22 @@ renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
 
+--TODO: remove after proper DB is implemented
+dummyHash :: ByteString -> Int
+dummyHash = foldl' (\h c -> 33*h `xor` fromEnum c) 5381 . unpack
+
+authHandler :: AuthHandler Request UserId
+authHandler = mkAuthHandler handler
+  where
+  maybeToEither e = maybe (Left e) Right
+  throw401 msg = throwError $ err401 { errBody = msg }
+  handler req = either throw401 (pure . UserId . dummyHash) $ do
+    --TODO: this is a subject of change after MVP 2.0
+    maybeToEither "Missing Authorization header" $ lookup "Authorization" $ requestHeaders req
+
+genAuthServerContext :: Context (AuthHandler Request UserId ': '[])
+genAuthServerContext = authHandler :. EmptyContext
+
 main :: IO ()
 main = do
   args <- execParser opts
@@ -186,6 +209,6 @@ main = do
 
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serve (Proxy @API) .
+        serveWithContext (Proxy @API) genAuthServerContext .
         (\r -> server caps (hoistEventBackend liftIO  $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb))
   exitFailure

@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -6,6 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 module Plutus.Certification.Server where
 
 import Conduit
@@ -19,7 +22,7 @@ import Observe.Event.BackendModification
 import Observe.Event.Render.JSON
 import Network.URI
 import IOHK.Certification.Interface
-
+import Servant.Server.Experimental.Auth
 import Plutus.Certification.API as API
 import Paths_plutus_certification qualified as Package
 import Data.Time.LocalTime
@@ -65,12 +68,20 @@ renderServerEventSelector GetRun = ("get-run", absurd)
 renderServerEventSelector AbortRun = ("abort-run", \rid -> ("run-id",toJSON rid))
 renderServerEventSelector GetRunLogs = ("get-run-logs", \rid -> ("run-id",toJSON rid))
 
+newtype UserAddress = UserAddress { unUserAddress :: String} -- TODO: replace with Text / BS
+
+data UserId = UserId Int
+            deriving Show
+
+-- | We need to specify the data returned after authentication
+type instance AuthServerData (AuthProtect "public-key") = UserId
+
 -- | An implementation of 'API'
-server :: (MonadMask m) => ServerCaps m r -> EventBackend m r ServerEventSelector -> ServerT API m
+server :: (MonadMask m,MonadIO m) => ServerCaps m r -> EventBackend m r ServerEventSelector -> ServerT API m
 server ServerCaps {..} eb = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , createRun = \fref -> withEvent eb CreateRun \ev -> do
+  , createRun = \_ fref -> withEvent eb CreateRun \ev -> do
       addField ev $ CreateRunRef fref
       res <- submitJob (setAncestor $ reference ev) fref
       addField ev $ CreateRunID res
@@ -79,7 +90,7 @@ server ServerCaps {..} eb = NamedAPI
      runConduit
         $ getRuns (setAncestor $ reference ev) rid
        .| evalStateC Queued consumeRuns
-  , abortRun = \rid -> withEvent eb AbortRun \ev -> do
+  , abortRun = \_ rid -> withEvent eb AbortRun \ev -> do
      addField ev rid
      const NoContent <$> (abortRuns (setAncestor $ reference ev) rid)
   , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do

@@ -2,25 +2,26 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 module Main where
 
 import Plutus.Certification.API
 import Servant.Client hiding (manager)
 import Servant.Client.Core.BaseUrl
+import Servant.Client.Core
 import Data.Proxy
 import Network.HTTP.Client hiding (Proxy)
+import Network.HTTP.Types.Header
 import Network.HTTP.Client.TLS
 import Options.Applicative
 import Control.Exception hiding (handle)
-import System.Console.Haskeline
 import Data.UUID as UUID
 import Data.ByteString.Char8 as BS hiding (hPutStrLn)
 import Data.ByteString.Lazy.Char8 (hPutStrLn)
 import Data.Coerce
 import Network.URI hiding (scheme)
-import Servant.API.BasicAuth
-import Servant.API
-import Servant.Client.Core.BasicAuth
+import Servant.API hiding (addHeader)
 import Data.Aeson
 import System.IO (stdout)
 import Data.Time.LocalTime
@@ -35,13 +36,15 @@ flakeRefReader = do
       scheme -> readerError $ "URI '" ++ urlStr ++ "' must be a github: flakeref, not '" ++ scheme ++ "'"
     Nothing -> readerError $ "couldn't not parse '" ++ urlStr ++ "' as an absolute URI"
 
-createRunParser :: Parser FlakeRefV1
-createRunParser = argument flakeRefReader
-  ( metavar "REF"
- <> help "the flake reference pointing to the repo to build"
-  )
+createRunParser :: Parser CreateRunArgs
+createRunParser = CreateRunArgs
+  <$> argument flakeRefReader
+    ( metavar "REF"
+   <> help "the flake reference pointing to the repo to build"
+    )
+  <*> publicKeyParser
 
-createRunInfo :: ParserInfo FlakeRefV1
+createRunInfo :: ParserInfo CreateRunArgs
 createRunInfo = info createRunParser
   ( fullDesc
  <> header "plutus-certification-client run create — Create a new testing run"
@@ -53,14 +56,21 @@ getRunParser = argument (maybeReader (coerce . UUID.fromString))
  <> help "the ID of the run"
   )
 
+publicKeyParser :: Parser ByteString
+publicKeyParser = option str
+  ( long "public-key"
+ <> metavar "PUB_KEY"
+ <> help "wallet public Key"
+  )
+
 getRunInfo :: ParserInfo RunIDV1
 getRunInfo = info getRunParser
   ( fullDesc
  <> header "plutus-certification-client run get — Get the status of a run"
   )
 
-abortRunInfo :: ParserInfo RunIDV1
-abortRunInfo = info getRunParser
+abortRunInfo :: ParserInfo AbortRunArgs
+abortRunInfo = info abortRunParser
   ( fullDesc
  <> header "plutus-certification-client run abort — Abort a run"
   )
@@ -79,6 +89,11 @@ getLogsParser = GetLogsArgs
        <> help "filter logs by action-type (Generate/Build/Certify)"
         ))
 
+abortRunParser :: Parser AbortRunArgs
+abortRunParser = AbortRunArgs
+  <$> getRunParser
+  <*> publicKeyParser
+
 zonedTimeReader :: ReadM ZonedTime
 zonedTimeReader = do
   urlStr <- str
@@ -93,9 +108,9 @@ getLogsInfo = info getLogsParser
   )
 
 data RunCommand
-  = Create !FlakeRefV1
+  = Create !CreateRunArgs
   | Get !RunIDV1
-  | Abort !RunIDV1
+  | Abort !AbortRunArgs
   | GetLogs !GetLogsArgs
 
 runCommandParser :: Parser RunCommand
@@ -105,6 +120,10 @@ runCommandParser = hsubparser
  <> command "abort" (Abort <$> abortRunInfo)
  <> command "get-logs" (GetLogs <$> getLogsInfo)
   )
+
+data CreateRunArgs = CreateRunArgs !FlakeRefV1 !ByteString
+
+data AbortRunArgs = AbortRunArgs !RunIDV1 !ByteString
 
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
@@ -170,29 +189,23 @@ argsInfo = info (argsParser <**> helper)
   ( fullDesc
  <> header "plutus-certification-cli — A tool for interacting with the Plutus Certification service"
   )
+addAuth :: ByteString -> AuthenticatedRequest (AuthProtect "public-key")
+addAuth = flip mkAuthenticatedRequest (\v -> addHeader hAuthorization (BS.unpack v))
+
+type instance AuthClientData (AuthProtect "public-key") = ByteString
 
 main :: IO ()
 main = do
   args <- execParser argsInfo
-  auth <- case args.certificationUser of
-    Nothing -> pure Nothing
-    Just u -> runInputT defaultSettings (getPassword Nothing ("password for " ++ (BS.unpack u) ++ ":")) >>= \case
-      Just s -> pure . Just . BasicAuthData u $ BS.pack s
-      Nothing -> fail "no password provided"
   manager <- newTlsManagerWith $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
   let apiClient = client $ Proxy @API
       cEnv = mkClientEnv manager args.certificationURL
-      cEnv' = case auth of
-        Nothing -> cEnv
-        Just ba -> cEnv
-          { makeClientRequest = \u -> defaultMakeClientRequest u . basicAuthReq ba
-          }
       handle :: (ToJSON a) => ClientM a -> IO ()
-      handle c = runClientM c cEnv' >>= either throwIO (hPutStrLn stdout . encode)
+      handle c = runClientM c cEnv >>= either throwIO (hPutStrLn stdout . encode)
   case args.cmd of
     CmdVersion -> handle $ apiClient.version
-    CmdRun (Create ref) -> handle $ apiClient.createRun ref
+    CmdRun (Create (CreateRunArgs ref pubKey)) -> handle $ apiClient.createRun (addAuth pubKey) ref
     CmdRun (Get ref) -> handle $ apiClient.getRun ref
-    CmdRun (Abort ref) -> handle $ (const True <$> apiClient.abortRun ref)
+    CmdRun (Abort (AbortRunArgs ref pubKey)) -> handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref)
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) -> handle $ apiClient.getLogs ref zt act
