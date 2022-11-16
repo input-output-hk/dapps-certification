@@ -27,7 +27,7 @@ import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
 import InformationTable from "components/InformationTable/InformationTable";
 
-const TIMEOFFSET = 60 * 1000;
+const TIMEOFFSET = 1000;
 
 const Certification = () => {
   const form: any = useForm({
@@ -45,7 +45,7 @@ const Certification = () => {
   const [errorToast, setErrorToast] = useState(false);
   const [runStatus, setRunStatus] = useState("");
   const [runState, setRunState] = useState("");
-  const [refetchMin, setRefetchMin] = useState(1);
+  const [refetchMin, setRefetchMin] = useState(5);
   const [fetchRunStatus, setFetchRunStatus] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiFetching, setApiFetching] = useState(false); // to be used for 'Abort'
@@ -154,7 +154,7 @@ const Certification = () => {
   }, [uuid]);
 
   useEffect(() => {
-    runStatus === "certifying" ? setRefetchMin(0.2) : setRefetchMin(1);
+    runStatus === "certifying" ? setRefetchMin(2) : setRefetchMin(5);
     if (
       runStatus === "certifying" ||
       runStatus === "building" ||
@@ -258,7 +258,7 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {logInfo && logInfo.length ? (
+          {runState ? (
             <>
               <InformationTable logs={logInfo} />
             </>

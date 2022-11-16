@@ -12,6 +12,7 @@ const PieChart: React.FC<{
         title: title + totalCountStr,
         is3D: is3D,
         backgroundColor: 'transparent',
+        colors: ['#657CD0','#DA68A0','#06C3C0','#777B80','#7C6D70','#7C0850','#F75870'],
         legend: {position: 'none'},
         titleTextStyle: {
             color: '#383838'
