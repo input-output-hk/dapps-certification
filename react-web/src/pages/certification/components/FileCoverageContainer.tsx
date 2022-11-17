@@ -57,15 +57,19 @@ const FileCoverageContainer: React.FC<{
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
-                <li className="coverage-file" key={index}>
-                    <a href={githubLink + "/" + file}>{file}</a>{/* To be changed to location of the file code coverage UI */}
-                    <div>
-                        <div className="meter-bar">
-                            <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
+                <>
+                    <div style={{paddingBottom: "10px"}}><label>Coverage</label></div>
+                    <li className="coverage-file" key={index}>
+                        {/* To be changed to location of the file code coverage UI */}
+                        {/* <a href={githubLink + "/" + file}>{file}</a>*/}
+                        <div>
+                            <div className="meter-bar">
+                                <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
+                            </div>
+                            <span className="coverage-percentage">{percentagePerFile[file]}%</span>
                         </div>
-                        <span className="coverage-percentage">{percentagePerFile[file]}%</span>
-                    </div>
-                </li>
+                    </li>
+                </>
             );
         }) : null;
     };
