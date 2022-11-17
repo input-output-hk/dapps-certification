@@ -5,15 +5,20 @@ import InformationTableEntry from "./InformationTableEntry";
 
 const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
     const [showLogs, setShowLogs] = useState(false);
-    const bottomRef = useRef<HTMLDivElement>(null)
+    const bottomRef = useRef<HTMLDivElement>(null);
+    const logContentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
+        logContentRef.current?.scrollIntoView({behavior: 'smooth'})
     }, [logs])
 
     const showLogView = () => {
         setShowLogs(true);
-        bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
+        setTimeout(() => {
+            bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
+            logContentRef.current?.scrollIntoView({behavior: 'smooth'})
+        }, 2);
     }
 
     const hideLogView = () => {
@@ -38,7 +43,7 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
                                 <i>-</i>
                         </span>
                     </div>
-                    <div className="log-content">
+                    <div className="log-content" ref={logContentRef}>
                         {logs.map((item: any, index: number) => {
                             let logData = ''
                             try {
