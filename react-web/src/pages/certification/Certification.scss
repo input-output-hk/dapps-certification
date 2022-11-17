@@ -96,6 +96,11 @@
     font-weight: 600;
     color: $dark-gray;
   }
+
+  .result-card .accordion-content label {
+    font-weight: 500;
+  }
+
   .failing-testcase {
     margin-left: 10px;
   }

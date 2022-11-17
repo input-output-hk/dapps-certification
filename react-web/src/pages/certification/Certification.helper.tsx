@@ -1,3 +1,5 @@
+import { formatToTitleCase } from "utils/utils";
+
 export const CertificationTasks = [{
   label: 'UnitTests',
   key: '_certRes_unitTestResults',
@@ -65,7 +67,7 @@ export const processTablesDataForChart = (resultObj: any, tableAttr: string) => 
 
   const data = [[tableAttr, "Percentage"]]
   for (let key in resultObj.tables[tableAttr]) {
-    data.push([key, resultObj.tables[tableAttr][key]])
+    data.push([formatToTitleCase(key), resultObj.tables[tableAttr][key]])
   }
 
   return {
