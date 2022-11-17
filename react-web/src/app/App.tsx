@@ -4,11 +4,20 @@ import { BASE_URL } from "constants/route";
 
 import "./App.scss";
 import Header from "components/Header/Header";
+import PrivateRoutes from "components/PrivateRoutes/PrivateRoutes";
+import NotFound from "components/NotFound/NotFound";
 import Loader from "components/Loader/Loader";
 
 const Certification = lazy(
   () => import("../pages/certification/Certification")
 );
+
+const MaintenancePage = lazy(() => import("../pages/maintenance/Maintenance"));
+const Community = lazy(() => import("../pages/community/Community"));
+// const TestHistory = lazy(() => import("../pages/testHistory/TestHistory"));
+// const Subscription = lazy(() => import("../pages/subscription/Subscription"));
+// const UserProfile = lazy(() => import("../pages/userProfile/UserProfile"));
+const Support = lazy(() => import("../pages/support/Support"));
 
 const PageLayout = () => {
   return (
@@ -27,8 +36,19 @@ const App = () => {
     <Suspense fallback={<Loader />}>
       <Routes>
         <Route path={BASE_URL} element={<PageLayout />}>
-          <Route path="/" element={<Certification />} />
+          <Route element={<PrivateRoutes />}>
+            <Route path="/" element={<Certification />} />
+            {/* 
+            <Route path="/test" element={<TestHistory />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/profile" element={<UserProfile />} />
+            */}
+          </Route>
+          <Route path="/" element={<MaintenancePage />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/support" element={<Support />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

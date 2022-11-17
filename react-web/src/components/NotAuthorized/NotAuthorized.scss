@@ -1,0 +1,46 @@
+.text-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 10rem;
+  }
+  
+  .title {
+    font-size: 5em;
+    font-weight: 700;
+    color: #ee4b5e;
+  }
+  
+  .subtitle {
+    font-size: 40px;
+    font-weight: 700;
+    color: #1fa9d6;
+  }
+  .isi {
+    font-size: 18px;
+    text-align: center;
+    margin: 30px;
+    padding: 20px;
+    color: white;
+  }
+  .buttons {
+    margin: 30px;
+    font-weight: 700;
+    border: 2px solid #ee4b5e;
+    text-decoration: none;
+    padding: 15px;
+    text-transform: uppercase;
+    color: #ee4b5e;
+    border-radius: 26px;
+    transition: all 0.2s ease-in-out;
+    display: inline-block;
+  
+    .buttons:hover {
+      background-color: #ee4b5e;
+      color: white;
+      transition: all 0.2s ease-in-out;
+    }
+  }

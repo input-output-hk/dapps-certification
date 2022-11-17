@@ -48,6 +48,7 @@ const Header = () => {
   const renderAuthenticatedMenu = () => {
     return (
       <>
+        {/*
         <li>
           <Link to="support">Support</Link>
         </li>
@@ -57,6 +58,7 @@ const Header = () => {
         <li>
           <Link to="test">Test History</Link>
         </li>
+        */}
         <li>
           <AvatarDropDown />
         </li>
@@ -75,7 +77,7 @@ const Header = () => {
         <span className="navicon"></span>
       </label>
       <ul className={`menu ${isActive ? "active-ul" : ""}`}>
-        {isLoggedIn ? renderAuthenticatedMenu() : renderNoAuthMenu()}
+        {isLoggedIn ? renderAuthenticatedMenu() : renderNoAuthMenu()} 
       </ul>
     </header>
   );
