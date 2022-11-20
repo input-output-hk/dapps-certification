@@ -12,12 +12,17 @@ import "base" Control.Concurrent.MVar
 import "base" Control.Exception
 import "aeson" Data.Aeson
 import "base" Data.Maybe
+import "directory" System.Directory
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BSL8
 import "base" GHC.Stack
 import "plutus-contract-certification" Plutus.Contract.Test.Certification.Run
+import "plutus-contract" Plutus.Contract.Test.Coverage
 import "base" System.IO
+import "lens" Control.Lens
 import "dapps-certification-interface" IOHK.Certification.Interface qualified as I
 import "unix" System.Posix.IO
+import "plutus-tx" PlutusTx.Coverage
+import "uuid" Data.UUID.V4
 
 taskName :: CertificationTask -> I.CertificationTaskName
 taskName UnitTestsTask = I.UnitTestsTask
@@ -128,6 +133,13 @@ postProgress eventChan msgChan = readEvents initState
     updateState CertificationDone _ = error "unreachable"
     updateState _ st = st
 
+getHtmlReport :: CoverageReport -> IO String
+getHtmlReport rep = do
+  uuid <- show <$> nextRandom
+  writeCoverageReport uuid rep
+  let fn = uuid ++ ".html"
+  readFile fn <* removeFile fn
+
 main :: HasCallStack => IO ()
 main = do
   out <- dup stdOutput
@@ -146,5 +158,6 @@ main = do
           , certEventChannel = Just eventChan
           }
     (res, _) <- concurrently (certifyWithOptions certOpts certification) (postProgress eventChan msgChan)
+    report <- getHtmlReport (res ^. certRes_coverageReport)
 
-    emitMessage msgChan . I.Success $ I.CertificationResult res
+    emitMessage msgChan . I.Success $ I.CertificationResult (res,report)
