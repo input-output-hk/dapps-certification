@@ -30,7 +30,7 @@ argsInfo = info (argsParser <**> helper)
 
 instrumentedMain :: EventBackend IO r MainSelector -> Args -> IO ()
 instrumentedMain backend (Args {..}) = do
-  res <- buildFlake (narrowEventBackend Build backend) flake
+  res <- buildFlake (narrowEventBackend Build backend) (const $ pure ()) flake
   hPutStrLn stdout res
 
 main :: IO ()

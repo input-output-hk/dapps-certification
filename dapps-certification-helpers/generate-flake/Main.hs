@@ -50,7 +50,7 @@ instrumentedMain backend (Args {..}) = do
   withEvent backend CreateOutput \ev -> do
     addField ev output
     createDirectory output
-  generateFlake (narrowEventBackend Generate backend) flakeref output
+  generateFlake (narrowEventBackend Generate backend) (const $ pure ()) flakeref output
 
 main :: IO ()
 main = do
