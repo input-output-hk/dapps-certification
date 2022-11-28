@@ -6,8 +6,8 @@ const FileCoverageContainer: React.FC<{
 }> = ({ result, githubLink }) => {
     const coverageIndexFiles: Array<string> = [];
     const coverageIndexReport: any = {};
-    if (result["_certRes_coverageIndexReport"] && result["_certRes_coverageIndexReport"]["_coverageMetadata"]) {
-        result["_certRes_coverageIndexReport"]["_coverageMetadata"].forEach(
+    if (result._certRes_coverageReport?._coverageIndex?._coverageMetadata) {
+        result._certRes_coverageReport?._coverageIndex?._coverageMetadata.forEach(
             (item: any) => {
                 // Find out all files upon which coverage is handled
                 const parentLoc =
@@ -28,8 +28,8 @@ const FileCoverageContainer: React.FC<{
 
     const coverageFiles: Array<string> = [];
     const coverageReport: any = {};
-    if (result["_certRes_coverageReport"] && result["_certRes_coverageReport"]["_coveredAnnotations"]) {
-        result["_certRes_coverageReport"]["_coveredAnnotations"].forEach(
+    if (result._certRes_coverageReport?._coverageData?._coveredAnnotations) {
+        result._certRes_coverageReport?._coverageData?._coveredAnnotations.forEach(
             (item: any) => {
                 const parentLoc =
                     item["tag"] === "CoverLocation"
@@ -57,15 +57,19 @@ const FileCoverageContainer: React.FC<{
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
-                <li className="coverage-file" key={index}>
-                    <a href={githubLink + "/" + file}>{file}</a>{/* To be changed to location of the file code coverage UI */}
-                    <div>
-                        <div className="meter-bar">
-                            <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
+                <>
+                    <div style={{paddingBottom: "10px"}}><label>Coverage</label></div>
+                    <li className="coverage-file" key={index}>
+                        {/* To be changed to location of the file code coverage UI */}
+                        {/* <a href={githubLink + "/" + file}>{file}</a>*/}
+                        <div>
+                            <div className="meter-bar">
+                                <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
+                            </div>
+                            <span className="coverage-percentage">{percentagePerFile[file]}%</span>
                         </div>
-                        <span className="coverage-percentage">{percentagePerFile[file]}%</span>
-                    </div>
-                </li>
+                    </li>
+                </>
             );
         }) : null;
     };
