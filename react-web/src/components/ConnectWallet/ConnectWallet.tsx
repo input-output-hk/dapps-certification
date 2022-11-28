@@ -1,5 +1,5 @@
-import React, { FC, useEffect, useState } from "react";
-import './ConnectWalletModal.scss';
+import React, { useEffect, useState } from "react";
+import './ConnectWallet.scss';
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 
@@ -16,7 +16,7 @@ declare global {
 }
 let CardanoNS = window.cardano;
 
-const ConnectWalletModal = () => {
+const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState(null)
@@ -85,4 +85,4 @@ const ConnectWalletModal = () => {
     )
 }
 
-export default ConnectWalletModal;
+export default ConnectWallet;

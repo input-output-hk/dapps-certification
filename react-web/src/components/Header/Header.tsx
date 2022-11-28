@@ -4,7 +4,7 @@ import { useAppSelector } from "store/store";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
-import ConnectWalletModal from "components/ConnectWalletModal/ConnectWalletModal";
+import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 
 const Header = () => {
   const { isLoggedIn } = useAppSelector((state) => state.auth);
@@ -31,7 +31,7 @@ const Header = () => {
           <Link to="support">Support</Link>
         </li>
         <li className="button-wrap">
-          <ConnectWalletModal/>
+          <ConnectWallet />
         </li>
       </>
     );
