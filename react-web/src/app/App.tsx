@@ -5,7 +5,7 @@ import { BASE_URL } from "constants/route";
 import "./App.scss";
 import Certification from "pages/certification/Certification";
 import Button from "components/Button/Button";
-import ConnectWallet from "components/ConnectWallet/ConnectWallet";
+import ConnectWalletModal from "components/ConnectWalletModal/ConnectWalletModal";
 
 const PageLayout = () => {
 
@@ -17,9 +17,10 @@ const PageLayout = () => {
   return (
     <>
       <header>
+        <a href="#"><img src="images/logo.png" alt="IOHK logo" style={{width: '82px', padding: '10px'}}/></a>
         <Button
             type="button"
-            className="btn btn-primary"
+            displayStyle="gradient"
             buttonLabel={"Connect Wallet"}
             onClick={(_) => openConnectWallet()}
           />
@@ -30,9 +31,7 @@ const PageLayout = () => {
         <Outlet />
       </section>
 
-      {connectToWallet ? <>
-        <ConnectWallet />
-      </> : null}
+      <ConnectWalletModal open={connectToWallet}/>
     </>
   );
 };
