@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { BASE_URL } from "constants/route";
 
@@ -7,6 +7,7 @@ import Header from "components/Header/Header";
 import PrivateRoutes from "components/PrivateRoutes/PrivateRoutes";
 import NotFound from "components/NotFound/NotFound";
 import Loader from "components/Loader/Loader";
+
 
 const Certification = lazy(
   () => import("../pages/certification/Certification")
@@ -20,6 +21,8 @@ const Community = lazy(() => import("../pages/community/Community"));
 const Support = lazy(() => import("../pages/support/Support"));
 
 const PageLayout = () => {
+
+  
   return (
     <>
       <Header />
@@ -27,6 +30,7 @@ const PageLayout = () => {
       <section data-testid="contentWrapper" id="contentWrapper">
         <Outlet />
       </section>
+
     </>
   );
 };

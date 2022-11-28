@@ -42,9 +42,6 @@
     &.disabled {
       background: $muted-gray;
       border-color: transparent;
-      pointer-events: none;
-      cursor: default;
-      opacity: 0.5;
     }
 
     label {

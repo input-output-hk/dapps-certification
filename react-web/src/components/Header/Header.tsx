@@ -6,6 +6,7 @@ import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import Button from "components/Button/Button";
+import ConnectWalletModal from "components/ConnectWalletModal/ConnectWalletModal";
 
 const Header = () => {
   const { isLoggedIn } = useAppSelector((state) => state.auth);
@@ -65,8 +66,25 @@ const Header = () => {
       </>
     );
   };
+
+
+  const [connectToWallet, setConnectToWallet] = useState(false)
+  const openConnectWallet = () => {
+    setConnectToWallet(true)
+  }
+
   return (
     <header className="header">
+
+        <a href="#"><img src="images/logo.png" alt="IOHK logo" style={{width: '82px', padding: '10px'}}/></a>
+        <Button
+            type="button"
+            displayStyle="gradient"
+            buttonLabel={"Connect Wallet"}
+            onClick={(_) => openConnectWallet()}
+          />
+      <ConnectWalletModal open={connectToWallet}/>
+
       <input
         className="menu-btn"
         type="checkbox"
