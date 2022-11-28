@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import './ConnectWalletModal.scss';
 import CustomizedDialogs from "components/Modal/Modal";
 
+import { useAppDispatch } from "store/store";
+import { login } from "store/slices/auth.slice";
+
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
 
@@ -13,6 +16,7 @@ declare global {
 let CardanoNS = window.cardano;
 
 const ConnectWalletModal = (props?: any) => {
+    const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState(null)
 
@@ -25,11 +29,17 @@ const ConnectWalletModal = (props?: any) => {
     }
 
     useEffect(() => {
-        CardanoNS.onAccountChange((address: Array<any>) => {
-            setAddress(address[0]);
-        })
+        if (CardanoNS?.onAccountChange && typeof CardanoNS.onAccountChange === 'function') { 
+            CardanoNS.onAccountChange((address: Array<any>) => {
+                setAddress(address[0]);
+            })
+        }
     });
 
+    useEffect(() => {
+        address && dispatch(login());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [address])
     
 
     // return (

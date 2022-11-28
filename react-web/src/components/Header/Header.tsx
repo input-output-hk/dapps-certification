@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { login } from "store/slices/auth.slice";
-import { useAppDispatch, useAppSelector } from "store/store";
+import { useAppSelector } from "store/store";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
@@ -11,11 +10,8 @@ import ConnectWalletModal from "components/ConnectWalletModal/ConnectWalletModal
 const Header = () => {
   const { isLoggedIn } = useAppSelector((state) => state.auth);
   const [isActive, setIsActive] = useState(false);
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const onLogin = () => {
-    dispatch(login());
-  };
+  
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -36,11 +32,11 @@ const Header = () => {
           <a href="#">Support</a>
         </li>
         <li className="button-wrap">
-          <Button
+        <Button
             type="button"
-            className="btn btn-primary-outline"
+            displayStyle="gradient"
             buttonLabel={"Connect Wallet"}
-            onClick={(_) => onLogin()}
+            onClick={(_) => openConnectWallet()}
           />
         </li>
       </>
@@ -77,12 +73,7 @@ const Header = () => {
     <header className="header">
 
         <a href="#"><img src="images/logo.png" alt="IOHK logo" style={{width: '82px', padding: '10px'}}/></a>
-        <Button
-            type="button"
-            displayStyle="gradient"
-            buttonLabel={"Connect Wallet"}
-            onClick={(_) => openConnectWallet()}
-          />
+        
       <ConnectWalletModal open={connectToWallet}/>
 
       <input
