@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 import './ConnectWalletModal.scss';
-import CustomizedDialogs from "components/Modal/Modal";
+import Modal from "components/Modal/Modal";
+import Button from "components/Button/Button";
 
 import { useAppDispatch } from "store/store";
 import { login } from "store/slices/auth.slice";
@@ -15,7 +16,7 @@ declare global {
 }
 let CardanoNS = window.cardano;
 
-const ConnectWalletModal = (props?: any) => {
+const ConnectWalletModal = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState(null)
@@ -42,36 +43,25 @@ const ConnectWalletModal = (props?: any) => {
     }, [address])
     
 
-    // return (
-    //     <div className="modal-wrapper">
-    //         <div className="modal-backdrop"></div>
-    //         <div className="modal">
-    //             <div className="modal-body">
-    //                 <div id="walletsContainer">
-    //                     {wallet ? <>
-    //                         <span>address : {address}</span>
-    //                     </> :
-    //                         wallets.map((wallet: string) => {
-    //                             if (CardanoNS[wallet]) {
-    //                                 return (
-    //                                     <div className="card" onClick={(_) => loadWallet(wallet)}>
-    //                                         <img src={CardanoNS[wallet].icon} alt={CardanoNS[wallet].name} />
-    //                                         <span>{CardanoNS[wallet].name}</span>
-    //                                     </div>
-    //                                 )
-    //                             } else {
-    //                                 return null
-    //                             }
-    //                         })
-    //                     }
-    //                 </div>
-    //             </div>
-    //         </div>
-    //     </div>
-    // )
+    const [isOpen, setIsOpen] = useState(false)
+    const openConnectWalletModal = () => {
+        setIsOpen(true)
+    }
 
-    return props?.open ? (<>
-            <CustomizedDialogs title="Connect a wallet">
+    const onCloseModal = (flag: boolean) => {
+        setIsOpen(flag)
+    } 
+
+
+    return (
+        <>
+            <Button
+                type="button"
+                displayStyle="gradient"
+                buttonLabel={"Connect Wallet"}
+                onClick={(_) => openConnectWalletModal()}
+            />
+            <Modal open={isOpen} title="Connect a wallet" onCloseModal={onCloseModal}>
                 <div id="walletsContainer">
                     {wallet ? <>
                         <span>address : {address}</span>
@@ -90,8 +80,9 @@ const ConnectWalletModal = (props?: any) => {
                         })
                     }
                 </div>
-            </CustomizedDialogs>
-        </>) : null
+            </Modal>
+        </>
+    )
 }
 
 export default ConnectWalletModal;

@@ -1,27 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
-// import Button from '@mui/material/Button';
-// import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-// import DialogActions from '@mui/material/DialogActions';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 
 import './Modal.scss'
-
-// import Typography from '@mui/material/Typography';
-
-// const BootstrapDialog = styled(Dialog)(({ theme: any }) => ({
-//   '& .MuiDialogContent-root': {
-//     padding: theme.spacing(2),
-//   },
-//   '& .MuiDialogActions-root': {
-//     padding: theme.spacing(1),
-//   },
-// }));
-
 
 export interface DialogTitleProps {
   id: string;
@@ -53,30 +38,18 @@ function BootstrapDialogTitle(props: DialogTitleProps) {
   );
 }
 
-const CustomizedDialogs = (props: any) => {
-  const [open, setOpen] = React.useState(true);
-
-  // const handleClickOpen = () => {
-  //   setOpen(true);
-  // };
-
-  useEffect(()=> {
-    setOpen(props.open)
-  }, [props.open])
+const Modal = (props: any) => {
 
   const handleClose = () => {
-    setOpen(false);
+    props.onCloseModal(false)
   };
 
   return (
-    <div>
-      {/* <Button variant="outlined" onClick={handleClickOpen}>
-        Open dialog
-      </Button> */}
+    <>
       <Dialog
         onClose={handleClose}
         aria-labelledby="customized-dialog-title"
-        open={open}
+        open={props.open}
       >
         <BootstrapDialogTitle id="customized-dialog-title" onClose={handleClose}>
           {props.title}
@@ -90,7 +63,7 @@ const CustomizedDialogs = (props: any) => {
           </Button>
         </DialogActions> */}
       </Dialog>
-    </div>
+    </>
   );
 }
-export default CustomizedDialogs;
+export default Modal;

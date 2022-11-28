@@ -4,7 +4,6 @@ import { useAppSelector } from "store/store";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
-import Button from "components/Button/Button";
 import ConnectWalletModal from "components/ConnectWalletModal/ConnectWalletModal";
 
 const Header = () => {
@@ -23,21 +22,16 @@ const Header = () => {
     return (
       <>
         <li>
-          <a href="#">Community</a>
+          <Link to="community">Community</Link>
         </li>
         <li>
-          <a href="#">Pricing</a>
+          <Link to="pricing">Pricing</Link>
         </li>
         <li>
-          <a href="#">Support</a>
+          <Link to="support">Support</Link>
         </li>
         <li className="button-wrap">
-        <Button
-            type="button"
-            displayStyle="gradient"
-            buttonLabel={"Connect Wallet"}
-            onClick={(_) => openConnectWallet()}
-          />
+          <ConnectWalletModal/>
         </li>
       </>
     );
@@ -45,13 +39,13 @@ const Header = () => {
   const renderAuthenticatedMenu = () => {
     return (
       <>
-        {/*
         <li>
           <Link to="support">Support</Link>
         </li>
         <li>
           <Link to="subscription">Subscription</Link>
         </li>
+        {/*
         <li>
           <Link to="test">Test History</Link>
         </li>
@@ -63,18 +57,12 @@ const Header = () => {
     );
   };
 
-
-  const [connectToWallet, setConnectToWallet] = useState(false)
-  const openConnectWallet = () => {
-    setConnectToWallet(true)
-  }
-
   return (
     <header className="header">
 
-        <a href="#"><img src="images/logo.png" alt="IOHK logo" style={{width: '82px', padding: '10px'}}/></a>
-        
-      <ConnectWalletModal open={connectToWallet}/>
+      <Link to="/">
+        <img src="images/logo.png" alt="IOHK logo" style={{width: '82px', padding: '10px'}}/>
+      </Link>
 
       <input
         className="menu-btn"

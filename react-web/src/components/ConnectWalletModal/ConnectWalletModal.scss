@@ -31,7 +31,9 @@
 
 #walletsContainer {
     display: flex;
-    justify-content: space-evenly;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
 }
 .card {
     cursor: pointer;
