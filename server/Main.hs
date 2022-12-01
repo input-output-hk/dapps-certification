@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeOperators #-}
 module Main where
 
+import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
 import Control.Monad.IO.Class
 import Data.Aeson
@@ -236,6 +237,8 @@ main = do
       _ <- initDb
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @API) genAuthServerContext .
-        (\r -> server caps (hoistEventBackend liftIO  $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb))
+        serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
+        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (be r eb))
   exitFailure
+  where
+  be r eb = hoistEventBackend liftIO $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb

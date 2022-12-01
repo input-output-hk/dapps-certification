@@ -122,7 +122,7 @@ generalReader = do
 getLogsInfo :: ParserInfo GetLogsArgs
 getLogsInfo = info getLogsParser
   ( fullDesc
- <> header "plutus-certification-client run get-logs — Get the logs for a run"
+ <> header "plutus-certification-client run get-logs — Get the logs of a run"
   )
 
 getRunsInfo :: ParserInfo GetRunsArgs

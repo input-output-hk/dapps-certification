@@ -44,12 +44,13 @@
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+          (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
+          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           ];
         buildable = true;
         modules = [
           "IOHK/Certification/Persistence/Structure"
           "IOHK/Certification/Persistence/API"
-          "IOHK/Certification/Persistence/DummyState"
           "IOHK/Certification/Persistence"
           ];
         hsSourceDirs = [ "src" ];

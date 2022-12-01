@@ -4,6 +4,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists #-}     -- allows to write Map and HashMap as lists
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -15,6 +16,9 @@ module IOHK.Certification.Persistence.Structure where
 import Database.Selda
 import GHC.OverloadedLabels
 import Data.Aeson
+import Data.Proxy
+import Data.Swagger hiding (Contact)
+import Control.Lens hiding ((.=),index)
 
 data Profile = Profile
   { profileId :: ID Profile -- TODO: do we need an internal id?
@@ -38,6 +42,23 @@ instance FromJSON Profile where
       <*> v .:? "vendor"  .!= Nothing
       <*> v .:? "twitter"  .!= Nothing
       <*> v .:? "linkedin"  .!= Nothing
+
+instance ToSchema Profile where
+   declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    textSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe Text))
+    return $ NamedSchema (Just "Profile") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("address", textSchema)
+          , ("dapp", textSchemaM)
+          , ("website", textSchemaM)
+          , ("vendor", textSchemaM)
+          , ("twitter", textSchemaM)
+          , ("linkedin", textSchemaM)
+          ]
+      & required .~ [ "address", "dapp" ]
+
 
 instance ToJSON Profile where
   toJSON (Profile{..}) = object
@@ -74,7 +95,7 @@ instance IsLabel "profileId" (ID Profile -> Contact -> Contact) where
 instance SqlRow Contact
 
 data Status = Queued | Failed | Succeeded
-  deriving (Show, Read, Bounded, Enum, Eq)
+  deriving (Show, Read, Bounded, Enum, Eq, Generic)
 
 instance ToJSON Status where
   toJSON :: Status -> Value
@@ -104,6 +125,26 @@ data Run = Run
   , profileId :: ID Profile
   , certificateCreatedAt :: Maybe UTCTime
   } deriving (Generic,Show)
+
+instance ToSchema Status
+instance ToSchema Run where
+   declareNamedSchema _ = do
+    utcSchema <- declareSchemaRef (Proxy :: Proxy UTCTime)
+    utcSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe UTCTime))
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    statusSchema <- declareSchemaRef (Proxy :: Proxy Status)
+    return $ NamedSchema (Just "Run") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("created", utcSchema)
+          , ("finishedAt", utcSchemaM)
+          , ("syncedAt", utcSchema)
+          , ("repoUrl", textSchema)
+          , ("commitDate", utcSchema)
+          , ("runStatus", statusSchema)
+          , ("certificateCreatedAt", utcSchemaM)
+          ]
+      & required .~ [ "created", "utcSchema", "repoUrl", "commitDate", "runStatus" ]
 
 instance ToJSON Run where
   toJSON (Run{..}) = object

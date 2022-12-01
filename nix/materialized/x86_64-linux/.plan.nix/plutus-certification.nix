@@ -55,6 +55,10 @@
           (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
           (hsPkgs."eventuo11y-batteries" or (errorHandler.buildDepError "eventuo11y-batteries"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
+          (hsPkgs."servant-swagger" or (errorHandler.buildDepError "servant-swagger"))
+          (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
+          (hsPkgs."servant-swagger-ui" or (errorHandler.buildDepError "servant-swagger-ui"))
+          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
@@ -64,6 +68,8 @@
         buildable = true;
         modules = [
           "Paths_plutus_certification"
+          "Plutus/Certification/API/Routes"
+          "Plutus/Certification/API/Swagger"
           "Plutus/Certification/API"
           "Plutus/Certification/Cache"
           "Plutus/Certification/Cicero"
@@ -96,6 +102,8 @@
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
+            (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
+            (hsPkgs."servant-swagger-ui" or (errorHandler.buildDepError "servant-swagger-ui"))
             ];
           buildable = true;
           modules = [ "Paths_plutus_certification" ];
