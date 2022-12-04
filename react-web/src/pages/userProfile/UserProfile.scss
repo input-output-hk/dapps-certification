@@ -1,0 +1,17 @@
+#profileContainer {
+  max-width: 400px;
+    margin: 20px auto 0;
+  .input-wrapper {
+    .input {
+      &.disabled {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+.button-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}

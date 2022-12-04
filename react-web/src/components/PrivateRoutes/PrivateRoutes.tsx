@@ -1,5 +1,6 @@
 import React from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
+
 
 import { useAppSelector } from "store/store";
 
@@ -9,13 +10,20 @@ const PrivateRoutes = () => {
   const location = useLocation();
   const renderNoAuthPage = () => {
     if (location.pathname === "/") {
-      return <h1 style={{textAlign: "center"}}>Welcome to testing tool</h1>;
+      return <></>;
     } else {
       return <NotAuthorized />;
     }
   };
-  const { isLoggedIn } = useAppSelector((state) => state.auth);
-  return isLoggedIn ? <Outlet /> : renderNoAuthPage();
+  const renderOutlets = (userDetails: any) => {
+    if (location.pathname !== "/profile" && (!userDetails.dappOwner || !userDetails.dappRepository)) {
+      return <Navigate replace to="/profile" />;
+    } else {
+      return <Outlet />
+    }
+  }
+  const { isLoggedIn, userDetails } = useAppSelector((state) => state.auth);
+  return isLoggedIn ? renderOutlets(userDetails) : renderNoAuthPage();
 }
 
 export default PrivateRoutes;
