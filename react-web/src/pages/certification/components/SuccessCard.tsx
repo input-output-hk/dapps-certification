@@ -50,7 +50,8 @@ const SuccessCard: React.FC<{
             </span>
             <div className={`accordion-content ${isOpen ? "" : "hidden"}`}>
               {resultObj.map((item: any, index: number) => {
-                return (<div>
+                return (
+                <div key={index}>
                   <label>Test: {formatToTitleCase(item[0])}</label>
                   <span>
                     <i>OK, passed {item[1].numTests} tests</i>
