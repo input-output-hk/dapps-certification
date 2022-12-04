@@ -22,12 +22,14 @@ const UserProfile = () => {
 
   useEffect(()=> {if (!userDetails.dappOwner || !userDetails.dappRepository) {
     setIsEdit(true);
-  }})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }}, [])
 
   useEffect(() => {
     const { dappOwner, dappRepository, company, vendor, linkedIn } =
       userDetails;
     form.reset({ dappOwner, dappRepository, company, vendor, linkedIn });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userDetails]);
 
   const formHandler = (formData: any) => {

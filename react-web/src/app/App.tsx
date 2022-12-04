@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { lazy, Suspense } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { BASE_URL } from "constants/route";
 
