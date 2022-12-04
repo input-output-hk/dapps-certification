@@ -26,8 +26,8 @@ const initialState: AuthState = {
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
   try {  
-    // const response = await postData.get("/profile/current")
-    const response = await postData.get(data.url || 'static/data/current-profile.json', data)
+    const response = await postData.get("/profile/current", data)
+    // FOR MOCK - const response = await postData.get(data.url || 'static/data/current-profile.json', data)
     return response.data
   } catch(e) {
     return rejectWithValue(e)
@@ -40,7 +40,6 @@ export const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
-      localStorage.removeItem('address')
       return initialState
     },
   },
@@ -50,11 +49,11 @@ export const authSlice = createSlice({
       state.loading = false;
       state.isLoggedIn = true;
       state.userDetails = actions.payload;
-      state.address = actions.meta.arg.address;
-      localStorage.setItem('address', state.address)
+      if (actions?.meta?.arg?.address) {
+        state.address = actions.meta.arg.address;
+      }
     },
     [getProfileDetails.rejected]: (state) => {
-      localStorage.removeItem('address')
       return initialState
     }
   }

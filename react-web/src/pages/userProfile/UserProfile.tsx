@@ -32,13 +32,11 @@ const UserProfile = () => {
 
   const formHandler = (formData: any) => {
     const submitProfile = async () => {
-      await postData.get("static/data/current-profile.json", formData);
-      // await postData.put("/profile/current", formData);
+      // FOR MOCK - await postData.get("static/data/current-profile.json", formData);
+      await postData.put("/profile/current", formData);
       await dispatch(
-        getProfileDetails({
-          address: localStorage.getItem("address"),
-          url: "static/data/new-profile.json",
-        })
+        // FOR MOCK - getProfileDetails({url: "static/data/new-profile.json"})
+        getProfileDetails()
       );
       navigate('/')
     };
