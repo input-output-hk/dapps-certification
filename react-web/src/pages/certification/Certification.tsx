@@ -39,6 +39,7 @@ const Certification = () => {
   });
 
   const { uuid } = useAppSelector((state) => state.certification);
+  const { userDetails } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -53,9 +54,21 @@ const Certification = () => {
   const [fetchRunStatus, setFetchRunStatus] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiFetching, setApiFetching] = useState(false); // to be used for 'Abort'
+  const [username, setUsername] = useState('');
+  const [repoName, setRepository] = useState('');
+
+  useEffect(() => {
+    if (userDetails?.dappOwner) {
+      setUsername(userDetails.dappOwner)
+    }
+    if (userDetails?.dappRepository) {
+      setRepository(userDetails.dappRepository)
+    }
+  }, [userDetails])
 
   const formHandler = (formData: ISearchForm) => {
-    const { username, repoName, branch, commit } = formData;
+    const { branch, commit } = formData;
+      
     setSubmitting(true);
 
     // Reset to default process states
@@ -70,9 +83,10 @@ const Certification = () => {
 
     const triggerAPI = async () => {
       try {
+        const data = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
         const response = await postData.post(
           "/run",
-          "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
+          data
         );
         /** For mock */
         // const response = await postData.get('static/data/run')
@@ -150,6 +164,10 @@ const Certification = () => {
     exportObjectToJsonFile(resultData);
   };
 
+  const triggerGetCertificate = () => {
+    console.log('TBD')
+  }
+
   useEffect(() => {
     if (uuid.length) {
       triggerFetchRunStatus();
@@ -199,20 +217,6 @@ const Certification = () => {
         <div className="search-form common-top">
           <Form form={form} onSubmit={formHandler}>
             <Input
-              label="Owner"
-              type="text"
-              disabled={submitting}
-              {...form.register("username")}
-            />
-
-            <Input
-              label="Repository"
-              type="text"
-              disabled={submitting}
-              {...form.register("repoName")}
-            />
-
-            <Input
               label="Commit Hash"
               type="text"
               id="commit"
@@ -237,25 +241,32 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
-            <h2
-              id="breadcrumb"
-              className={runStatus === "finished" ? "" : "hidden"}
-            >
-              <a target="_blank" rel="noreferrer" href={githubLink}>
-                {form.getValues("username")}/{form.getValues("repoName")}
-              </a>
-              {Object.keys(resultData).length ? (
-                <>
+            <header>
+              <h2
+                id="breadcrumb"
+                style={{alignSelf:"center"}}
+                className={runStatus === "finished" ? "" : "hidden"}
+              >
+                <a target="_blank" rel="noreferrer" href={githubLink}>
+                  {username}/{repoName}
+                </a>
+              </h2>
+              <div style={{float:"right", marginLeft:"5px"}}>
+                {Object.keys(resultData).length ? (<>
                   <Button
                     className="report-download"
                     onClick={(e) => handleDownloadResultData(resultData)}
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
-                </>
-              ) : null}
-            </h2>
-
+                  <Button
+                    displayStyle="gradient"
+                    onClick={(e) => triggerGetCertificate()}
+                    buttonLabel="Get Certificate"
+                  />
+                </>) : null}
+              </div>
+            </header>
             <Timeline
               statusConfig={timelineConfig}
               unitTestSuccess={unitTestSuccess}

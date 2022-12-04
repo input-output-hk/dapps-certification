@@ -67,8 +67,24 @@
 }
 
 #resultContainer {
-  margin-top: 60px;
 
+  header {
+    display: flex;
+    justify-content: space-between;
+    &>div {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 10px;
+      &>.btn {
+        white-space: nowrap;
+        &button.report-download {
+          .icon-image {
+            width: 1rem;
+          }
+        }
+      }
+    }
+  }
   .result-card {
     margin-bottom: 15px;
     padding: 8px;
@@ -128,15 +144,5 @@
     .chart-wrapper {
       width: 33%;
     }
-  }
-}
-
-button.report-download {
-  float: right;
-  padding: 5px 14px;
-  font-size: 13px;
-  border-radius: 9px;
-  .icon-image {
-    width: 1rem;
   }
 }

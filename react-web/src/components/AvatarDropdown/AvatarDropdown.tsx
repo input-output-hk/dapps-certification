@@ -1,30 +1,60 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { logout } from "store/slices/auth.slice";
 import { useAppDispatch } from "store/store";
-import "./avatar.scss";
+import Button from "@mui/material/Button";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Avatar from "@mui/material/Avatar";
+import "./AvatarDropDown.scss";
 
 const AvatarDropDown = () => {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const logOut = () => {
     dispatch(logout());
   };
+
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const navigateToProfile = () => {
+    setAnchorEl(null);
+    navigate("/profile");
+  };
+  const handleLogoutClose = () => {
+    setAnchorEl(null);
+    logOut();
+    navigate("/");
+  };
+
   return (
     <div className="wrapper">
-      <label htmlFor="toggler">
-        <img
-          className="avatar"
-          src="images/avatar.svg"
-          alt="Profile"
-        />
-      </label>
-      <input id="toggler" type="checkbox" />
-      <div className="dropdown">
-        <Link to="profile">User Profile</Link>
-        <button className="logout-btn link" onClick={logOut}>
-          Logout
-        </button>
-      </div>
+      <Button
+        id="avatar-button"
+        aria-controls={open ? "basic-menu" : undefined}
+        aria-haspopup="true"
+        aria-expanded={open ? "true" : undefined}
+        onClick={handleClick}
+      >
+        <Avatar alt="Profile Photo" src="images/avatar.svg" />
+      </Button>
+      <Menu
+        id="avatar-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={(e) => {
+          setAnchorEl(null);
+        }}
+        MenuListProps={{
+          "aria-labelledby": "avatar-button",
+        }}
+      >
+        <MenuItem onClick={navigateToProfile}>User Profile</MenuItem>
+        <MenuItem onClick={handleLogoutClose}>Logout</MenuItem>
+      </Menu>
     </div>
   );
 };

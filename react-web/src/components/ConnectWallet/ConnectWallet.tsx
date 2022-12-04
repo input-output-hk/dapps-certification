@@ -4,7 +4,7 @@ import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 
 import { useAppDispatch } from "store/store";
-import { login } from "store/slices/auth.slice";
+import { getProfileDetails } from "store/slices/auth.slice";
 
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
@@ -38,7 +38,9 @@ const ConnectWallet = () => {
     });
 
     useEffect(() => {
-        address && dispatch(login());
+        if (address) {
+            dispatch(getProfileDetails({"address": address}))            
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [address])
     
@@ -63,11 +65,10 @@ const ConnectWallet = () => {
             />
             <Modal open={isOpen} title="Connect a wallet" onCloseModal={onCloseModal}>
                 <div id="walletsContainer">
-                    {wallet ? <>
-                        <span>address : {address}</span>
-                    </> :
+                    {wallet ? 
+                        null : !CardanoNS ? (<span>No wallet extensions installed yet!</span>) :
                         wallets.map((wallet: string, index: number) => {
-                            if (CardanoNS[wallet]) {
+                            if (CardanoNS && CardanoNS[wallet]) {
                                 return (
                                     <div className="card" key={index} onClick={(_) => loadWallet(wallet)}>
                                         <img src={CardanoNS[wallet].icon} alt={CardanoNS[wallet].name} />
