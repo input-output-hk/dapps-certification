@@ -16,6 +16,7 @@ const Header = () => {
     if (isLoggedIn) {
       navigate("");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
   const renderNoAuthMenu = () => {

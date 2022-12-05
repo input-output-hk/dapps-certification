@@ -37,7 +37,7 @@ const TimelineItem: FC<ITimelineItem> = ({
     <li
       data-value={status}
       data-testid={status}
-      className={(state === "running" || state === "failed" || state === "passed") ? "active" : ""}
+      className={state === "running" ? "active" : ""}
     >
       <img
         className={`image ${state==="running" ? "anim-rotate" : ""} ${status==="certifying" ? "certifying" : ""}`}

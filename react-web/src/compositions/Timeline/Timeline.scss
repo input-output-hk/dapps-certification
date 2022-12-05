@@ -62,40 +62,38 @@
 }
 
 
-/*
-// TBD media-query (max-width <= 640px)
-#statusTimeline {
+@media (max-width: 768px) {
+  #statusTimeline {
+    ul {
+      justify-content: center;
 
-  ul {
-    justify-content: center;
-
-    &:before {
-      display: none;
-    }
-
-    li {
-      padding-left: 0.5em;
-      padding-right: 0.5em;
-
-      &:not(.active) span.text {
-        font-size: 8px!important;
-        margin-left: 0 !important;
+      &:before {
+        display: none;
       }
 
-      &:not(:last-child):after {
-        background-color: $lighter-gray;
-        bottom: 26px;
-        content: " ";
-        height: 3px;
-        left: 30px;
-        margin-bottom: 20px;
-        position: absolute;
-        right: 0;
-        top: 6px;
-        width: 100%;
-        z-index: -1;
+      li {
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+
+        &:not(.active) span.text {
+          font-size: 8px!important;
+          margin-left: 0 !important;
+        }
+
+        &:not(:last-child):after {
+          background-color: $lighter-gray;
+          bottom: 26px;
+          content: " ";
+          height: 3px;
+          left: 30px;
+          margin-bottom: 20px;
+          position: absolute;
+          right: 0;
+          top: 6px;
+          width: 100%;
+          z-index: -1;
+        }
       }
     }
   }
 }
-*/

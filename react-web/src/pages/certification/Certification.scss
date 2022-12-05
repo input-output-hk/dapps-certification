@@ -5,6 +5,11 @@
   margin-top: 2rem;
   max-width: 65%;
   padding: 10px;
+  @media (max-width: 768px) {
+    & {
+      max-width: fit-content;
+    }
+  }
 
   .search-form {
     max-width: 340px;
@@ -35,6 +40,11 @@
 
 #coverageIndicator {
   margin: 100px 0 50px;
+  @media (max-width: 768px) {
+    & {
+      margin-top: 50px;
+    }
+  }
 
   .coverage-file {
     display: flex;
@@ -71,12 +81,15 @@
   header {
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
     &>div {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: 10px;
       &>.btn {
         white-space: nowrap;
+        margin: 0;
         &button.report-download {
           .icon-image {
             width: 1rem;

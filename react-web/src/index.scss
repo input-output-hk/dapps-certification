@@ -19,6 +19,11 @@ body {
   margin: 0 auto;
   padding: 40px;
   color: #2d333a;
+  @media (max-width: 768px) {
+    & {
+      padding: 0;
+    }
+  }
 }
 
 input {
