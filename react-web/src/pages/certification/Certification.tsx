@@ -164,10 +164,6 @@ const Certification = () => {
     exportObjectToJsonFile(resultData);
   };
 
-  const triggerGetCertificate = () => {
-    console.log('TBD')
-  }
-
   useEffect(() => {
     if (uuid.length) {
       triggerFetchRunStatus();
@@ -258,11 +254,6 @@ const Certification = () => {
                     onClick={(e) => handleDownloadResultData(resultData)}
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
-                  />
-                  <Button
-                    displayStyle="gradient"
-                    onClick={(e) => triggerGetCertificate()}
-                    buttonLabel="Get Certificate"
                   />
                 </>) : null}
               </div>
