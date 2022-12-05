@@ -43,19 +43,20 @@ export const authSlice = createSlice({
       return initialState
     },
   },
-  extraReducers: {
-    [getProfileDetails.pending]: (state) => {state.loading = true;},
-    [getProfileDetails.fulfilled]: (state, actions) => {
-      state.loading = false;
-      state.isLoggedIn = true;
-      state.userDetails = actions.payload;
-      if (actions?.meta?.arg?.address) {
-        state.address = actions.meta.arg.address;
-      }
-    },
-    [getProfileDetails.rejected]: (state) => {
-      return initialState
-    }
+  extraReducers: (builder) => {
+    builder.addCase(getProfileDetails.pending, (state) => {state.loading = true;})
+      .addCase(getProfileDetails.fulfilled, (state, actions) => {
+        state.loading = false;
+        state.isLoggedIn = true;
+        state.userDetails = actions.payload;
+        if (actions?.meta?.arg?.address) {
+          state.address = actions.meta.arg.address;
+        }
+      })
+      .addCase(getProfileDetails.rejected, (state) => {
+        return initialState
+      })
+      .addDefaultCase((state, action) => { return initialState })
   }
 });
 
