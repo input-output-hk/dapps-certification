@@ -5,6 +5,7 @@ import Button from "components/Button/Button";
 
 import { useAppDispatch } from "store/store";
 import { getProfileDetails } from "store/slices/auth.slice";
+import Toast from "components/Toast/Toast";
 
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
@@ -22,10 +23,16 @@ const ConnectWallet = () => {
     const [address, setAddress] = useState(null)
 
     const loadWallet = async (walletName: string) => {
-        const enabledWallet = await CardanoNS[walletName].enable();
-        setWallet(enabledWallet)
-        if (enabledWallet) {
-            setAddress(await enabledWallet.getChangeAddress())
+        try {
+            const enabledWallet = await CardanoNS[walletName].enable();
+            setWallet(enabledWallet)
+            if (enabledWallet) {
+                setAddress(await enabledWallet.getChangeAddress())
+            }
+        } catch (err) {
+            // do nothing
+            console.log(err);
+            <Toast message={""}/>
         }
     }
 
