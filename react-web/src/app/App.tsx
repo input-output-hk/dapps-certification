@@ -11,7 +11,7 @@ import Loader from "components/Loader/Loader";
 const Certification = lazy(() => import("../pages/certification/Certification"));
 const MaintenancePage = lazy(() => import("../pages/maintenance/Maintenance"));
 const Community = lazy(() => import("../pages/community/Community"));
-// const TestHistory = lazy(() => import("../pages/testHistory/TestHistory"));
+const TestHistory = lazy(() => import("../pages/testHistory/TestHistory"));
 const UserProfile = lazy(() => import("../pages/userProfile/UserProfile"));
 const Subscription = lazy(() => import("../pages/subscription/Subscription"));
 const Support = lazy(() => import("../pages/support/Support"));
@@ -38,9 +38,7 @@ const App = () => {
           <Route element={<PrivateRoutes />}>
             <Route path="/" element={<Certification />} />
             <Route path="/subscription" element={<Subscription />} />
-            {/* 
             <Route path="/test" element={<TestHistory />} />
-            */}
             <Route path="/profile" element={<UserProfile />} />
           </Route>
           <Route path="/" element={<MaintenancePage />} />

@@ -46,11 +46,9 @@ const Header = () => {
         <li>
           <Link to="subscription">Subscription</Link>
         </li>
-        {/*
         <li>
           <Link to="test">Test History</Link>
         </li>
-        */}
         <li>
           <AvatarDropDown />
         </li>
