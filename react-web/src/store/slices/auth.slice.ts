@@ -56,7 +56,6 @@ export const authSlice = createSlice({
       .addCase(getProfileDetails.rejected, (state) => {
         return initialState
       })
-      .addDefaultCase((state, action) => { return initialState })
   }
 });
 

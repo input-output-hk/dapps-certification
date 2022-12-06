@@ -14,7 +14,7 @@ const Header = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate("");
+      navigate("/");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
