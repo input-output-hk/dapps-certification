@@ -1,9 +1,11 @@
-import React from "react";
+import Modal from "components/Modal/Modal";
+import React, { useState } from "react";
 
 const FileCoverageContainer: React.FC<{
     result: { [x: string]: any };
     githubLink: string;
-}> = ({ result, githubLink }) => {
+    coverageFile?: string
+}> = ({ result, githubLink, coverageFile = '' }) => {
     const coverageIndexFiles: Array<string> = [];
     const coverageIndexReport: any = {};
     if (result._certRes_coverageReport?._coverageIndex?._coverageMetadata) {
@@ -54,14 +56,30 @@ const FileCoverageContainer: React.FC<{
         }
     })
 
+    const [isOpen, setIsOpen] = useState(false)
+    const openModal = () => {
+        setIsOpen(true)
+    }
+    const onCloseModal = (flag: boolean) => {
+        setIsOpen(flag)
+    }
+
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
-                <>
-                    <div key={index} style={{paddingBottom: "10px"}}><label>Coverage</label></div>
+                <>  
+                    <div key={index} style={{paddingBottom: "10px"}}>
+                        <span className="link" onClick={(_) => openModal()}>Coverage</span>
+                        <Modal open={isOpen} onCloseModal={onCloseModal}>
+                            <div dangerouslySetInnerHTML={{__html: coverageFile.replace("<body >", "").replace("</body>", "") }} />
+                        </Modal>
+                    </div>
                     <li className="coverage-file">
-                        {/* To be changed to location of the file code coverage UI */}
-                        {/* <a href={githubLink + "/" + file}>{file}</a>*/}
+                        <>
+                            {/* To be changed to location of the file code coverage UI */}
+                            {/* <a href={githubLink + "/" + file}>{file}</a>*/}
+                            {/* add Modal here */}
+                        </>
                         <div>
                             <div className="meter-bar">
                                 <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
