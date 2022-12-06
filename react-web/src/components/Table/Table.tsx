@@ -8,8 +8,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 
-const TableComponent: FC<any> = ({ data, config }) => {
-  const dataset = useMemo(() => data, [data]);
+const TableComponent: FC<any> = ({ dataSet, config }) => {
+  const data = useMemo(() => dataSet, [dataSet]);
   const columns = useMemo(() => config, [config]);
   const tableInstance = useTable({ columns, data }, useSortBy);
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
@@ -54,8 +54,6 @@ const TableComponent: FC<any> = ({ data, config }) => {
                 {row.cells.map((cell: any) => {
                   return (
                     <TableCell
-                      component="th"
-                      scope="row"
                       {...cell.getCellProps()}
                     >
                       {cell.render("Cell")}

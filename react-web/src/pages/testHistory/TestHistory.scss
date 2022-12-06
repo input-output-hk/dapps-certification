@@ -1,6 +1,12 @@
 #testHistory {
-    margin: 2rem;
-    .btn-test-history {
-      padding: 8px 12px;
-    }
+  margin: 2rem;
+  th {
+    font-weight: bold !important;
   }
+  .icon {
+    width: 15px;
+    vertical-align: text-top;
+    margin-left: 8px;
+    cursor: pointer;
+  }
+}

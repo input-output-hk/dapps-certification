@@ -38,7 +38,7 @@ const App = () => {
           <Route element={<PrivateRoutes />}>
             <Route path="/" element={<Certification />} />
             <Route path="/subscription" element={<Subscription />} />
-            <Route path="/test" element={<TestHistory />} />
+            <Route path="/history" element={<TestHistory />} />
             <Route path="/profile" element={<UserProfile />} />
           </Route>
           <Route path="/" element={<MaintenancePage />} />
