@@ -57,6 +57,7 @@
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
+          (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
           ];
@@ -93,6 +94,7 @@
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
+            (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
             ];
           buildable = true;
           modules = [ "Paths_plutus_certification" ];

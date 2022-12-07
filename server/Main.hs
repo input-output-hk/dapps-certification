@@ -2,11 +2,13 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
@@ -47,6 +49,8 @@ import Plutus.Certification.Client
 import Plutus.Certification.Server
 import Plutus.Certification.Local
 import Paths_plutus_certification qualified as Package
+import IOHK.Certification.Persistence qualified as DB
+import Data.Text.Encoding
 
 data Backend
   = Local
@@ -151,17 +155,39 @@ renderRoot (InjectLocal s) = renderLocalSelector s
 dummyHash :: ByteString -> Int
 dummyHash = foldl' (\h c -> 33*h `xor` fromEnum c) 5381 . unpack
 
-authHandler :: AuthHandler Request UserId
+authHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
 authHandler = mkAuthHandler handler
   where
-  maybeToEither e = maybe (Left e) Right
-  throw401 msg = throwError $ err401 { errBody = msg }
-  handler req = either throw401 (pure . UserId . dummyHash) $ do
-    --TODO: this is a subject of change after MVP 2.0
+  handler req = either throw401 ensureProfile $ do
     maybeToEither "Missing Authorization header" $ lookup "Authorization" $ requestHeaders req
 
-genAuthServerContext :: Context (AuthHandler Request UserId ': '[])
+  maybeToEither e = maybe (Left e) Right
+  throw401 msg = throwError $ err401 { errBody = msg }
+  getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
+
+  --NOTE: this will create a new profile if there isn't any with the given address
+  ensureProfile :: ByteString -> Handler (DB.ProfileId,UserAddress)
+  ensureProfile bs = do
+    let address = decodeUtf8 bs
+    profileIdM <- (getProfileFromDb bs)
+    case profileIdM of
+      Just pid -> pure (pid, UserAddress address)
+      Nothing -> do
+        pidM <- DB.withDb $ DB.upsertProfile $ DB.Profile undefined address Nothing Nothing Nothing Nothing Nothing
+        case pidM of
+          Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
+          Just pid -> pure (pid,UserAddress address)
+
+
+genAuthServerContext :: Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
 genAuthServerContext = authHandler :. EmptyContext
+
+initDb :: IO ()
+initDb = void $ try' $ DB.withDb $
+    DB.createTables
+  where
+  try' :: IO a -> IO (Either SomeException a)
+  try' = try
 
 main :: IO ()
 main = do
@@ -207,6 +233,7 @@ main = do
                    & setBeforeMainLoop (finalize initEv)
           corsPolicy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
 
+      _ <- initDb
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @API) genAuthServerContext .

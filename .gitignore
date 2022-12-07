@@ -5,3 +5,5 @@ flake
 gentags.sh
 tags
 docker/
+Makefile
+*.sqlite

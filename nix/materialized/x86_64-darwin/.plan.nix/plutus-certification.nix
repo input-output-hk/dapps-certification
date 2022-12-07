@@ -35,12 +35,12 @@
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+          (hsPkgs."cicero-api" or (errorHandler.buildDepError "cicero-api"))
           (hsPkgs."servant" or (errorHandler.buildDepError "servant"))
           (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
           (hsPkgs."servant-client-core" or (errorHandler.buildDepError "servant-client-core"))
           (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
           (hsPkgs."conduit" or (errorHandler.buildDepError "conduit"))
-          (hsPkgs."cicero-api" or (errorHandler.buildDepError "cicero-api"))
           (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
@@ -57,6 +57,7 @@
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
+          (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
           ];
@@ -69,6 +70,7 @@
           "Plutus/Certification/Client"
           "Plutus/Certification/Server"
           "Plutus/Certification/Local"
+          "Plutus/Certification/GithubClient"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -93,6 +95,7 @@
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
+            (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
             ];
           buildable = true;
           modules = [ "Paths_plutus_certification" ];

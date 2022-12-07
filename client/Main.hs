@@ -25,7 +25,11 @@ import Servant.API hiding (addHeader)
 import Data.Aeson
 import System.IO (stdout)
 import Data.Time.LocalTime
+import Data.Time
 import Data.Text as Text
+
+
+type PublicKey = ByteString
 
 flakeRefReader :: ReadM FlakeRefV1
 flakeRefReader = do
@@ -56,7 +60,7 @@ getRunParser = argument (maybeReader (coerce . UUID.fromString))
  <> help "the ID of the run"
   )
 
-publicKeyParser :: Parser ByteString
+publicKeyParser :: Parser PublicKey
 publicKeyParser = option str
   ( long "public-key"
  <> metavar "PUB_KEY"
@@ -78,7 +82,7 @@ abortRunInfo = info abortRunParser
 getLogsParser :: Parser GetLogsArgs
 getLogsParser = GetLogsArgs
   <$> getRunParser
-  <*> optional (option zonedTimeReader
+  <*> optional (option generalReader
         ( long "after"
        <> metavar "AFTER"
        <> help "getting all the logs following a certain timestamp"
@@ -89,13 +93,27 @@ getLogsParser = GetLogsArgs
        <> help "filter logs by action-type (Generate/Build/Certify)"
         ))
 
+getRunsParser :: Parser GetRunsArgs
+getRunsParser = GetRunsArgs
+  <$> publicKeyParser
+  <*> optional (option generalReader
+        ( long "after"
+       <> metavar "AFTER"
+       <> help "getting all the runs following a certain timestamp"
+        ))
+  <*> optional (option auto
+        ( long "max-count"
+       <> metavar "COUNT"
+       <> help "maximum number or runs to fetch"
+        ))
+
 abortRunParser :: Parser AbortRunArgs
 abortRunParser = AbortRunArgs
   <$> getRunParser
   <*> publicKeyParser
 
-zonedTimeReader :: ReadM ZonedTime
-zonedTimeReader = do
+generalReader :: FromHttpApiData a => ReadM a
+generalReader = do
   urlStr <- str
   case parseUrlPiece urlStr of
     Right u -> pure u
@@ -107,11 +125,18 @@ getLogsInfo = info getLogsParser
  <> header "plutus-certification-client run get-logs — Get the logs for a run"
   )
 
+getRunsInfo :: ParserInfo GetRunsArgs
+getRunsInfo = info getRunsParser
+  ( fullDesc
+ <> header "plutus-certification-client run get-many — Get many runs"
+  )
+
 data RunCommand
   = Create !CreateRunArgs
   | Get !RunIDV1
   | Abort !AbortRunArgs
   | GetLogs !GetLogsArgs
+  | GetRuns !GetRunsArgs
 
 runCommandParser :: Parser RunCommand
 runCommandParser = hsubparser
@@ -119,11 +144,14 @@ runCommandParser = hsubparser
  <> command "get" (Get <$> getRunInfo)
  <> command "abort" (Abort <$> abortRunInfo)
  <> command "get-logs" (GetLogs <$> getLogsInfo)
+ <> command "get-many" (GetRuns <$> getRunsInfo)
   )
 
-data CreateRunArgs = CreateRunArgs !FlakeRefV1 !ByteString
+data CreateRunArgs = CreateRunArgs !FlakeRefV1 !PublicKey
 
-data AbortRunArgs = AbortRunArgs !RunIDV1 !ByteString
+data GetRunsArgs = GetRunsArgs !PublicKey !(Maybe UTCTime) !(Maybe Int)
+
+data AbortRunArgs = AbortRunArgs !RunIDV1 !PublicKey
 
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
@@ -137,6 +165,63 @@ runCommandInfo = info runCommandParser
  <> header "plutus-certification-client run — Manage certification runs"
   )
 
+currentProfileInfo :: ParserInfo ProfileCommand
+currentProfileInfo = info currentProfileParser
+  ( fullDesc
+ <> header "plutus-certification-client profile Current profile Management"
+  )
+
+currentProfileParser :: Parser ProfileCommand
+currentProfileParser = hsubparser
+  ( command "get" (GetCurrentProfile <$> getCurrentProfileInfo)
+ <> command "update" (UpdateCurrentProfile <$> updateCurrentProfileInfo)
+  )
+
+updateCurrentProfileInfo :: ParserInfo UpdateCurrentProfileArgs
+updateCurrentProfileInfo = info updateCurrentProfileInfoParser
+  ( fullDesc
+ <> header "plutus-certification-client profile update — Update the current profile information"
+  )
+
+updateCurrentProfileInfoParser :: Parser UpdateCurrentProfileArgs
+updateCurrentProfileInfoParser = UpdateCurrentProfileArgs
+  <$> publicKeyParser
+  <*> profileBodyParser
+
+profileBodyParser :: Parser ProfileBody
+profileBodyParser = ProfileBody
+  <$> optional (option str
+        ( long "dapp"
+       <> metavar "DAPP-NAME"
+       <> help "dapp identification"
+        ))
+  <*> optional (option str
+        ( long "website"
+       <> metavar "WEBSITE"
+       <> help "dapp website url"
+        ))
+  <*> optional (option str
+        ( long "vendor"
+       <> metavar "VENDOR"
+       <> help "vendor identification"
+        ))
+  <*> optional (option str
+        ( long "twitter"
+       <> metavar "TWITTER"
+       <> help "twitter account"
+        ))
+  <*> optional (option str
+        ( long "linkedin"
+       <> metavar "LINKEDIN"
+       <> help "linkedin account"
+        ))
+
+getCurrentProfileInfo :: ParserInfo PublicKey
+getCurrentProfileInfo = info publicKeyParser
+  ( fullDesc
+ <> header "plutus-certification-client profile get — Get the current profile information"
+  )
+
 versionCommandInfo :: ParserInfo ()
 versionCommandInfo = info (pure ())
   ( fullDesc
@@ -146,16 +231,24 @@ versionCommandInfo = info (pure ())
 data Command
   = CmdRun !RunCommand
   | CmdVersion
+  | CmdCurrentProfile !ProfileCommand
+
+data ProfileCommand
+    = GetCurrentProfile !PublicKey
+    | UpdateCurrentProfile !UpdateCurrentProfileArgs
+
+data UpdateCurrentProfileArgs = UpdateCurrentProfileArgs PublicKey ProfileBody
 
 commandParser :: Parser Command
 commandParser = hsubparser
   ( command "run" (CmdRun <$> runCommandInfo)
  <> command "version" (const CmdVersion <$> versionCommandInfo)
+ <> command "profile" (CmdCurrentProfile <$> currentProfileInfo)
   )
 
 data Args = Args
   { certificationURL :: !BaseUrl
-  , certificationUser :: !(Maybe ByteString)
+  , certificationUser :: !(Maybe PublicKey)
   , cmd :: !Command
   }
 
@@ -189,10 +282,10 @@ argsInfo = info (argsParser <**> helper)
   ( fullDesc
  <> header "plutus-certification-cli — A tool for interacting with the Plutus Certification service"
   )
-addAuth :: ByteString -> AuthenticatedRequest (AuthProtect "public-key")
+addAuth :: PublicKey -> AuthenticatedRequest (AuthProtect "public-key")
 addAuth = flip mkAuthenticatedRequest (\v -> addHeader hAuthorization (BS.unpack v))
 
-type instance AuthClientData (AuthProtect "public-key") = ByteString
+type instance AuthClientData (AuthProtect "public-key") = PublicKey
 
 main :: IO ()
 main = do
@@ -209,3 +302,7 @@ main = do
     CmdRun (Abort (AbortRunArgs ref pubKey)) -> handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref)
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) -> handle $ apiClient.getLogs ref zt act
+    CmdRun (GetRuns (GetRunsArgs pubKey after' count')) -> handle $ apiClient.getRuns (addAuth pubKey) after' count'
+    CmdCurrentProfile (GetCurrentProfile pubKey) -> handle $ apiClient.getCurrentProfile (addAuth pubKey)
+    CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs pubKey profileBody)) ->
+      handle $ apiClient.updateCurrentProfile (addAuth pubKey) profileBody

@@ -22,6 +22,7 @@ module Plutus.Certification.API
   , IncompleteRunStatus(..)
   , Cicero.Run.RunLog(..)
   , KnownActionType(..)
+  , ProfileBody(..)
   ) where
 
 import Control.Applicative
@@ -37,28 +38,68 @@ import Data.ByteString.Lazy.Char8
 import Data.Time.LocalTime
 import Data.Text hiding (unpack, pack)
 import IOHK.Certification.Interface
+import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
+import Data.Time
 
 type API = NamedRoutes NamedAPI
 data NamedAPI mode = NamedAPI
   { version :: mode :- "version" :> Get '[JSON] VersionV1
   , versionHead :: mode :- "version" :> HeadNoContent
-  , createRun :: mode :- "run"
+  , createRun :: mode
+      :- "run"
       :> AuthProtect "public-key"
       :> ReqBody '[PlainText] FlakeRefV1
       :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
   , getRun :: mode :- "run" :> Capture "id" RunIDV1 :> Get '[JSON] RunStatusV1
-  , abortRun :: mode :- "run"
+  , abortRun :: mode
+      :- "run"
       :> AuthProtect "public-key"
       :> Capture "id" RunIDV1
       :> DeleteNoContent
-  , getLogs :: mode :- "run"
+  , getLogs :: mode
+      :- "run"
       :> Capture "id" RunIDV1
       :> "logs"
       :> QueryParam "after" ZonedTime
       :> QueryParam "action-type" KnownActionType
       :> Get '[JSON] [Cicero.Run.RunLog]
+  , getRuns :: mode
+      :- "run"
+      :> AuthProtect "public-key"
+      :> QueryParam "after" UTCTime
+      :> QueryParam "count" Int
+      :> Get '[JSON] [DB.Run]
+  , getCurrentProfile :: mode
+      :- "profile"
+      :> "current"
+      :> AuthProtect "public-key"
+      :> Get '[JSON] DB.Profile
+  , updateCurrentProfile :: mode
+      :- "profile"
+      :> "current"
+      :> AuthProtect "public-key"
+      :> ReqBody '[JSON] ProfileBody
+      :> Put '[JSON] DB.Profile
   } deriving stock Generic
+
+data ProfileBody = ProfileBody
+   { dapp :: !(Maybe Text)
+   , website :: !(Maybe Text)
+   , vendor :: !(Maybe Text)
+   , twitter :: !(Maybe Text)
+   , linkedin :: !(Maybe Text)
+   } deriving stock Generic
+
+instance FromJSON ProfileBody where
+    parseJSON = withObject "Profile" $ \v -> ProfileBody
+      <$> v .:? "dapp"  .!= Nothing
+      <*> v .:? "website"  .!= Nothing
+      <*> v .:? "vendor"  .!= Nothing
+      <*> v .:? "twitter"  .!= Nothing
+      <*> v .:? "linkedin"  .!= Nothing
+
+instance ToJSON ProfileBody where
 
 newtype VersionV1 = VersionV1 { version :: Version }
 
