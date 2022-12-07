@@ -2,15 +2,22 @@
   pkgs = hackage:
     {
       packages = {
+        "charset".revision = (((hackage."charset")."0.3.9").revisions).default;
         "old-time".revision = (((hackage."old-time")."1.1.0.3").revisions).default;
         "servant-client".revision = (((hackage."servant-client")."0.19").revisions).default;
         "mmorph".revision = (((hackage."mmorph")."1.2.0").revisions).default;
+        "postgresql-binary".revision = (((hackage."postgresql-binary")."0.12.5").revisions).default;
         "happy".revision = (((hackage."happy")."1.20.0").revisions).default;
         "streaming-commons".revision = (((hackage."streaming-commons")."0.2.2.4").revisions).default;
         "streaming-commons".flags.use-bytestring-builder = false;
         "pretty".revision = (((hackage."pretty")."1.1.3.6").revisions).default;
         "haskell-src-exts".revision = (((hackage."haskell-src-exts")."1.23.1").revisions).default;
+        "data-textual".revision = (((hackage."data-textual")."0.3.0.3").revisions).default;
         "network-uri".revision = (((hackage."network-uri")."2.6.4.1").revisions).default;
+        "parsers".revision = (((hackage."parsers")."0.12.11").revisions).default;
+        "parsers".flags.parsec = true;
+        "parsers".flags.binary = true;
+        "parsers".flags.attoparsec = true;
         "unordered-containers".revision = (((hackage."unordered-containers")."0.2.19.1").revisions).default;
         "unordered-containers".flags.debug = false;
         "integer-logarithms".revision = (((hackage."integer-logarithms")."1.0.3.1").revisions).default;
@@ -54,6 +61,7 @@
         "some".revision = (((hackage."some")."1.0.4.1").revisions).default;
         "some".flags.newtype-unsafe = true;
         "temporary".revision = (((hackage."temporary")."1.3").revisions).default;
+        "selda".revision = (((hackage."selda")."0.5.2.0").revisions).default;
         "comonad".revision = (((hackage."comonad")."5.0.8").revisions).default;
         "comonad".flags.containers = true;
         "comonad".flags.distributive = true;
@@ -65,28 +73,35 @@
         "asn1-types".revision = (((hackage."asn1-types")."0.3.4").revisions).default;
         "base-compat".revision = (((hackage."base-compat")."0.12.2").revisions).default;
         "string-conversions".revision = (((hackage."string-conversions")."0.4.0.1").revisions).default;
+        "data-endian".revision = (((hackage."data-endian")."0.1.1").revisions).default;
         "bitvec".revision = (((hackage."bitvec")."1.1.3.0").revisions).default;
         "bitvec".flags.libgmp = false;
         "contravariant".revision = (((hackage."contravariant")."1.5.5").revisions).default;
         "contravariant".flags.tagged = true;
         "contravariant".flags.semigroups = true;
         "contravariant".flags.statevar = true;
+        "type-hint".revision = (((hackage."type-hint")."0.1").revisions).default;
         "base-compat-batteries".revision = (((hackage."base-compat-batteries")."0.12.2").revisions).default;
         "safe".revision = (((hackage."safe")."0.3.19").revisions).default;
         "Cabal".revision = (((hackage."Cabal")."3.6.3.0").revisions).default;
         "sop-core".revision = (((hackage."sop-core")."0.5.0.2").revisions).default;
         "assoc".revision = (((hackage."assoc")."1.0.2").revisions).default;
         "cicero-api".revision = (((hackage."cicero-api")."0.1.2.0").revisions).default;
+        "binary-parser".revision = (((hackage."binary-parser")."0.5.7.2").revisions).default;
         "unliftio".revision = (((hackage."unliftio")."0.2.22.0").revisions).default;
         "data-fix".revision = (((hackage."data-fix")."0.3.2").revisions).default;
         "tls".revision = (((hackage."tls")."1.6.0").revisions).default;
         "tls".flags.network = true;
         "tls".flags.hans = false;
         "tls".flags.compat = true;
+        "text-printer".revision = (((hackage."text-printer")."0.5.0.2").revisions).default;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.6.1").revisions).default;
+        "data-bword".revision = (((hackage."data-bword")."0.1.0.2").revisions).default;
         "basement".revision = (((hackage."basement")."0.0.15").revisions).default;
+        "network-ip".revision = (((hackage."network-ip")."0.3.0.3").revisions).default;
         "old-locale".revision = (((hackage."old-locale")."1.0.0.7").revisions).default;
         "mtl".revision = (((hackage."mtl")."2.2.2").revisions).default;
+        "selda-json".revision = (((hackage."selda-json")."0.1.1.1").revisions).default;
         "OneTuple".revision = (((hackage."OneTuple")."0.3.1").revisions).default;
         "mime-types".revision = (((hackage."mime-types")."0.1.1.0").revisions).default;
         "parsec".revision = (((hackage."parsec")."3.1.15.0").revisions).default;
@@ -94,6 +109,7 @@
         "attoparsec-iso8601".revision = (((hackage."attoparsec-iso8601")."1.0.2.1").revisions).default;
         "attoparsec-iso8601".flags.fast = false;
         "attoparsec-iso8601".flags.developer = false;
+        "data-dword".revision = (((hackage."data-dword")."0.3.2.1").revisions).default;
         "pem".revision = (((hackage."pem")."0.2.4").revisions).default;
         "strict".revision = (((hackage."strict")."0.4.0.1").revisions).default;
         "strict".flags.assoc = true;
@@ -111,10 +127,13 @@
         "splitmix".flags.optimised-mixer = false;
         "recv".revision = (((hackage."recv")."0.0.0").revisions).default;
         "file-embed".revision = (((hackage."file-embed")."0.0.15.0").revisions).default;
+        "text-latin1".revision = (((hackage."text-latin1")."0.3.1").revisions).default;
         "attoparsec".revision = (((hackage."attoparsec")."0.14.4").revisions).default;
         "attoparsec".flags.developer = false;
+        "bytestring-strict-builder".revision = (((hackage."bytestring-strict-builder")."0.4.5.6").revisions).default;
         "singleton-bool".revision = (((hackage."singleton-bool")."0.1.6").revisions).default;
         "th-compat".revision = (((hackage."th-compat")."0.1.4").revisions).default;
+        "data-checked".revision = (((hackage."data-checked")."0.3").revisions).default;
         "memory".revision = (((hackage."memory")."0.18.0").revisions).default;
         "memory".flags.support_deepseq = true;
         "memory".flags.support_bytestring = true;
@@ -140,6 +159,8 @@
         "free".revision = (((hackage."free")."5.1.9").revisions).default;
         "terminfo".revision = (((hackage."terminfo")."0.4.1.5").revisions).default;
         "connection".revision = (((hackage."connection")."0.3.1").revisions).default;
+        "postgresql-libpq".revision = (((hackage."postgresql-libpq")."0.9.4.3").revisions).default;
+        "postgresql-libpq".flags.use-pkg-config = false;
         "resourcet".revision = (((hackage."resourcet")."1.2.6").revisions).default;
         "vault".revision = (((hackage."vault")."0.3.1.5").revisions).default;
         "vault".flags.useghc = true;
@@ -162,6 +183,8 @@
         "vector-stream".revision = (((hackage."vector-stream")."0.1.0.0").revisions).default;
         "ghc-boot-th".revision = (((hackage."ghc-boot-th")."9.2.4").revisions).default;
         "asn1-encoding".revision = (((hackage."asn1-encoding")."0.9.6").revisions).default;
+        "selda-postgresql".revision = (((hackage."selda-postgresql")."0.1.8.2").revisions).default;
+        "selda-postgresql".flags.haste = false;
         "indexed-traversable".revision = (((hackage."indexed-traversable")."0.1.2").revisions).default;
         "distributive".revision = (((hackage."distributive")."0.6.2.1").revisions).default;
         "distributive".flags.tagged = true;
@@ -169,6 +192,7 @@
         "text-short".revision = (((hackage."text-short")."0.1.5").revisions).default;
         "text-short".flags.asserts = false;
         "servant".revision = (((hackage."servant")."0.19").revisions).default;
+        "data-serializer".revision = (((hackage."data-serializer")."0.3.5").revisions).default;
         "bsb-http-chunked".revision = (((hackage."bsb-http-chunked")."0.0.0.4").revisions).default;
         "bifunctors".revision = (((hackage."bifunctors")."5.5.13").revisions).default;
         "bifunctors".flags.tagged = true;
@@ -218,6 +242,8 @@
         "base-unicode-symbols".flags.base-4-8 = true;
         "base-unicode-symbols".flags.old-base = false;
         "wai-logger".revision = (((hackage."wai-logger")."2.4.0").revisions).default;
+        "selda-sqlite".revision = (((hackage."selda-sqlite")."0.1.7.2").revisions).default;
+        "selda-sqlite".flags.haste = false;
         "these".revision = (((hackage."these")."1.1.1.1").revisions).default;
         "these".flags.assoc = true;
         "split".revision = (((hackage."split")."0.2.3.5").revisions).default;
@@ -251,6 +277,12 @@
         "wai-app-static".flags.print = false;
         "transformers".revision = (((hackage."transformers")."0.5.6.2").revisions).default;
         "template-haskell".revision = (((hackage."template-haskell")."2.18.0.0").revisions).default;
+        "direct-sqlite".revision = (((hackage."direct-sqlite")."2.3.27").revisions).default;
+        "direct-sqlite".flags.haveusleep = true;
+        "direct-sqlite".flags.systemlib = false;
+        "direct-sqlite".flags.fulltextsearch = true;
+        "direct-sqlite".flags.urifilenames = true;
+        "direct-sqlite".flags.json1 = true;
         "blaze-markup".revision = (((hackage."blaze-markup")."0.8.2.8").revisions).default;
         "mono-traversable".revision = (((hackage."mono-traversable")."1.0.15.3").revisions).default;
         "witherable".revision = (((hackage."witherable")."0.4.2").revisions).default;
@@ -349,6 +381,7 @@
       packages = {
         dapps-certification-interface = ./.plan.nix/dapps-certification-interface.nix;
         dapps-certification-helpers = ./.plan.nix/dapps-certification-helpers.nix;
+        dapps-certification-persistence = ./.plan.nix/dapps-certification-persistence.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
         };
       };
@@ -358,6 +391,7 @@
         packages = {
           "dapps-certification-interface" = { flags = {}; };
           "dapps-certification-helpers" = { flags = {}; };
+          "dapps-certification-persistence" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
           };
         })
@@ -376,11 +410,13 @@
           "cookie".components.library.planned = lib.mkOverride 900 true;
           "these".components.library.planned = lib.mkOverride 900 true;
           "cereal".components.library.planned = lib.mkOverride 900 true;
+          "selda".components.library.planned = lib.mkOverride 900 true;
           "resourcet".components.library.planned = lib.mkOverride 900 true;
           "haskell-src-meta".components.library.planned = lib.mkOverride 900 true;
           "http2".components.library.planned = lib.mkOverride 900 true;
           "filepath".components.library.planned = lib.mkOverride 900 true;
           "wai".components.library.planned = lib.mkOverride 900 true;
+          "data-textual".components.library.planned = lib.mkOverride 900 true;
           "distributive".components.library.planned = lib.mkOverride 900 true;
           "pretty".components.library.planned = lib.mkOverride 900 true;
           "utf8-string".components.library.planned = lib.mkOverride 900 true;
@@ -391,7 +427,9 @@
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.exes."greet".planned = lib.mkOverride 900 true;
+          "data-dword".components.library.planned = lib.mkOverride 900 true;
           "strict".components.library.planned = lib.mkOverride 900 true;
+          "text-printer".components.library.planned = lib.mkOverride 900 true;
           "entropy".components.setup.planned = lib.mkOverride 900 true;
           "comonad".components.library.planned = lib.mkOverride 900 true;
           "data-fix".components.library.planned = lib.mkOverride 900 true;
@@ -407,6 +445,7 @@
           "dlist".components.library.planned = lib.mkOverride 900 true;
           "time-manager".components.library.planned = lib.mkOverride 900 true;
           "ghc-prim".components.library.planned = lib.mkOverride 900 true;
+          "postgresql-libpq".components.setup.planned = lib.mkOverride 900 true;
           "HUnit".components.library.planned = lib.mkOverride 900 true;
           "some".components.library.planned = lib.mkOverride 900 true;
           "array".components.library.planned = lib.mkOverride 900 true;
@@ -415,6 +454,7 @@
           "cicero-api".components.exes."cicero-cli".planned = lib.mkOverride 900 true;
           "dapps-certification-helpers".components.library.planned = lib.mkOverride 900 true;
           "binary".components.library.planned = lib.mkOverride 900 true;
+          "charset".components.library.planned = lib.mkOverride 900 true;
           "wai-extra".components.library.planned = lib.mkOverride 900 true;
           "ghc-boot-th".components.library.planned = lib.mkOverride 900 true;
           "scientific".components.library.planned = lib.mkOverride 900 true;
@@ -434,6 +474,7 @@
           "indexed-traversable-instances".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.library.planned = lib.mkOverride 900 true;
           "data-default-class".components.library.planned = lib.mkOverride 900 true;
+          "type-hint".components.library.planned = lib.mkOverride 900 true;
           "adjunctions".components.library.planned = lib.mkOverride 900 true;
           "cryptonite".components.library.planned = lib.mkOverride 900 true;
           "asn1-parse".components.library.planned = lib.mkOverride 900 true;
@@ -441,6 +482,7 @@
           "network-byte-order".components.library.planned = lib.mkOverride 900 true;
           "mime-types".components.library.planned = lib.mkOverride 900 true;
           "directory".components.library.planned = lib.mkOverride 900 true;
+          "network-ip".components.library.planned = lib.mkOverride 900 true;
           "happy".components.exes."happy".planned = lib.mkOverride 900 true;
           "network-info".components.library.planned = lib.mkOverride 900 true;
           "uuid".components.library.planned = lib.mkOverride 900 true;
@@ -458,6 +500,7 @@
           "haskeline".components.library.planned = lib.mkOverride 900 true;
           "th-expand-syns".components.library.planned = lib.mkOverride 900 true;
           "unix-time".components.library.planned = lib.mkOverride 900 true;
+          "direct-sqlite".components.library.planned = lib.mkOverride 900 true;
           "cryptohash-sha1".components.library.planned = lib.mkOverride 900 true;
           "free".components.library.planned = lib.mkOverride 900 true;
           "unix-compat".components.library.planned = lib.mkOverride 900 true;
@@ -473,6 +516,7 @@
           "indexed-traversable".components.library.planned = lib.mkOverride 900 true;
           "network-uri".components.library.planned = lib.mkOverride 900 true;
           "wai-logger".components.setup.planned = lib.mkOverride 900 true;
+          "data-serializer".components.library.planned = lib.mkOverride 900 true;
           "memory".components.library.planned = lib.mkOverride 900 true;
           "pem".components.library.planned = lib.mkOverride 900 true;
           "typed-process".components.library.planned = lib.mkOverride 900 true;
@@ -486,11 +530,14 @@
           "entropy".components.library.planned = lib.mkOverride 900 true;
           "assoc".components.library.planned = lib.mkOverride 900 true;
           "process".components.library.planned = lib.mkOverride 900 true;
+          "binary-parser".components.library.planned = lib.mkOverride 900 true;
+          "selda-postgresql".components.library.planned = lib.mkOverride 900 true;
           "http-date".components.library.planned = lib.mkOverride 900 true;
           "template-haskell".components.library.planned = lib.mkOverride 900 true;
           "blaze-markup".components.library.planned = lib.mkOverride 900 true;
           "th-lift".components.library.planned = lib.mkOverride 900 true;
           "stm".components.library.planned = lib.mkOverride 900 true;
+          "postgresql-binary".components.library.planned = lib.mkOverride 900 true;
           "byteorder".components.library.planned = lib.mkOverride 900 true;
           "witherable".components.library.planned = lib.mkOverride 900 true;
           "plutus-certification".components.library.planned = lib.mkOverride 900 true;
@@ -503,32 +550,40 @@
           "cabal-doctest".components.library.planned = lib.mkOverride 900 true;
           "iproute".components.library.planned = lib.mkOverride 900 true;
           "servant-client".components.library.planned = lib.mkOverride 900 true;
+          "selda-sqlite".components.library.planned = lib.mkOverride 900 true;
           "wai-logger".components.library.planned = lib.mkOverride 900 true;
           "th-compat".components.library.planned = lib.mkOverride 900 true;
           "tls".components.library.planned = lib.mkOverride 900 true;
+          "bytestring-strict-builder".components.library.planned = lib.mkOverride 900 true;
           "http-types".components.library.planned = lib.mkOverride 900 true;
           "QuickCheck".components.library.planned = lib.mkOverride 900 true;
           "ansi-wl-pprint".components.library.planned = lib.mkOverride 900 true;
           "uuid-types".components.library.planned = lib.mkOverride 900 true;
           "semigroupoids".components.library.planned = lib.mkOverride 900 true;
           "x509-validation".components.library.planned = lib.mkOverride 900 true;
+          "postgresql-libpq".components.library.planned = lib.mkOverride 900 true;
           "dapps-certification-helpers".components.exes."build-flake".planned = lib.mkOverride 900 true;
           "wai-app-static".components.exes."warp".planned = lib.mkOverride 900 true;
           "singleton-bool".components.library.planned = lib.mkOverride 900 true;
           "attoparsec".components.library.planned = lib.mkOverride 900 true;
+          "data-checked".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-persistence".components.library.planned = lib.mkOverride 900 true;
           "mtl".components.library.planned = lib.mkOverride 900 true;
           "base-unicode-symbols".components.library.planned = lib.mkOverride 900 true;
           "aeson-qq".components.library.planned = lib.mkOverride 900 true;
           "vault".components.library.planned = lib.mkOverride 900 true;
           "th-abstraction".components.library.planned = lib.mkOverride 900 true;
           "attoparsec".components.sublibs."attoparsec-internal".planned = lib.mkOverride 900 true;
+          "parsers".components.library.planned = lib.mkOverride 900 true;
           "transformers".components.library.planned = lib.mkOverride 900 true;
           "wai-app-static".components.library.planned = lib.mkOverride 900 true;
+          "selda-json".components.library.planned = lib.mkOverride 900 true;
           "conduit-aeson".components.library.planned = lib.mkOverride 900 true;
           "OneTuple".components.library.planned = lib.mkOverride 900 true;
           "parsec".components.library.planned = lib.mkOverride 900 true;
           "deepseq".components.library.planned = lib.mkOverride 900 true;
           "primitive".components.library.planned = lib.mkOverride 900 true;
+          "text-latin1".components.library.planned = lib.mkOverride 900 true;
           "old-locale".components.library.planned = lib.mkOverride 900 true;
           "conduit".components.library.planned = lib.mkOverride 900 true;
           "eventuo11y".components.library.planned = lib.mkOverride 900 true;
@@ -551,6 +606,7 @@
           "th-reify-many".components.library.planned = lib.mkOverride 900 true;
           "dapps-certification-helpers".components.exes."generate-flake".planned = lib.mkOverride 900 true;
           "time-compat".components.library.planned = lib.mkOverride 900 true;
+          "data-endian".components.library.planned = lib.mkOverride 900 true;
           "basement".components.library.planned = lib.mkOverride 900 true;
           "optparse-applicative".components.library.planned = lib.mkOverride 900 true;
           "wai-cors".components.library.planned = lib.mkOverride 900 true;
@@ -558,6 +614,7 @@
           "x509-system".components.library.planned = lib.mkOverride 900 true;
           "hourglass".components.library.planned = lib.mkOverride 900 true;
           "base-compat".components.library.planned = lib.mkOverride 900 true;
+          "data-bword".components.library.planned = lib.mkOverride 900 true;
           "base64-bytestring".components.library.planned = lib.mkOverride 900 true;
           "hashable".components.library.planned = lib.mkOverride 900 true;
           "semigroups".components.library.planned = lib.mkOverride 900 true;
