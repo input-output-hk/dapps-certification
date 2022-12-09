@@ -21,6 +21,15 @@ const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState(null)
+    const [isOpen, setIsOpen] = useState(false)
+
+    const openConnectWalletModal = () => {
+        setIsOpen(true)
+    }
+
+    const onCloseModal = (flag: boolean) => {
+        setIsOpen(flag)
+    } 
 
     const loadWallet = async (walletName: string) => {
         try {
@@ -51,17 +60,6 @@ const ConnectWallet = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [address])
-    
-
-    const [isOpen, setIsOpen] = useState(false)
-    const openConnectWalletModal = () => {
-        setIsOpen(true)
-    }
-
-    const onCloseModal = (flag: boolean) => {
-        setIsOpen(flag)
-    } 
-
 
     return (
         <>
