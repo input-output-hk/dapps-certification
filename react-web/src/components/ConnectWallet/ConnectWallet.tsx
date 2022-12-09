@@ -36,13 +36,14 @@ const ConnectWallet = () => {
         }
     }
 
-    useEffect(() => {
+    const bindAccountChange = () => {
         if (CardanoNS?.onAccountChange && typeof CardanoNS.onAccountChange === 'function') { 
             CardanoNS.onAccountChange((address: Array<any>) => {
                 setAddress(address[0]);
             })
         }
-    });
+    }
+    bindAccountChange();
 
     useEffect(() => {
         if (address) {

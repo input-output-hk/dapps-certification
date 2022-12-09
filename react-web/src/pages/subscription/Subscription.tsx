@@ -2,8 +2,8 @@ import React from "react";
 import MaintenancePage from "pages/maintenance/Maintenance";
 
 
-function subscription() {
+const Subscription = () => {
   return <MaintenancePage />;
 }
 
-export default subscription;
+export default Subscription;
