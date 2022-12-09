@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import './ConnectWallet.scss';
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
@@ -23,13 +23,9 @@ const ConnectWallet = () => {
     const [address, setAddress] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
 
-    const openConnectWalletModal = () => {
-        setIsOpen(true)
-    }
+    const openConnectWalletModal = useCallback(() => setIsOpen(true),[])
 
-    const onCloseModal = (flag: boolean) => {
-        setIsOpen(flag)
-    } 
+    const onCloseModal = useCallback(() => setIsOpen(false),[]) 
 
     const loadWallet = async (walletName: string) => {
         try {
@@ -67,7 +63,7 @@ const ConnectWallet = () => {
                 type="button"
                 displayStyle="gradient"
                 buttonLabel={"Connect Wallet"}
-                onClick={(_) => openConnectWalletModal()}
+                onClick={openConnectWalletModal}
             />
             <Modal open={isOpen} title="Connect a wallet" onCloseModal={onCloseModal}>
                 <div id="walletsContainer">
