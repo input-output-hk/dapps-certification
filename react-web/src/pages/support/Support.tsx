@@ -1,8 +1,8 @@
 import React from "react";
 import MaintenancePage from "pages/maintenance/Maintenance";
 
-function support() {
+const Support = () => {
   return <MaintenancePage />;
 }
 
-export default support;
+export default Support;

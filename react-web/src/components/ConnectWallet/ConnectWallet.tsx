@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import './ConnectWallet.scss';
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
@@ -21,6 +21,11 @@ const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [address, setAddress] = useState(null)
+    const [isOpen, setIsOpen] = useState(false)
+
+    const openConnectWalletModal = useCallback(() => setIsOpen(true),[])
+
+    const onCloseModal = useCallback(() => setIsOpen(false),[]) 
 
     const loadWallet = async (walletName: string) => {
         try {
@@ -32,17 +37,17 @@ const ConnectWallet = () => {
         } catch (err) {
             // do nothing
             console.log(err);
-            <Toast message={""}/>
         }
     }
 
-    useEffect(() => {
+    const bindAccountChange = () => {
         if (CardanoNS?.onAccountChange && typeof CardanoNS.onAccountChange === 'function') { 
             CardanoNS.onAccountChange((address: Array<any>) => {
                 setAddress(address[0]);
             })
         }
-    });
+    }
+    bindAccountChange();
 
     useEffect(() => {
         if (address) {
@@ -50,17 +55,6 @@ const ConnectWallet = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [address])
-    
-
-    const [isOpen, setIsOpen] = useState(false)
-    const openConnectWalletModal = () => {
-        setIsOpen(true)
-    }
-
-    const onCloseModal = (flag: boolean) => {
-        setIsOpen(flag)
-    } 
-
 
     return (
         <>
@@ -68,7 +62,7 @@ const ConnectWallet = () => {
                 type="button"
                 displayStyle="gradient"
                 buttonLabel={"Connect Wallet"}
-                onClick={(_) => openConnectWalletModal()}
+                onClick={openConnectWalletModal}
             />
             <Modal open={isOpen} title="Connect a wallet" onCloseModal={onCloseModal}>
                 <div id="walletsContainer">

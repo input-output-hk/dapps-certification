@@ -2,8 +2,8 @@ import React from "react";
 
 import MaintenancePage from "pages/maintenance/Maintenance";
 
-function pricing() {
+const Pricing = () => {
     return <MaintenancePage />
 }
 
-export default pricing;
+export default Pricing;

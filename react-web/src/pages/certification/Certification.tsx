@@ -257,7 +257,7 @@ const Certification = () => {
                 {Object.keys(resultData).length ? (<>
                   <Button
                     className="report-download"
-                    onClick={(e) => handleDownloadResultData(resultData)}
+                    onClick={(_) => handleDownloadResultData(resultData)}
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
