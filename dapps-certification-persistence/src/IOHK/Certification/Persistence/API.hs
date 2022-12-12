@@ -64,7 +64,7 @@ getProfileAddress = fmap listToMaybe . query . getProfileAddressQ
 
 createRun :: MonadSelda m => UUID -> UTCTime -> Text -> UTCTime -> ID Profile -> m ()
 createRun runId time repo commitDate pid = do
-  void $ insert runs [Run runId time (Just time) time repo commitDate Queued pid Nothing]
+  void $ insert runs [Run runId time (Just time) time repo commitDate Queued pid]
 
 getRunOwnerQ :: UUID -> Query t (Col t (ID Profile))
 getRunOwnerQ runId = do
@@ -91,10 +91,33 @@ syncRun runId time= update runs
     (\run -> (run ! #runId .== literal runId))
     (`with` [ #syncedAt := literal time ])
 
-updateCertificateCreation :: MonadSelda m => ID Profile -> UTCTime -> m Int
-updateCertificateCreation pid time= update runs
-      (\run -> (run ! #profileId .== literal pid) .&& (run ! #runStatus .== literal Succeeded))
-      (`with` [ #certificateCreatedAt := literal (Just time) ] )
+createCertificate :: (MonadSelda m,MonadMask m) => UUID -> Text -> UTCTime -> m (Maybe Certification)
+createCertificate runId ipfsCID time = transaction $ do
+  result <- query $ do
+    run <- select runs
+    restrict (run ! #runId .== literal runId)
+    restrict ( run ! #runStatus .== literal Succeeded)
+    pure run
+  case result of
+    [_] -> do
+      void $ update runs
+        (\run -> (run ! #runId .== literal runId))
+        (`with` [ #runStatus := literal Certified
+                , #syncedAt := literal time
+                ])
+      let cert = Certification def ipfsCID time runId
+      certId <- insertWithPK certifications [cert]
+      pure $ Just $ cert { certId = certId}
+    _ -> pure Nothing
+
+getCertificationQuery :: UUID -> Query t (Row t Certification)
+getCertificationQuery runID = do
+    c <- select certifications
+    restrict (c ! #certRunId .== literal runID )
+    pure c
+
+getCertification :: MonadSelda m => UUID -> m (Maybe Certification)
+getCertification = fmap listToMaybe . query . getCertificationQuery
 
 getRuns :: MonadSelda m => ID Profile -> Maybe UTCTime -> Maybe Int -> m [Run]
 getRuns pid afterM topM = query $
@@ -113,4 +136,4 @@ getRuns pid afterM topM = query $
 
 --TODO: replace this with a proper configuration
 withDb :: (MonadIO m, MonadMask m) => SeldaT SQLite m a -> m a
-withDb = withSQLite "people.sqlite"
+withDb = withSQLite "certification.sqlite"
