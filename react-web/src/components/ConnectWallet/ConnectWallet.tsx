@@ -37,7 +37,6 @@ const ConnectWallet = () => {
         } catch (err) {
             // do nothing
             console.log(err);
-            <Toast message={""}/>
         }
     }
 
