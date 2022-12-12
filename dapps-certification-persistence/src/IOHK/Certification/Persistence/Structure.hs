@@ -21,9 +21,9 @@ import Data.Swagger hiding (Contact)
 import Control.Lens hiding ((.=),index)
 
 data Profile = Profile
-  { profileId :: ID Profile -- TODO: do we need an internal id?
-  , ownerAddress :: Text    -- TODO: type level restrictions might apply in the future
-                            -- regarding the format
+  { profileId :: ID Profile   -- TODO: do we need an internal id?
+  , ownerAddress :: Text      -- TODO: type level restrictions might apply in the future
+                              -- regarding the format
   , dapp :: Maybe Text
   , website :: Maybe Text
   , vendor :: Maybe Text
@@ -59,7 +59,6 @@ instance ToSchema Profile where
           ]
       & required .~ [ "address", "dapp" ]
 
-
 instance ToJSON Profile where
   toJSON (Profile{..}) = object
       [ "address" .= ownerAddress
@@ -70,6 +69,43 @@ instance ToJSON Profile where
       , "linkedin" .= linkedin
       ]
 instance SqlRow Profile
+
+data Certification = Certification
+  { certId :: ID Certification
+  , certReportContentId :: Text
+  , certCreatedAt :: UTCTime
+  , certRunId :: UUID
+  } deriving (Generic,Show)
+
+instance FromJSON Certification where
+    parseJSON = withObject "Certification" $ \v -> Certification
+      <$> (pure def)
+      <*> v .: "reportContentId"
+      <*> v .: "createdAt"
+      <*> v .: "runId"
+
+instance ToJSON Certification where
+  toJSON (Certification{..}) = object
+      [ "reportContentId" .= certReportContentId
+      , "createdAt" .= certCreatedAt
+      , "runId" .= certRunId
+      ]
+
+instance ToSchema Certification where
+   declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    utcSchema <- declareSchemaRef (Proxy :: Proxy UTCTime)
+    uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
+    return $ NamedSchema (Just "Certification") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("reportContentId", textSchema)
+          , ("createdAt", utcSchema)
+          , ("runId", uuidSchema)
+          ]
+      & required .~ [ "runId", "createdAt", "reportContentId" ]
+
+instance SqlRow Certification
 
 data Author = Author
   { authorId :: ID Author
@@ -94,7 +130,7 @@ instance IsLabel "profileId" (ID Profile -> Contact -> Contact) where
 
 instance SqlRow Contact
 
-data Status = Queued | Failed | Succeeded
+data Status = Queued | Failed | Succeeded | Certified
   deriving (Show, Read, Bounded, Enum, Eq, Generic)
 
 instance ToJSON Status where
@@ -102,6 +138,7 @@ instance ToJSON Status where
   toJSON Queued = toJSON ("queued" :: Text)
   toJSON Failed = toJSON ("failed" :: Text)
   toJSON Succeeded = toJSON ("succeeded" :: Text)
+  toJSON Certified = toJSON ("certified" :: Text)
 
 instance FromJSON Status where
     parseJSON =
@@ -110,6 +147,7 @@ instance FromJSON Status where
         handle "queued" = pure Queued
         handle "failed" = pure Failed
         handle "succeeded" = pure Succeeded
+        handle "certified" = pure Succeeded
         handle t = fail $ "provided text (" ++ show t ++ ") is not a Status"
 
 instance SqlType Status
@@ -123,7 +161,6 @@ data Run = Run
   , commitDate :: UTCTime
   , runStatus :: Status
   , profileId :: ID Profile
-  , certificateCreatedAt :: Maybe UTCTime
   } deriving (Generic,Show)
 
 instance ToSchema Status
@@ -146,6 +183,8 @@ instance ToSchema Run where
           ]
       & required .~ [ "created", "utcSchema", "repoUrl", "commitDate", "runStatus" ]
 
+
+
 instance ToJSON Run where
   toJSON (Run{..}) = object
       [ "runId" .= runId
@@ -155,7 +194,6 @@ instance ToJSON Run where
       , "repoUrl" .= repoUrl
       , "commitDate" .= commitDate
       , "runStatus" .= runStatus
-      , "certificateCreatedAt" .= certificateCreatedAt
       ]
 
 instance FromJSON Run where
@@ -168,7 +206,6 @@ instance FromJSON Run where
         <*> v .: "commitDate"
         <*> v .: "runStatus"
         <*> (pure def)
-        <*> v .:? "certificateCreatedAt" .!= Nothing
 
 instance SqlRow Run
 
@@ -189,6 +226,13 @@ runs = table "run"
   , #created :- index
   ]
 
+certifications :: Table Certification
+certifications = table "certification"
+  [ #certId :- primary
+  , #certRunId :- foreignKey runs #runId
+  , #certRunId :- unique
+  ]
+
 authors :: Table Author
 authors = table "author"
   [ #authorId :- primary
@@ -201,13 +245,10 @@ contacts = table "contact"
   , #profileId :- foreignKey profiles #profileId
   ]
 
-
 createTables :: MonadSelda m => m ()
 createTables = do
+  createTable certifications
   createTable profiles
   createTable authors
   createTable contacts
   createTable runs
-
-
-

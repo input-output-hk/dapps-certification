@@ -131,12 +131,32 @@ getRunsInfo = info getRunsParser
  <> header "plutus-certification-client run get-many — Get many runs"
   )
 
+getCertificationInfo :: ParserInfo RunIDV1
+getCertificationInfo = info getRunParser
+  ( fullDesc
+ <> header "plutus-certification-client run get-certification — Get the attached certification info of a run"
+  )
+
+createCertificationInfo :: ParserInfo CreateCertificationArgs
+createCertificationInfo = info createCertificationParser
+  ( fullDesc
+ <> header ( "plutus-certification-client run create-certification — Generates the certification objects of a run."
+      ++ " It works only if the run succeeded and no certification was already generated before" )
+  )
+
+createCertificationParser :: Parser CreateCertificationArgs
+createCertificationParser = CreateCertificationArgs
+  <$> getRunParser
+  <*> publicKeyParser
+
 data RunCommand
   = Create !CreateRunArgs
   | Get !RunIDV1
   | Abort !AbortRunArgs
   | GetLogs !GetLogsArgs
   | GetRuns !GetRunsArgs
+  | GetCertification !RunIDV1
+  | CreateCertification !CreateCertificationArgs
 
 runCommandParser :: Parser RunCommand
 runCommandParser = hsubparser
@@ -145,6 +165,8 @@ runCommandParser = hsubparser
  <> command "abort" (Abort <$> abortRunInfo)
  <> command "get-logs" (GetLogs <$> getLogsInfo)
  <> command "get-many" (GetRuns <$> getRunsInfo)
+ <> command "get-certification" (GetCertification <$> getCertificationInfo)
+ <> command "create-certification" (CreateCertification <$> createCertificationInfo)
   )
 
 data CreateRunArgs = CreateRunArgs !FlakeRefV1 !PublicKey
@@ -152,6 +174,7 @@ data CreateRunArgs = CreateRunArgs !FlakeRefV1 !PublicKey
 data GetRunsArgs = GetRunsArgs !PublicKey !(Maybe UTCTime) !(Maybe Int)
 
 data AbortRunArgs = AbortRunArgs !RunIDV1 !PublicKey
+data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !PublicKey
 
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
@@ -296,13 +319,24 @@ main = do
       handle :: (ToJSON a) => ClientM a -> IO ()
       handle c = runClientM c cEnv >>= either throwIO (hPutStrLn stdout . encode)
   case args.cmd of
-    CmdVersion -> handle $ apiClient.version
-    CmdRun (Create (CreateRunArgs ref pubKey)) -> handle $ apiClient.createRun (addAuth pubKey) ref
-    CmdRun (Get ref) -> handle $ apiClient.getRun ref
-    CmdRun (Abort (AbortRunArgs ref pubKey)) -> handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref)
+    CmdVersion ->
+      handle $ apiClient.version
+    CmdRun (Create (CreateRunArgs ref pubKey)) ->
+      handle $ apiClient.createRun (addAuth pubKey) ref
+    CmdRun (Get ref) ->
+      handle $ apiClient.getRun ref
+    CmdRun (Abort (AbortRunArgs ref pubKey)) ->
+      handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref)
     --TODO: investigate why ZonedTime doesn't serialize properly
-    CmdRun (GetLogs (GetLogsArgs ref zt act)) -> handle $ apiClient.getLogs ref zt act
-    CmdRun (GetRuns (GetRunsArgs pubKey after' count')) -> handle $ apiClient.getRuns (addAuth pubKey) after' count'
-    CmdCurrentProfile (GetCurrentProfile pubKey) -> handle $ apiClient.getCurrentProfile (addAuth pubKey)
+    CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
+      handle $ apiClient.getLogs ref zt act
+    CmdRun (GetRuns (GetRunsArgs pubKey after' count')) ->
+      handle $ apiClient.getRuns (addAuth pubKey) after' count'
+    CmdRun (GetCertification ref) ->
+      handle $ apiClient.getCertification ref
+    CmdRun (CreateCertification (CreateCertificationArgs ref pubKey)) ->
+      handle $ apiClient.createCertification (addAuth pubKey) ref
+    CmdCurrentProfile (GetCurrentProfile pubKey) ->
+      handle $ apiClient.getCurrentProfile (addAuth pubKey)
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs pubKey profileBody)) ->
       handle $ apiClient.updateCurrentProfile (addAuth pubKey) profileBody

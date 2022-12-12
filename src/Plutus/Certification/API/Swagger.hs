@@ -35,6 +35,8 @@ type UnnamedApi
   :<|> GetRunsRoute
   :<|> GetCurrentProfileRoute
   :<|> UpdateCurrentProfileRoute
+  :<|> CreateCertificationRoute
+  :<|> GetCertificateRoute
 
 instance (HasSwagger sub) => HasSwagger (AuthProtect  "public-key" :> sub) where
   toSwagger _ = toSwagger (Proxy :: Proxy (Servant.Header "Authorization" Text :> sub))

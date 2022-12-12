@@ -49,6 +49,7 @@
           (hsPkgs."async" or (errorHandler.buildDepError "async"))
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
+          (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."aeson-qq" or (errorHandler.buildDepError "aeson-qq"))
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
@@ -70,6 +71,7 @@
           "Paths_plutus_certification"
           "Plutus/Certification/API/Routes"
           "Plutus/Certification/API/Swagger"
+          "Plutus/Certification/Web3StorageClient"
           "Plutus/Certification/API"
           "Plutus/Certification/Cache"
           "Plutus/Certification/Cicero"

@@ -27,10 +27,11 @@ import Data.Time.LocalTime
 import Data.Text hiding (unpack, pack)
 import Data.Swagger
 import IOHK.Certification.Interface
+import Data.Time
+
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import qualified Control.Lens as L
-import Data.Time
 
 type API = NamedRoutes NamedAPI
 
@@ -87,6 +88,24 @@ type UpdateCurrentProfileRoute = "profile"
   :> ReqBody '[JSON] ProfileBody
   :> Put '[JSON] DB.Profile
 
+type CreateCertificationRoute = "run"
+  :> Description "Store the L1 Report into IPFS and broadcasts the Certificate onchain"
+  :> AuthProtect "public-key"
+  :> Capture "id" RunIDV1
+  :> "certificate"
+  :> Post '[JSON] DB.Certification
+
+-- TODO: the certification object remains to be added in a future commit
+type GetCertificateRoute = "run"
+  :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
+  :> Capture "id" RunIDV1
+  :> "certificate"
+  :> Get '[JSON] DB.Certification
+
+data CertificateCreationResponse = CertificateCreationResponse
+  { certCreationReportId :: Text
+  }
+
 data NamedAPI mode = NamedAPI
   { version :: mode :- VersionRoute
   , versionHead :: mode :- VersionHeadRoute
@@ -97,6 +116,8 @@ data NamedAPI mode = NamedAPI
   , getRuns :: mode :- GetRunsRoute
   , getCurrentProfile :: mode :- GetCurrentProfileRoute
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute
+  , createCertification :: mode :- CreateCertificationRoute
+  , getCertification :: mode :- GetCertificateRoute
   } deriving stock Generic
 
 data ProfileBody = ProfileBody

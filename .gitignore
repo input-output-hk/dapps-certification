@@ -7,3 +7,4 @@ tags
 docker/
 Makefile
 *.sqlite
+react-web/node_modules/
