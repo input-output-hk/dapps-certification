@@ -29,6 +29,9 @@ data Profile = Profile
   , vendor :: Maybe Text
   , twitter :: Maybe Text
   , linkedin :: Maybe Text
+  , authors :: Maybe Text
+  , contacts :: Maybe Text
+  , version :: Maybe Text
   } deriving (Generic, Show)
 
 type ProfileId = ID Profile
@@ -42,6 +45,9 @@ instance FromJSON Profile where
       <*> v .:? "vendor"  .!= Nothing
       <*> v .:? "twitter"  .!= Nothing
       <*> v .:? "linkedin"  .!= Nothing
+      <*> v .:? "authors"  .!= Nothing
+      <*> v .:? "contacts"  .!= Nothing
+      <*> v .:? "version"  .!= Nothing
 
 instance ToSchema Profile where
    declareNamedSchema _ = do
@@ -56,6 +62,9 @@ instance ToSchema Profile where
           , ("vendor", textSchemaM)
           , ("twitter", textSchemaM)
           , ("linkedin", textSchemaM)
+          , ("authors", textSchemaM)
+          , ("contacts", textSchemaM)
+          , ("version", textSchemaM)
           ]
       & required .~ [ "address", "dapp" ]
 
@@ -67,6 +76,9 @@ instance ToJSON Profile where
       , "vendor" .= vendor
       , "twitter" .= twitter
       , "linkedin" .= linkedin
+      , "authors" .= authors
+      , "contacts" .= contacts
+      , "version" .= version
       ]
 instance SqlRow Profile
 
@@ -107,28 +119,15 @@ instance ToSchema Certification where
 
 instance SqlRow Certification
 
-data Author = Author
-  { authorId :: ID Author
-  , name :: Text
-  , profileId :: ID Profile
+data DApp = DApp
+  { dappId :: ID DApp
+  , dappName :: Text
+  , dappOwner :: Text
+  , dappRepo :: Text
+  , dappProfileId :: ID Profile
   } deriving (Generic,Show)
 
-instance SqlRow Author
-
-instance IsLabel "profileId" (ID Profile -> Author -> Author) where
-  fromLabel = \v p -> p { profileId = v}
-
-data Contact = Contact
-  { contactId :: ID Contact
-  , name :: Text
-  , details :: Maybe Text
-  , profileId :: ID Profile
-  } deriving (Generic,Show)
-
-instance IsLabel "profileId" (ID Profile -> Contact -> Contact) where
-  fromLabel = \v p -> p { profileId = v}
-
-instance SqlRow Contact
+instance SqlRow DApp
 
 data Status = Queued | Failed | Succeeded | Certified
   deriving (Show, Read, Bounded, Enum, Eq, Generic)
@@ -152,6 +151,7 @@ instance FromJSON Status where
 
 instance SqlType Status
 
+type CommitHash = Text
 data Run = Run
   { runId :: UUID
   , created :: UTCTime
@@ -159,6 +159,7 @@ data Run = Run
   , syncedAt :: UTCTime
   , repoUrl :: Text
   , commitDate :: UTCTime
+  , commitHash :: CommitHash
   , runStatus :: Status
   , profileId :: ID Profile
   } deriving (Generic,Show)
@@ -178,10 +179,11 @@ instance ToSchema Run where
           , ("syncedAt", utcSchema)
           , ("repoUrl", textSchema)
           , ("commitDate", utcSchema)
+          , ("commitHash", textSchema)
           , ("runStatus", statusSchema)
           , ("certificateCreatedAt", utcSchemaM)
           ]
-      & required .~ [ "created", "utcSchema", "repoUrl", "commitDate", "runStatus" ]
+      & required .~ [ "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
 
 
 
@@ -193,6 +195,7 @@ instance ToJSON Run where
       , "syncedAt" .= syncedAt
       , "repoUrl" .= repoUrl
       , "commitDate" .= commitDate
+      , "commitHash" .= commitHash
       , "runStatus" .= runStatus
       ]
 
@@ -204,6 +207,7 @@ instance FromJSON Run where
         <*> v .: "syncedAt"
         <*> v .: "repoUrl"
         <*> v .: "commitDate"
+        <*> v .: "commitHash"
         <*> v .: "runStatus"
         <*> (pure def)
 
@@ -233,22 +237,16 @@ certifications = table "certification"
   , #certRunId :- unique
   ]
 
-authors :: Table Author
-authors = table "author"
-  [ #authorId :- primary
-  , #profileId :- foreignKey profiles #profileId
-  ]
-
-contacts :: Table Contact
-contacts = table "contact"
-  [ #contactId :- primary
-  , #profileId :- foreignKey profiles #profileId
+dapps :: Table DApp
+dapps = table "dapp"
+  [ #dappId :- primary
+  , #dappProfileId :- foreignKey profiles #profileId
+  , #dappProfileId :- unique
   ]
 
 createTables :: MonadSelda m => m ()
 createTables = do
   createTable certifications
   createTable profiles
-  createTable authors
-  createTable contacts
+  createTable dapps
   createTable runs

@@ -2,8 +2,7 @@ module IOHK.Certification.Persistence (module X) where
 import IOHK.Certification.Persistence.Structure as X
   ( Run(..)
   , Status(..)
-  , Contact(..)
-  , Author(..)
+  , DApp(..)
   , Profile(..)
   , Certification(..)
   , profiles

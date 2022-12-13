@@ -215,7 +215,7 @@ profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
   <$> optional (option str
         ( long "dapp"
-       <> metavar "DAPP-NAME"
+       <> metavar "DAPP_NAME"
        <> help "dapp identification"
         ))
   <*> optional (option str
@@ -237,6 +237,21 @@ profileBodyParser = ProfileBody
         ( long "linkedin"
        <> metavar "LINKEDIN"
        <> help "linkedin account"
+        ))
+  <*> optional (option str
+        ( long "authors"
+       <> metavar "AUTHORS"
+       <> help "the list of authors represented as a string"
+        ))
+  <*> optional (option str
+        ( long "contacts"
+       <> metavar "CONTACTS"
+       <> help "the list of contacts represented as a string"
+        ))
+  <*> optional (option str
+        ( long "version"
+       <> metavar "DAPP_VERSION"
+       <> help "DApp version"
         ))
 
 getCurrentProfileInfo :: ParserInfo PublicKey

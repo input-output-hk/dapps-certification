@@ -125,11 +125,11 @@ server ServerCaps {..} eb = NamedAPI
   , versionHead = withEvent eb Version . const $ pure NoContent
   , createRun = \(profileId,_) fref@FlakeRef{..} -> withEvent eb CreateRun \ev -> do
       -- ensure the ref is in the right format before start the job
-      commitDate <- getCommitDate uri
+      (commitDate,commitHash) <- getCommitDateAndHash uri
       addField ev $ CreateRunRef fref
       res <- submitJob (setAncestor $ reference ev) fref
       addField ev $ CreateRunID res
-      createDbRun fref profileId res commitDate
+      createDbRun fref profileId res commitDate commitHash
       pure res
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> (
       runConduit
@@ -215,20 +215,20 @@ server ServerCaps {..} eb = NamedAPI
       -- ensure is the owner of the run
       isOwner <- (== (Just profileId)) <$> (DB.withDb $ DB.getRunOwner uuid)
       unless (isOwner) $ throwError err403
-    getCommitDate uri = do
+    getCommitDateAndHash uri = do
       (owner,repo,path') <- extractUriSegments uri
       commitInfoE <- liftIO $ getCommitInfo owner repo path'
       case commitInfoE of
            Left e -> throwError err400 { errBody = LSB.pack $ show e}
-           Right (Commit _ (CommitDetails _ _ (Author _ _ time))) -> pure time
+           Right (Commit hash (CommitDetails _ _ (Author _ _ time))) -> pure (time,hash)
     extractUriSegments uri = case fmap pack $ pathSegments uri of
         owner:repo:path':_ -> pure (owner,repo,path')
         _ -> throwError err400 { errBody = "Wrong flake-ref details"}
     getNow = liftIO $ getCurrentTime
-    createDbRun FlakeRef{..} profileId res commitDate = do
+    createDbRun FlakeRef{..} profileId res commitDate commitHash= do
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
-      DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate profileId
+      DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate commitHash profileId
     dbSync uuid status = do
       now <- getNow
       let dbStatus = toDbStatus status
