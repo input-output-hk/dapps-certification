@@ -1,11 +1,27 @@
-import Modal from "components/Modal/Modal";
 import React, { useState } from "react";
+import Modal from "components/Modal/Modal";
+import parse from 'html-react-parser';
 
 const FileCoverageContainer: React.FC<{
     result: { [x: string]: any };
     githubLink: string;
     coverageFile?: string
 }> = ({ result, githubLink, coverageFile = '' }) => {
+    const [isOpen, setIsOpen] = useState(false)
+    const openModal = () => {
+        setIsOpen(true)
+    }
+    const onCloseModal = (flag: boolean) => {
+        setIsOpen(flag)
+    }
+
+    const parseHTMLContents = (filename: string) => {
+        const pattern = new RegExp("<h2(.*)>"+filename+"<\/h2>")
+        const pre = coverageFile.split(pattern)
+        const content = pre[2].split('</pre>')[0] + '</pre>'
+        return parse(content);
+    }
+
     const coverageIndexFiles: Array<string> = [];
     const coverageIndexReport: any = {};
     if (result._certRes_coverageReport?._coverageIndex?._coverageMetadata) {
@@ -56,29 +72,18 @@ const FileCoverageContainer: React.FC<{
         }
     })
 
-    const [isOpen, setIsOpen] = useState(false)
-    const openModal = () => {
-        setIsOpen(true)
-    }
-    const onCloseModal = (flag: boolean) => {
-        setIsOpen(flag)
-    }
-
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
                 <>  
-                    <div key={index} style={{paddingBottom: "10px"}}>
-                        <span className="link" onClick={(_) => openModal()}>Coverage</span>
-                        <Modal open={isOpen} onCloseModal={onCloseModal}>
-                            <div dangerouslySetInnerHTML={{__html: coverageFile.replace("<body >", "").replace("</body>", "") }} />
-                        </Modal>
-                    </div>
                     <li className="coverage-file">
                         <>
                             {/* To be changed to location of the file code coverage UI */}
                             {/* <a href={githubLink + "/" + file}>{file}</a>*/}
-                            {/* add Modal here */}
+                            <span className="link" onClick={(_) => openModal()}>{file}</span>
+                            <Modal open={isOpen} onCloseModal={onCloseModal}>
+                                <div>{parseHTMLContents(file)}</div>
+                            </Modal>
                         </>
                         <div>
                             <div className="meter-bar">
