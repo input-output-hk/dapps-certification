@@ -126,6 +126,9 @@ data ProfileBody = ProfileBody
    , vendor :: !(Maybe Text)
    , twitter :: !(Maybe Text)
    , linkedin :: !(Maybe Text)
+   , authors :: Maybe Text
+   , contacts :: Maybe Text
+   , version :: Maybe Text
    } deriving stock Generic
 
 instance FromJSON ProfileBody where
@@ -135,6 +138,9 @@ instance FromJSON ProfileBody where
       <*> v .:? "vendor"  .!= Nothing
       <*> v .:? "twitter"  .!= Nothing
       <*> v .:? "linkedin"  .!= Nothing
+      <*> v .:? "authors"  .!= Nothing
+      <*> v .:? "contacts"  .!= Nothing
+      <*> v .:? "version"  .!= Nothing
 
 instance ToJSON ProfileBody where
 

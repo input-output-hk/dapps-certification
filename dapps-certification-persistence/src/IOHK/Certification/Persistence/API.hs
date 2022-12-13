@@ -62,9 +62,9 @@ getProfileAddressQ  pid = do
 getProfileAddress :: MonadSelda m => ID Profile -> m (Maybe Text)
 getProfileAddress = fmap listToMaybe . query . getProfileAddressQ
 
-createRun :: MonadSelda m => UUID -> UTCTime -> Text -> UTCTime -> ID Profile -> m ()
-createRun runId time repo commitDate pid = do
-  void $ insert runs [Run runId time (Just time) time repo commitDate Queued pid]
+createRun :: MonadSelda m => UUID -> UTCTime -> Text -> UTCTime -> CommitHash -> ID Profile -> m ()
+createRun runId time repo commitDate commitHash pid = do
+  void $ insert runs [Run runId time (Just time) time repo commitDate commitHash Queued pid]
 
 getRunOwnerQ :: UUID -> Query t (Col t (ID Profile))
 getRunOwnerQ runId = do
