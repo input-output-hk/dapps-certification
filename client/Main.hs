@@ -42,10 +42,10 @@ flakeRefReader = do
 
 createRunParser :: Parser CreateRunArgs
 createRunParser = CreateRunArgs
-  <$> argument flakeRefReader
+  <$> (CommitOrBranch <$> (option str
     ( metavar "REF"
    <> help "the flake reference pointing to the repo to build"
-    )
+    )))
   <*> publicKeyParser
 
 createRunInfo :: ParserInfo CreateRunArgs
@@ -169,7 +169,7 @@ runCommandParser = hsubparser
  <> command "create-certification" (CreateCertification <$> createCertificationInfo)
   )
 
-data CreateRunArgs = CreateRunArgs !FlakeRefV1 !PublicKey
+data CreateRunArgs = CreateRunArgs !CommitOrBranch !PublicKey
 
 data GetRunsArgs = GetRunsArgs !PublicKey !(Maybe UTCTime) !(Maybe Int)
 

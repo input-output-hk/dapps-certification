@@ -24,10 +24,12 @@ import Network.URI
 import Data.UUID
 import Data.ByteString.Lazy.Char8 as BSL8
 import Data.Time.LocalTime
-import Data.Text hiding (unpack, pack)
+import Data.Text as Text
+import Data.Text.Encoding
 import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
+import Data.Proxy
 
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
@@ -46,7 +48,7 @@ type VersionHeadRoute = "version"
 type CreateRunRoute = "run"
   :> Description "Create a new testing run"
   :> AuthProtect "public-key"
-  :> ReqBody '[PlainText] FlakeRefV1
+  :> ReqBody '[PlainText] CommitOrBranch
   :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
 
 type GetRunRoute = "run"
@@ -178,18 +180,27 @@ instance FromJSON VersionV1 where
 
 newtype FlakeRefV1 = FlakeRef { uri :: URI }
                    deriving(Generic)
+newtype CommitOrBranch = CommitOrBranch { commitOrBranch :: Text }
+                   deriving(Generic)
+
+instance MimeUnrender PlainText CommitOrBranch where
+  mimeUnrender _ = Right . CommitOrBranch . decodeUtf8 . BSL8.toStrict
 
 instance MimeUnrender PlainText FlakeRefV1 where
-  mimeUnrender _ uribs = case parseAbsoluteURI uristr of
+  mimeUnrender _ uriBs = case parseAbsoluteURI uriStr of
       Just u -> case u.uriScheme of
         "github:" -> Right $ FlakeRef u
-        s -> Left $ "URI '" ++ uristr ++ "' must be a github: flakeref, not '" ++ s ++ "'"
-      Nothing -> Left $ "couldn't not parse '" ++ uristr ++ "' as an absolute URI"
+        s -> Left $ "URI '" ++ uriStr ++ "' must be a github: flakeref, not '" ++ s ++ "'"
+      Nothing -> Left $ "couldn't not parse '" ++ uriStr ++ "' as an absolute URI"
     where
-      uristr = unpack uribs
+      uriStr = BSL8.unpack uriBs
 
 instance MimeRender PlainText FlakeRefV1 where
-  mimeRender _ ref = pack $ uriToString id ref.uri ""
+  mimeRender _ ref = BSL8.pack $ uriToString id ref.uri ""
+
+instance MimeRender PlainText CommitOrBranch where
+  mimeRender _ = BSL8.pack . Text.unpack . commitOrBranch
+
 
 newtype RunIDV1 = RunID { uuid :: UUID }
   deriving newtype (FromHttpApiData, ToHttpApiData, ToJSON )
@@ -204,7 +215,7 @@ instance MimeRender OctetStream RunIDV1 where
 instance MimeUnrender OctetStream RunIDV1 where
   mimeUnrender _ ridbs = case fromByteString ridbs of
     Just rid -> pure $ RunID rid
-    Nothing -> Left $ "couldn't parse '" ++ (unpack ridbs) ++ "' as a run ID"
+    Nothing -> Left $ "couldn't parse '" ++ (BSL8.unpack ridbs) ++ "' as a run ID"
 
 data StepState
   = Running
@@ -348,12 +359,22 @@ instance ToSchema CertifyingStatus
 instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
-instance ToSchema DAppBody
+
+instance ToSchema DAppBody where
+  declareNamedSchema _ = do
+    profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
+    return $ NamedSchema (Just "DAppBody") $ profileSchema
+
 instance ToSchema ProfileBody
 
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
+      L.& type_ L.?~ SwaggerString
+
+instance ToSchema CommitOrBranch  where
+   declareNamedSchema _ = do
+    return $ NamedSchema (Just "CommitOrBranch") $ mempty
       L.& type_ L.?~ SwaggerString
 
 instance ToSchema Cicero.Run.RunLog where
