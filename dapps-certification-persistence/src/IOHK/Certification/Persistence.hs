@@ -5,6 +5,7 @@ import IOHK.Certification.Persistence.Structure as X
   , DApp(..)
   , Profile(..)
   , Certification(..)
+  , ProfileDTO(..)
   , profiles
   , runs
   , authors

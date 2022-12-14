@@ -163,9 +163,12 @@ server ServerCaps {..} eb = NamedAPI
   , getRuns = \(profileId,_) afterM countM -> do
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
+      let dappId = profileId
+      let dappM = fmap (\DAppBody{..} -> DB.DApp{..}) dapp
       DB.withDb $ do
-        _ <- DB.upsertProfile (DB.Profile{..})
+        _ <- DB.upsertProfile (DB.Profile{..}) dappM
         -- it's safe to call partial function fromJust
+
         fromJust <$> DB.getProfile profileId
   , getCurrentProfile = \(profileId,_) ->
       let notFound = throwError $ err404 { errBody = "Profile not found" }

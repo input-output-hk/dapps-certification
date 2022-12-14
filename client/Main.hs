@@ -211,13 +211,32 @@ updateCurrentProfileInfoParser = UpdateCurrentProfileArgs
   <$> publicKeyParser
   <*> profileBodyParser
 
+dappBodyParser :: Parser DAppBody
+dappBodyParser = DAppBody
+  <$> option str
+        ( long "dapp-name"
+       <> metavar "DAPP_NAME"
+       <> help "dapp name"
+        )
+  <*> option str
+        ( long "dapp-owner"
+       <> metavar "DAPP_GITHUB_OWNER"
+       <> help "dapp github owner"
+        )
+  <*> option str
+        ( long "dapp-repo"
+       <> metavar "DAPP_GITHUB_REPO"
+       <> help "dapp github repo"
+        )
+  <*> option str
+        ( long "dapp-version"
+       <> metavar "DAPP_VERSION"
+       <> help "dapp version"
+        )
+
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
-  <$> optional (option str
-        ( long "dapp"
-       <> metavar "DAPP_NAME"
-       <> help "dapp identification"
-        ))
+  <$> optional dappBodyParser
   <*> optional (option str
         ( long "website"
        <> metavar "WEBSITE"
@@ -247,11 +266,6 @@ profileBodyParser = ProfileBody
         ( long "contacts"
        <> metavar "CONTACTS"
        <> help "the list of contacts represented as a string"
-        ))
-  <*> optional (option str
-        ( long "version"
-       <> metavar "DAPP_VERSION"
-       <> help "DApp version"
         ))
 
 getCurrentProfileInfo :: ParserInfo PublicKey

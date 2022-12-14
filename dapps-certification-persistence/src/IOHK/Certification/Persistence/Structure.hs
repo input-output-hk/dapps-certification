@@ -16,6 +16,7 @@ module IOHK.Certification.Persistence.Structure where
 import Database.Selda
 import GHC.OverloadedLabels
 import Data.Aeson
+import Data.Aeson.Types
 import Data.Proxy
 import Data.Swagger hiding (Contact)
 import Control.Lens hiding ((.=),index)
@@ -24,14 +25,12 @@ data Profile = Profile
   { profileId :: ID Profile   -- TODO: do we need an internal id?
   , ownerAddress :: Text      -- TODO: type level restrictions might apply in the future
                               -- regarding the format
-  , dapp :: Maybe Text
   , website :: Maybe Text
   , vendor :: Maybe Text
   , twitter :: Maybe Text
   , linkedin :: Maybe Text
   , authors :: Maybe Text
   , contacts :: Maybe Text
-  , version :: Maybe Text
   } deriving (Generic, Show)
 
 type ProfileId = ID Profile
@@ -40,14 +39,12 @@ instance FromJSON Profile where
     parseJSON = withObject "Profile" $ \v -> Profile
       <$> (pure def)
       <*> v .: "address"
-      <*> v .:? "dapp"  .!= Nothing
       <*> v .:? "website"  .!= Nothing
       <*> v .:? "vendor"  .!= Nothing
       <*> v .:? "twitter"  .!= Nothing
       <*> v .:? "linkedin"  .!= Nothing
       <*> v .:? "authors"  .!= Nothing
       <*> v .:? "contacts"  .!= Nothing
-      <*> v .:? "version"  .!= Nothing
 
 instance ToSchema Profile where
    declareNamedSchema _ = do
@@ -64,22 +61,22 @@ instance ToSchema Profile where
           , ("linkedin", textSchemaM)
           , ("authors", textSchemaM)
           , ("contacts", textSchemaM)
-          , ("version", textSchemaM)
           ]
       & required .~ [ "address", "dapp" ]
 
 instance ToJSON Profile where
-  toJSON (Profile{..}) = object
-      [ "address" .= ownerAddress
-      , "dapp" .= dapp
-      , "website" .= website
-      , "vendor" .= vendor
-      , "twitter" .= twitter
-      , "linkedin" .= linkedin
-      , "authors" .= authors
-      , "contacts" .= contacts
-      , "version" .= version
-      ]
+  toJSON = object . profileJSONPairs
+
+profileJSONPairs :: Profile -> [Pair]
+profileJSONPairs Profile{..} =
+  [ "address" .= ownerAddress
+  , "website" .= website
+  , "vendor" .= vendor
+  , "twitter" .= twitter
+  , "linkedin" .= linkedin
+  , "authors" .= authors
+  , "contacts" .= contacts
+  ]
 instance SqlRow Profile
 
 data Certification = Certification
@@ -120,12 +117,41 @@ instance ToSchema Certification where
 instance SqlRow Certification
 
 data DApp = DApp
-  { dappId :: ID DApp
+  { dappId :: ID Profile
   , dappName :: Text
   , dappOwner :: Text
   , dappRepo :: Text
-  , dappProfileId :: ID Profile
+  , dappVersion :: Text
   } deriving (Generic,Show)
+
+instance ToSchema DApp where
+  declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    return $ NamedSchema (Just "DApp") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("name", textSchema)
+          , ("owner", textSchema)
+          , ("repo", textSchema)
+          , ("version", textSchema)
+          ]
+      & required .~ ["name", "owner", "repo", "version"]
+
+instance FromJSON DApp where
+  parseJSON = withObject "DApp" $ \v -> DApp
+    <$> pure def
+    <*> v .: "name"
+    <*> v .: "owner"
+    <*> v .: "repo"
+    <*> v .: "version"
+
+instance ToJSON DApp where
+  toJSON (DApp{..}) = object
+      [ "name" .= dappName
+      , "owner" .= dappOwner
+      , "repo" .= dappRepo
+      , "version" .= dappVersion
+      ]
 
 instance SqlRow DApp
 
@@ -185,8 +211,6 @@ instance ToSchema Run where
           ]
       & required .~ [ "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
 
-
-
 instance ToJSON Run where
   toJSON (Run{..}) = object
       [ "runId" .= runId
@@ -216,6 +240,27 @@ instance SqlRow Run
 instance IsLabel "profileId" (ID Profile -> Profile -> Profile) where
   fromLabel = \v p -> p { profileId = v}
 
+data ProfileDTO = ProfileDTO
+  { profile :: Profile
+  , dapp :: Maybe DApp
+  }
+
+instance FromJSON ProfileDTO where
+  parseJSON = withObject "ProfileDTO" $ \v -> ProfileDTO
+      <$> parseJSON (Object v)
+      <*> v .:? "dapp" .!= Nothing
+
+instance ToJSON ProfileDTO where
+  toJSON ProfileDTO{..} = object $
+      [ "dapp" .= dapp ] ++ profileJSONPairs profile
+
+instance ToSchema ProfileDTO where
+  declareNamedSchema _ = do
+    profileSchema <- declareSchema (Proxy :: Proxy Profile)
+    dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
+    return $ NamedSchema (Just "ProfileDTO") $ profileSchema
+              & properties %~ (`mappend` [ ("dapp", dappSchema) ])
+
 profiles :: Table Profile
 profiles = table "profile"
   [ #profileId :- autoPrimary
@@ -239,9 +284,8 @@ certifications = table "certification"
 
 dapps :: Table DApp
 dapps = table "dapp"
-  [ #dappId :- primary
-  , #dappProfileId :- foreignKey profiles #profileId
-  , #dappProfileId :- unique
+  [ #dappId :- unique
+  , #dappId :- foreignKey profiles #profileId
   ]
 
 createTables :: MonadSelda m => m ()
