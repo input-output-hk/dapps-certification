@@ -59,9 +59,16 @@ getProfileQ pid = do
   restrict (profile ! #profileId .== literal pid)
   pure (profile :*: dapp)
 
+getProfileDAppQ :: ID Profile -> Query t (Row t DApp)
+getProfileDAppQ pid = do
+  dapp <- select dapps
+  restrict (dapp ! #dappId .== literal pid)
+  pure dapp
+
 getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
-getProfile pid = do
-  fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
+getProfile pid = fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
+
+getProfileDApp pid = fmap (listToMaybe ) $ query $ getProfileDAppQ pid
 
 toProfileDTO :: (Profile :*: Maybe DApp) -> ProfileDTO
 toProfileDTO (profile :*: dapp) = ProfileDTO{..}
@@ -84,7 +91,14 @@ getProfileAddressQ  pid = do
 getProfileAddress :: MonadSelda m => ID Profile -> m (Maybe Text)
 getProfileAddress = fmap listToMaybe . query . getProfileAddressQ
 
-createRun :: MonadSelda m => UUID -> UTCTime -> Text -> UTCTime -> CommitHash -> ID Profile -> m ()
+createRun :: MonadSelda m
+          => UUID
+          -> UTCTime
+          -> Text
+          -> UTCTime
+          -> CommitHash
+          -> ID Profile
+          -> m ()
 createRun runId time repo commitDate commitHash pid = do
   void $ insert runs [Run runId time (Just time) time repo commitDate commitHash Queued pid]
 

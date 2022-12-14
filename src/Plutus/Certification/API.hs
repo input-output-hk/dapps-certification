@@ -11,6 +11,7 @@ import Plutus.Certification.API.Routes as X
   , VersionV1(..)
   , RunIDV1(..)
   , FlakeRefV1(..)
+  , CommitOrBranch(..)
   , RunStatusV1(..)
   , StepState(..)
   , CertifyingStatus(..)

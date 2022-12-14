@@ -33,7 +33,8 @@ import Data.Maybe
 import Data.Time
 import Network.HTTP.Types
 import Network.HTTP.Client      hiding (Proxy)
-import Data.Text hiding (replicate, last)
+import Data.Text as Text hiding (replicate, last)
+import Data.Text.Encoding
 import Data.ByteString.Lazy.Char8 qualified as LSB
 import Paths_plutus_certification qualified as Package
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
@@ -123,9 +124,10 @@ server :: (MonadMask m,MonadIO m, MonadError ServerError m)
 server ServerCaps {..} eb = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , createRun = \(profileId,_) fref@FlakeRef{..} -> withEvent eb CreateRun \ev -> do
+  , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
+      fref <- getFlakeRef profileId commitOrBranch
       -- ensure the ref is in the right format before start the job
-      (commitDate,commitHash) <- getCommitDateAndHash uri
+      (commitDate,commitHash) <- getCommitDateAndHash fref
       addField ev $ CreateRunRef fref
       res <- submitJob (setAncestor $ reference ev) fref
       addField ev $ CreateRunID res
@@ -204,6 +206,20 @@ server ServerCaps {..} eb = NamedAPI
 
   }
   where
+    getFlakeRef profileId CommitOrBranch{..} = do
+      let forbidden str = throwError $ err403 { errBody = str}
+
+      DB.DApp{..} <- (DB.withDb $ DB.getProfileDApp profileId)
+        >>= maybe (forbidden "DApp profile data not available") pure
+
+      when (Text.null dappOwner || Text.null dappRepo )
+        $ forbidden "DApp owner or repo are empty"
+
+      let uri = ("github:" <> encodeUtf8 dappOwner <> "/" <> encodeUtf8 dappRepo <> "/" <> encodeUtf8 commitOrBranch )
+      either (\err -> throwError $ err400 { errBody = LSB.pack err })
+             pure
+             (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
+
     uploadToIpfs :: (Monad m, MonadIO m, MonadError ServerError m) => CertificationResult -> m IPFS.UploadResponse
     uploadToIpfs certResultM = do
       resp <- IPFS.uploadReportToIpfs IPFS.apiKey (LSB.toStrict $ encode certResultM)
@@ -218,7 +234,7 @@ server ServerCaps {..} eb = NamedAPI
       -- ensure is the owner of the run
       isOwner <- (== (Just profileId)) <$> (DB.withDb $ DB.getRunOwner uuid)
       unless (isOwner) $ throwError err403
-    getCommitDateAndHash uri = do
+    getCommitDateAndHash FlakeRef{..} = do
       (owner,repo,path') <- extractUriSegments uri
       commitInfoE <- liftIO $ getCommitInfo owner repo path'
       case commitInfoE of

@@ -16,6 +16,7 @@ import IOHK.Certification.Persistence.Structure as X
 import IOHK.Certification.Persistence.API as X
   ( upsertProfile
   , getProfile
+  , getProfileDApp
   , createRun
   , updateFinishedRun
   , getRuns
