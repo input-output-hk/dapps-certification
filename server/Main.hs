@@ -174,8 +174,9 @@ authHandler = mkAuthHandler handler
     case profileIdM of
       Just pid -> pure (pid, UserAddress address)
       Nothing -> do
-        pidM <- DB.withDb $ DB.upsertProfile $ DB.Profile undefined address Nothing Nothing
-          Nothing Nothing Nothing Nothing Nothing Nothing
+        pidM <- DB.withDb $ DB.upsertProfile
+          (DB.Profile undefined address Nothing Nothing Nothing Nothing Nothing Nothing)
+          Nothing
         case pidM of
           Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
           Just pid -> pure (pid,UserAddress address)

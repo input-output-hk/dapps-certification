@@ -17,6 +17,7 @@ import Plutus.Certification.API.Routes as X
   , IncompleteRunStatus(..)
   , KnownActionType(..)
   , ProfileBody(..)
+  , DAppBody(..)
   )
 import Plutus.Certification.API.Swagger as X 
   ( swaggerJson

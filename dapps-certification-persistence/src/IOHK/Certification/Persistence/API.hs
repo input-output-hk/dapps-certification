@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeOperators #-}
 
 module IOHK.Certification.Persistence.API where
 
@@ -11,38 +12,59 @@ import IOHK.Certification.Persistence.Structure
 import Data.Maybe
 import Control.Monad
 
-upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> m (Maybe (ID Profile))
-upsertProfile arg@Profile{..} = do
-  upsert profiles
-     (\profile -> profile ! #ownerAddress .== text ownerAddress)
+upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
+upsertProfile profile@Profile{..} dappM = do
+  void $ upsert profiles
+     (\p -> p ! #ownerAddress .== text ownerAddress)
      (`with`
-      [ #dapp     := fromTextMaybe dapp -- TODO: don't know if we should update the dapp
-      , #website  := fromTextMaybe website
+      [ #website  := fromTextMaybe website
       , #vendor   := fromTextMaybe vendor
       , #twitter  := fromTextMaybe twitter
       , #linkedin := fromTextMaybe linkedin
       --TODO: authors and contacts
       ])
-     [#profileId (def :: ID Profile) arg]
+     [#profileId (def :: ID Profile) profile]
+  -- we query this because upsert returns id only when inserts
+  profileIdM <- getProfileId ownerAddress
+  forM_ profileIdM $ \pid -> case dappM of
+    Nothing -> do
+        void $ deleteFrom dapps (\dapp -> dapp ! #dappId .== literal pid)
+    Just dapp@DApp{..} -> do
+      void $ upsert dapps
+          (\dapp' -> dapp' ! #dappId .== literal pid)
+          (`with`
+           [ #dappName := text dappName
+           , #dappOwner := text dappOwner
+           , #dappRepo := text dappRepo
+           , #dappVersion := text dappVersion
+           , #dappId := literal profileId
+           ]
+          )
+          [dapp { dappId = pid }]
+  pure profileIdM
   where
   fromTextMaybe = maybe null_ (just . text)
 
 getProfileByAddress :: MonadSelda m => Text -> m (Maybe Profile)
-getProfileByAddress address = listToMaybe <$> (query $ do
+getProfileByAddress address = listToMaybe <$> query (do
     p <- select profiles
     restrict (p ! #ownerAddress .== text address)
     pure p
   )
 
-getProfileQ :: ID Profile -> Query t (Row t Profile)
+getProfileQ :: ID Profile -> Query t (Row t Profile :*: Row t (Maybe DApp))
 getProfileQ pid = do
-    p <- select profiles
-    restrict (p ! #profileId .== literal pid )
-    pure p
+  profile <- select profiles
+  dapp <- leftJoin  (\dapp -> dapp ! #dappId .== literal pid) (select dapps)
+  restrict (profile ! #profileId .== literal pid)
+  pure (profile :*: dapp)
 
-getProfile :: MonadSelda m => ID Profile -> m (Maybe Profile)
-getProfile = fmap listToMaybe . query . getProfileQ
+getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
+getProfile pid = do
+  fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
 
+toProfileDTO :: (Profile :*: Maybe DApp) -> ProfileDTO
+toProfileDTO (profile :*: dapp) = ProfileDTO{..}
 
 getProfileIdQ:: Text -> Query t (Col t (ID Profile))
 getProfileIdQ  address = do
@@ -88,7 +110,7 @@ updateFinishedRun runId succeeded time= do
 
 syncRun :: MonadSelda m => UUID ->  UTCTime -> m Int
 syncRun runId time= update runs
-    (\run -> (run ! #runId .== literal runId))
+    (\run -> run ! #runId .== literal runId)
     (`with` [ #syncedAt := literal time ])
 
 createCertificate :: (MonadSelda m,MonadMask m) => UUID -> Text -> UTCTime -> m (Maybe Certification)
@@ -101,7 +123,7 @@ createCertificate runId ipfsCID time = transaction $ do
   case result of
     [_] -> do
       void $ update runs
-        (\run -> (run ! #runId .== literal runId))
+        (\run -> run ! #runId .== literal runId)
         (`with` [ #runStatus := literal Certified
                 , #syncedAt := literal time
                 ])

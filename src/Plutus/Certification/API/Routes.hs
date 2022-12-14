@@ -79,14 +79,14 @@ type GetCurrentProfileRoute = "profile"
   :> Description "Get the current profile information"
   :> "current"
   :> AuthProtect "public-key"
-  :> Get '[JSON] DB.Profile
+  :> Get '[JSON] DB.ProfileDTO
 
 type UpdateCurrentProfileRoute = "profile"
   :> Description "Update the current profile information"
   :> "current"
   :> AuthProtect "public-key"
   :> ReqBody '[JSON] ProfileBody
-  :> Put '[JSON] DB.Profile
+  :> Put '[JSON] DB.ProfileDTO
 
 type CreateCertificationRoute = "run"
   :> Description "Store the L1 Report into IPFS and broadcasts the Certificate onchain"
@@ -120,27 +120,47 @@ data NamedAPI mode = NamedAPI
   , getCertification :: mode :- GetCertificateRoute
   } deriving stock Generic
 
+data DAppBody = DAppBody
+  { dappName :: Text
+  , dappOwner :: Text
+  , dappRepo :: Text
+  , dappVersion :: Text
+  } deriving stock Generic
+
+instance FromJSON DAppBody where
+    parseJSON = withObject "DApp" $ \v -> DAppBody
+      <$> v .: "name"
+      <*> v .: "owner"
+      <*> v .: "repo"
+      <*> v .: "version"
+
+instance ToJSON DAppBody where
+  toJSON DAppBody{..} = object
+    [ "name" .= dappName
+    , "owner"  .= dappOwner
+    , "repo"  .= dappRepo
+    , "version"  .= dappVersion
+    ]
+
 data ProfileBody = ProfileBody
-   { dapp :: !(Maybe Text)
+   { dapp :: !(Maybe DAppBody)
    , website :: !(Maybe Text)
    , vendor :: !(Maybe Text)
    , twitter :: !(Maybe Text)
    , linkedin :: !(Maybe Text)
    , authors :: Maybe Text
    , contacts :: Maybe Text
-   , version :: Maybe Text
    } deriving stock Generic
 
 instance FromJSON ProfileBody where
     parseJSON = withObject "Profile" $ \v -> ProfileBody
-      <$> v .:? "dapp"  .!= Nothing
-      <*> v .:? "website"  .!= Nothing
-      <*> v .:? "vendor"  .!= Nothing
-      <*> v .:? "twitter"  .!= Nothing
+      <$> v .:? "dapp"      .!= Nothing
+      <*> v .:? "website"   .!= Nothing
+      <*> v .:? "vendor"    .!= Nothing
+      <*> v .:? "twitter"   .!= Nothing
       <*> v .:? "linkedin"  .!= Nothing
-      <*> v .:? "authors"  .!= Nothing
+      <*> v .:? "authors"   .!= Nothing
       <*> v .:? "contacts"  .!= Nothing
-      <*> v .:? "version"  .!= Nothing
 
 instance ToJSON ProfileBody where
 
@@ -328,6 +348,7 @@ instance ToSchema CertifyingStatus
 instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
+instance ToSchema DAppBody
 instance ToSchema ProfileBody
 
 instance ToSchema FlakeRefV1  where
