@@ -1,0 +1,52 @@
+.table-component {
+  position: relative;
+  .col-header {
+    display: flex;
+    max-height: 15px;
+    .sort-icon {
+      height: 60px;
+    }
+  }
+  .no-data {
+    margin: 2em;
+    text-align: center;
+    justify-content: center;
+  }
+  .sideBar {
+    display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
+    .colviz-container {
+      background-color: #fff;
+      height: 100%;
+      width: 150px;
+      padding: 15px;
+      border: 1px solid rgb(87, 85, 85);
+    }
+    .sidebarButtons {
+      position: relative;
+      width: 30px;
+      height: 100%;
+      background: #fff;
+      .sideBarButton {
+        border: none;
+        background: transparent;
+        .sideBarButtonIcon {
+          img {
+            max-width: 16px;
+          }
+        }
+        .sideBarButtonLabel {
+          margin-top: 10px;
+          writing-mode: vertical-lr;
+          font-size: 12px;
+        }
+        &:hover,
+        &:focus {
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}

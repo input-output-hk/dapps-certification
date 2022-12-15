@@ -9,4 +9,13 @@
     margin-left: 8px;
     cursor: pointer;
   }
+  .trash-icon-btn {
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    background-color: inherit;
+    .icon-trash {
+      height: 40px;
+    }
+  }
 }
