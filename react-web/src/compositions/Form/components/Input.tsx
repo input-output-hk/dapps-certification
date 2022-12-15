@@ -8,6 +8,7 @@ interface InputProps extends ComponentProps<"input"> {
  label: string;
  disabled?: boolean;
  disablefocus?: boolean;
+ name: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
@@ -31,14 +32,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
  }, [disablefocus]);
 
  const [active, setActive] = useState(false);
- const [errorMsg, setErrorMessage] = useState("");
+//  const [errorMsg, setErrorMessage] = useState("");
 
  // eslint-disable-next-line
- useEffect(() => {
-   if (errors && name && errors[name]) {
-     setErrorMessage(errors[name]?.message as string);
-   } else setErrorMessage("");
- });
+//  useEffect(() => {
+//    if (errors && name && errors[name]) {
+//      setErrorMessage(errors[name]?.message as string);
+//    } else setErrorMessage("");
+//  });
 
  return (
    <div
@@ -47,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
      onClick={(e: any) => setActive(true)}
    >
      <div
-       className={`input ${active ? "active" : ""} ${errorMsg ? "error" : ""} ${disabled ? "disabled" : ""}`}
+       className={`input ${active ? "active" : ""} ${errors[name] ? "error" : ""} ${disabled ? "disabled" : ""}`}
        onClick={(_) => {
          setActive(true);
          document.getElementById(name || "")?.focus();
@@ -64,7 +65,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
        />
      </div>
 
-     {errorMsg && <FieldError message={errorMsg} />}
+     {errors[name]?.message ? <FieldError message={errors[name]?.message} /> : <></>}
    </div>
  );
 });
