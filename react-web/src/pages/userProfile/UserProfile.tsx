@@ -15,22 +15,21 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const { userDetails } = useAppSelector((state: any) => state.auth);
   const [isEdit, setIsEdit] = useState(false);
+  
   const form: any = useForm({
     schema: userProfileSchema,
     mode: "onChange",
   });
 
-  useEffect(()=> {if (!userDetails.dappOwner || !userDetails.dappRepository) {
-    setIsEdit(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }}, [])
-
   useEffect(() => {
     const { dappOwner, dappRepository, company, vendor, linkedIn } =
       userDetails;
     form.reset({ dappOwner, dappRepository, company, vendor, linkedIn });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userDetails]);
+
+    if (!userDetails.dappOwner || !userDetails.dappRepository) {
+      setIsEdit(true);
+    }
+  }, [userDetails, form]);
 
   const formHandler = (formData: any) => {
     const submitProfile = async () => {
@@ -51,14 +50,14 @@ const UserProfile = () => {
         <Form form={form} onSubmit={formHandler}>
           <Input
             label="dApp Owner"
-            disabled={!isEdit || userDetails.dappOwner}
+            disabled={!isEdit}
             type="text"
             disablefocus="true"
             {...form.register("dappOwner")}
           />
           <Input
             label="dApp Repository"
-            disabled={!isEdit || userDetails.dappOwner}
+            disabled={!isEdit}
             type="text"
             disablefocus="true"
             {...form.register("dappRepository")}
