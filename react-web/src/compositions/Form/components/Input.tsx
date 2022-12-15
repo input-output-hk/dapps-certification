@@ -32,14 +32,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
  }, [disablefocus]);
 
  const [active, setActive] = useState(false);
-//  const [errorMsg, setErrorMessage] = useState("");
-
- // eslint-disable-next-line
-//  useEffect(() => {
-//    if (errors && name && errors[name]) {
-//      setErrorMessage(errors[name]?.message as string);
-//    } else setErrorMessage("");
-//  });
 
  return (
    <div
