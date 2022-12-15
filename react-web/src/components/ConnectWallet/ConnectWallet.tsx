@@ -53,8 +53,7 @@ const ConnectWallet = () => {
         if (address) {
             dispatch(getProfileDetails({"address": address}))            
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [address])
+    }, [dispatch, address])
 
     return (
         <>
