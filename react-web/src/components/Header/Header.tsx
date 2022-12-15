@@ -19,7 +19,7 @@ const Header = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
-  const renderNoAuthMenu = () => {
+  const NoAuthMenu = () => {
     return (
       <>
         <li>
@@ -37,7 +37,7 @@ const Header = () => {
       </>
     );
   };
-  const renderAuthenticatedMenu = () => {
+  const AuthenticatedMenu = () => {
     return (
       <>
         <li>
@@ -73,7 +73,7 @@ const Header = () => {
         <span className="navicon"></span>
       </label>
       <ul className={`menu ${isActive ? "active-ul" : ""}`}>
-        {isLoggedIn ? renderAuthenticatedMenu() : renderNoAuthMenu()} 
+        {isLoggedIn ? <AuthenticatedMenu /> : <NoAuthMenu />} 
       </ul>
     </header>
   );

@@ -1,8 +1,8 @@
 import React from "react";
 import MaintenancePage from "pages/maintenance/Maintenance";
 
-function communtiy() {
+const Community = () => {
   return <MaintenancePage />
 }
 
-export default communtiy;
+export default Community;
