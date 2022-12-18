@@ -7,12 +7,12 @@ const FileCoverageContainer: React.FC<{
     githubLink: string;
     coverageFile?: string
 }> = ({ result, githubLink, coverageFile = '' }) => {
-    const [isOpen, setIsOpen] = useState(false)
-    const openModal = () => {
-        setIsOpen(true)
+    const [isOpen, setIsOpen] = useState("")
+    const openModal = (file: string) => {
+        setIsOpen(file)
     }
     const onCloseModal = (flag: boolean) => {
-        setIsOpen(flag)
+        setIsOpen("")
     }
 
     const parseHTMLContents = (filename: string) => {
@@ -75,13 +75,12 @@ const FileCoverageContainer: React.FC<{
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
-                <>  
+                <>
                     <li className="coverage-file">
                         <>
                             {/* To be changed to location of the file code coverage UI */}
-                            {/* <a href={githubLink + "/" + file}>{file}</a>*/}
-                            <span className="link" onClick={(_) => openModal()}>{file}</span>
-                            <Modal open={isOpen} onCloseModal={onCloseModal}>
+                            <span className="link" onClick={(_) => openModal(file)}>{file}</span>
+                            <Modal id="coverageHtmlModal" open={isOpen===file} onCloseModal={onCloseModal}>
                                 <div>{parseHTMLContents(file)}</div>
                             </Modal>
                         </>
