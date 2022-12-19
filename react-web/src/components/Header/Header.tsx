@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAppSelector } from "store/store";
+import { useAppDispatch, useAppSelector } from "store/store";
+import { logout } from "store/slices/auth.slice";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import ConnectWallet from "components/ConnectWallet/ConnectWallet";
+import { useDelayedApi } from "hooks/useDelayedApi";
 
 const Header = () => {
-  const { isLoggedIn } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, address, wallet } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
   const [isActive, setIsActive] = useState(false);
+  const [pollForAddress, setPollForAddress] = useState(false)
   const navigate = useNavigate();
   
 
@@ -18,6 +22,27 @@ const Header = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    setPollForAddress(wallet && address && isLoggedIn)
+  }, [wallet, address, isLoggedIn])
+
+  useDelayedApi(
+    async () => {
+      setPollForAddress(false)
+      const newAddress = await wallet.getChangeAddress()
+      if (address !== newAddress) {
+        // account has been changed. Force logout the user
+        dispatch(logout());
+        setPollForAddress(false)
+      } else {
+        setPollForAddress(true)
+      }
+    },
+    3*1000,
+    pollForAddress
+  )
+  
 
   const NoAuthMenu = () => {
     return (

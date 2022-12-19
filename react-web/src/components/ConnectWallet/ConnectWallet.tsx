@@ -5,8 +5,6 @@ import Button from "components/Button/Button";
 
 import { useAppDispatch } from "store/store";
 import { getProfileDetails } from "store/slices/auth.slice";
-import Toast from "components/Toast/Toast";
-
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
 
@@ -40,21 +38,11 @@ const ConnectWallet = () => {
         }
     }
 
-    const bindAccountChange = () => {
-        if (CardanoNS?.onAccountChange && typeof CardanoNS.onAccountChange === 'function') { 
-            CardanoNS.onAccountChange((address: Array<any>) => {
-                setAddress(address[0]);
-            })
-        }
-    }
-    bindAccountChange();
-
     useEffect(() => {
         if (address) {
-            dispatch(getProfileDetails({"address": address}))            
+            dispatch(getProfileDetails({"address": address, "wallet": wallet}))            
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [address])
+    }, [dispatch, address, wallet])
 
     return (
         <>

@@ -5,6 +5,7 @@ import { postData } from "api/api";
 interface AuthState {
   isLoggedIn: boolean;
   address: string;
+  wallet: any;
   userDetails: {
     company?: string;
     vendor?: string;
@@ -20,6 +21,7 @@ interface AuthState {
 const initialState: AuthState = {
   isLoggedIn: false,
   address: '',
+  wallet: null,
   userDetails: {},
   loading: false
 };
@@ -51,6 +53,9 @@ export const authSlice = createSlice({
         state.userDetails = actions.payload;
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
+          if (actions?.meta?.arg?.wallet) {
+            state.wallet = actions.meta.arg.wallet;
+          }
         }
       })
       .addCase(getProfileDetails.rejected, (state) => {
