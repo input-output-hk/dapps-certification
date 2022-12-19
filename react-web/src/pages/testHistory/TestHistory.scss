@@ -19,4 +19,12 @@
       height: 40px;
     }
   }
+  .trim-cell-text {
+    max-width: 85px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    display: block;
+    cursor: default;
+  }
 }
