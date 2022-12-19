@@ -49,7 +49,7 @@ const TableComponent: FC<any> = ({ dataSet, config, showColViz }) => {
                    <div className="col-header">
                     <div> {column.render("Header")}</div>
 
-                    <div>
+                    <div className="sort-icon-container">
                       {column.isSorted ? (
                         column.isSortedDesc ? (
                           <img

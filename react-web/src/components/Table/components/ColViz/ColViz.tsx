@@ -48,7 +48,11 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
   const updateColumnDetails = (columnArray: any) => {
     const columnCopy = JSON.parse(JSON.stringify(columnArray));
     return columnCopy.map((column: any) => {
-      return { ...column, columnVisible: true };
+      const columnVisible = column.columnVisible === false ? false : true;
+      return {
+        ...column,
+        columnVisible: columnVisible,
+      };
     });
   };
   return (

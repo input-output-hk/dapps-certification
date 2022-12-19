@@ -31,56 +31,56 @@ const TestHistory = () => {
         </span>
       ),
     },
-    // {
-    //   Header: "Certificate Created At",
-    //   accessor: "certificateCreatedAt",
-    //   columnVisible: false,
-    //   Cell: (props: any) => (
-    //     <span>
-    //       {moment(props.row.original.certificateCreatedAt).format("YYYY-MM-DD HH:mm:ss")}
-    //     </span>
-    //   ),
-    // },
-    // {
-    //   Header: "Commit Date",
-    //   accessor: "commitDate",
-    //   columnVisible: false,
-    //   Cell: (props: any) => (
-    //     <span>
-    //       {moment(props.row.original.commitDate).format("YYYY-MM-DD HH:mm:ss")}
-    //     </span>
-    //   ),
-    // },
-    // {
-    //   Header: "Created",
-    //   accessor: "created",
-    //   columnVisible: false,
-    //   Cell: (props: any) => (
-    //     <span>
-    //       {moment(props.row.original.created).format("YYYY-MM-DD HH:mm:ss")}
-    //     </span>
-    //   ),
-    // },
-    // {
-    //   Header: "Finished At",
-    //   accessor: "finishedAt",
-    //   columnVisible: false,
-    //   Cell: (props: any) => (
-    //     <span>
-    //       {moment(props.row.original.finishedAt).format("YYYY-MM-DD HH:mm:ss")}
-    //     </span>
-    //   ),
-    // },
-    // {
-    //   Header: "Synced At",
-    //   accessor: "syncedAt",
-    //   columnVisible: false,
-    //   Cell: (props: any) => (
-    //     <span>
-    //       {moment(props.row.original.syncedAt).format("YYYY-MM-DD HH:mm:ss")}
-    //     </span>
-    //   ),
-    // },
+    {
+      Header: "Certificate Created At",
+      accessor: "certificateCreatedAt",
+      columnVisible: false,
+      Cell: (props: any) => (
+        <span>
+          {moment(props.row.original.certificateCreatedAt).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
+    {
+      Header: "Commit Date",
+      accessor: "commitDate",
+      columnVisible: false,
+      Cell: (props: any) => (
+        <span>
+          {moment(props.row.original.commitDate).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
+    {
+      Header: "Created",
+      accessor: "created",
+      columnVisible: false,
+      Cell: (props: any) => (
+        <span>
+          {moment(props.row.original.created).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
+    {
+      Header: "Finished At",
+      accessor: "finishedAt",
+      columnVisible: false,
+      Cell: (props: any) => (
+        <span>
+          {moment(props.row.original.finishedAt).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
+    {
+      Header: "Synced At",
+      accessor: "syncedAt",
+      columnVisible: false,
+      Cell: (props: any) => (
+        <span>
+          {moment(props.row.original.syncedAt).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
     {
       Header: "Status",
       accessor: "status", // accessor is the "key" in the data

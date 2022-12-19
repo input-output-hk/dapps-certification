@@ -2,9 +2,13 @@
   position: relative;
   .col-header {
     display: flex;
-    max-height: 15px;
-    .sort-icon {
-      height: 60px;
+    position: relative;
+    .sort-icon-container {
+      .sort-icon {
+        position: absolute;
+        top: -8px;
+        height: 40px;
+      }
     }
   }
   .no-data {
