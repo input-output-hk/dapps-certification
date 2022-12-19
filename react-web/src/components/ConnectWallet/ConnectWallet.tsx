@@ -4,7 +4,7 @@ import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 
 import { useAppDispatch } from "store/store";
-import { getProfileDetails, logout } from "store/slices/auth.slice";
+import { getProfileDetails } from "store/slices/auth.slice";
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
 
@@ -39,23 +39,10 @@ const ConnectWallet = () => {
     }
 
     useEffect(() => {
-        if (wallet) {
-            const enabledWallet: any = wallet;
-            if (address !== enabledWallet.getChangeAddress()) {
-                // account has been changed. Force logout the user
-                dispatch(logout());
-            } else {
-                // do nothing
-            }
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    useEffect(() => {
         if (address) {
-            dispatch(getProfileDetails({"address": address}))            
+            dispatch(getProfileDetails({"address": address, "wallet": wallet}))            
         }
-    }, [dispatch, address])
+    }, [dispatch, address, wallet])
 
     return (
         <>
