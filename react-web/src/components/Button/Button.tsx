@@ -10,6 +10,7 @@ export interface IButtonProps {
   iconUrl?: any;
   showLoader?: boolean;
   type?: "button" | "reset" | "submit" | undefined;
+  displayStyle?: "primary" | "primary-outline" | "secondary" | "gradient";
   onClick?: (e: any) => any;
 }
 
@@ -21,11 +22,12 @@ const Button: FC<IButtonProps> = ({
   type = "submit",
   iconUrl,
   showLoader = false,
+  displayStyle = "primary",
   onClick,
 }) => {
   return (
     <button
-      className={`btn ${className} ${isLoading ? "is-loading" : ""}`}
+      className={`btn ${className} ${isLoading ? "is-loading" : ""} ${"btn-" + displayStyle}`}
       type={type}
       onClick={onClick}
       disabled={disabled}

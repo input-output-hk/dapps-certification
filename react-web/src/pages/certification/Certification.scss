@@ -2,8 +2,14 @@
 
 #searchContainer {
   margin: 0 auto;
+  margin-top: 2rem;
   max-width: 65%;
   padding: 10px;
+  @media (max-width: 768px) {
+    & {
+      max-width: fit-content;
+    }
+  }
 
   .search-form {
     max-width: 340px;
@@ -34,6 +40,11 @@
 
 #coverageIndicator {
   margin: 100px 0 50px;
+  @media (max-width: 768px) {
+    & {
+      margin-top: 50px;
+    }
+  }
 
   .coverage-file {
     display: flex;
@@ -66,8 +77,27 @@
 }
 
 #resultContainer {
-  margin-top: 60px;
 
+  header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    &>div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      &>.btn {
+        white-space: nowrap;
+        margin: 0;
+        &button.report-download {
+          .icon-image {
+            width: 1rem;
+          }
+        }
+      }
+    }
+  }
   .result-card {
     margin-bottom: 15px;
     padding: 8px;
@@ -127,15 +157,5 @@
     .chart-wrapper {
       width: 33%;
     }
-  }
-}
-
-button.report-download {
-  float: right;
-  padding: 5px 14px;
-  font-size: 13px;
-  border-radius: 9px;
-  .icon-image {
-    width: 1rem;
   }
 }

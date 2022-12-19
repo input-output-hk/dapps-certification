@@ -1,8 +1,15 @@
 import * as yup from "yup";
 
 export const certificationSchema = yup.object().shape({
-  username: yup.string().required("This field is required."),
-  repoName: yup.string().required("This field is required."),
+  username: yup.string().when('username', {
+    is: (exists: boolean) => !!exists,
+    then: yup.string().required("This field is required.")
+  }),
+  repoName: yup.string().when('repoName', {
+    is: (exists: boolean) => !!exists,
+    then: yup.string().required("This field is required.")
+  }),
+  // repoName: yup.string().required("This field is required."),
   commit: yup
     .string()
     .required("This field is required.")
@@ -12,4 +19,4 @@ export const certificationSchema = yup.object().shape({
       /[0-9a-f]{7,40}/,
       "Please enter a combination of numbers and lowercase letters through a to f"
     ),
-});
+}, [["username", "username"], ["repoName", "repoName"], ["commit", "commit"]]);

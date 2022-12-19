@@ -1,10 +1,10 @@
 import "./Toast.scss";
 
-const Toast = () => {
+const Toast = (props?: any) => {
     return (
         <div className="overlay">
             <div className="toast-wrapper">
-                <span>Something wrong occurred. Please try again.</span>
+                <span>{props?.message || "Something wrong occurred. Please try again."}</span>
             </div>
         </div>
     )

@@ -58,8 +58,8 @@ const FileCoverageContainer: React.FC<{
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
                 <>
-                    <div style={{paddingBottom: "10px"}}><label>Coverage</label></div>
-                    <li className="coverage-file" key={index}>
+                    <div key={index} style={{paddingBottom: "10px"}}><label>Coverage</label></div>
+                    <li className="coverage-file">
                         {/* To be changed to location of the file code coverage UI */}
                         {/* <a href={githubLink + "/" + file}>{file}</a>*/}
                         <div>

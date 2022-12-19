@@ -1,0 +1,24 @@
+.maintenance-page-container {
+    margin: 5rem;
+    @media (min-width: 48em) {
+      margin: 5rem;
+    }
+    h2 {
+      font-size: 2rem;
+      font-weight: 400;
+      text-align: center;
+      margin: 1.5rem;
+      @media (min-width: 48em) {
+        margin: 5rem;
+      }
+    }
+    h3 {
+      font-size: 2rem;
+      font-weight: 400;
+      text-align: center;
+      margin: 1rem;
+      @media (min-width: 48em) {
+        margin: 1rem;
+      }
+    }
+  }

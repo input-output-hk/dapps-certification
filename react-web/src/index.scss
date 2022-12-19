@@ -11,17 +11,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
   max-width: 1440px;
   margin: 0 auto;
-  position: relative;
-}
-
-header {
-  height: 80px;
+  padding: 20px;
+  // position: relative;
 }
 
 #contentWrapper {
   margin: 0 auto;
   padding: 40px;
   color: #2d333a;
+  @media (max-width: 768px) {
+    & {
+      padding: 0;
+    }
+  }
 }
 
 input {
@@ -89,7 +91,16 @@ a, .link {
     text-decoration: underline;
   }
 }
+button.link {
+  font-family: monospace;
+}
 
 .text-right {
   float: right;
+}
+
+.disabled, [disabled] {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
 }
