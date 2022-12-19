@@ -29,7 +29,6 @@ const Header = () => {
 
   useDelayedApi(
     async () => {
-      console.log(wallet, address)
       setPollForAddress(false)
       const newAddress = await wallet.getChangeAddress()
       if (address !== newAddress) {
