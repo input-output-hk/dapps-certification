@@ -52,6 +52,8 @@ import Plutus.Certification.Local
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Data.Text.Encoding
+import Network.HTTP.Types.Method
+
 
 data Backend
   = Local
@@ -234,7 +236,10 @@ main = do
                                         schedule scheduleCrash (setAncestor $ reference ev))
                    & setInstallShutdownHandler (putMVar closeSocketVar)
                    & setBeforeMainLoop (finalize initEv)
-          corsPolicy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
+          corsPolicy = simpleCorsResourcePolicy
+                     { corsRequestHeaders = ["Content-Type", "Authorization"]
+                     , corsMethods = [methodGet,methodPost,methodPut,methodDelete,methodHead]
+                     }
 
       _ <- initDb
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
