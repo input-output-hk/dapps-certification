@@ -68,6 +68,7 @@ getProfileDAppQ pid = do
 getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
 getProfile pid = fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
 
+getProfileDApp :: MonadSelda m => ID Profile -> m (Maybe DApp)
 getProfileDApp pid = fmap (listToMaybe ) $ query $ getProfileDAppQ pid
 
 toProfileDTO :: (Profile :*: Maybe DApp) -> ProfileDTO
@@ -127,8 +128,8 @@ syncRun runId time= update runs
     (\run -> run ! #runId .== literal runId)
     (`with` [ #syncedAt := literal time ])
 
-createCertificate :: (MonadSelda m,MonadMask m) => UUID -> Text -> UTCTime -> m (Maybe Certification)
-createCertificate runId ipfsCID time = transaction $ do
+createCertificate :: (MonadSelda m,MonadMask m) => UUID -> Text -> Text -> UTCTime -> m (Maybe Certification)
+createCertificate runId ipfsCID txId time = transaction $ do
   result <- query $ do
     run <- select runs
     restrict (run ! #runId .== literal runId)
@@ -141,9 +142,9 @@ createCertificate runId ipfsCID time = transaction $ do
         (`with` [ #runStatus := literal Certified
                 , #syncedAt := literal time
                 ])
-      let cert = Certification def ipfsCID time runId
-      certId <- insertWithPK certifications [cert]
-      pure $ Just $ cert { certId = certId}
+      let cert = Certification runId ipfsCID txId time
+      _ <- insert certifications [cert]
+      pure $ Just $ cert
     _ -> pure Nothing
 
 getCertificationQuery :: UUID -> Query t (Row t Certification)
@@ -154,6 +155,12 @@ getCertificationQuery runID = do
 
 getCertification :: MonadSelda m => UUID -> m (Maybe Certification)
 getCertification = fmap listToMaybe . query . getCertificationQuery
+
+getRun :: MonadSelda m => UUID -> m (Maybe Run)
+getRun rid = listToMaybe <$> (query $ do
+  run <- select runs
+  restrict (run ! #runId .== literal rid)
+  pure run)
 
 getRuns :: MonadSelda m => ID Profile -> Maybe UTCTime -> Maybe Int -> m [Run]
 getRuns pid afterM topM = query $
