@@ -65,7 +65,7 @@ const FileCoverageContainer: React.FC<{
         );
     }
     
-    const percentagePerFile: any = {};
+    const percentagePerFile: {[x: string]: string} = {};
     coverageIndexFiles.forEach(filename => {
         if (coverageReport[filename] && coverageIndexReport[filename]) {
             percentagePerFile[filename] = ((coverageReport[filename].length / coverageIndexReport[filename].length) * 100).toFixed(2)
