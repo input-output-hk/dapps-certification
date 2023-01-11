@@ -18,6 +18,7 @@ import IOHK.Certification.Persistence.API as X
   , getProfile
   , getProfileDApp
   , createRun
+  , getRun
   , updateFinishedRun
   , getRuns
   , withDb

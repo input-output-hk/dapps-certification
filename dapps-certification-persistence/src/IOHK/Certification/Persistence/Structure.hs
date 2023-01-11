@@ -80,22 +80,23 @@ profileJSONPairs Profile{..} =
 instance SqlRow Profile
 
 data Certification = Certification
-  { certId :: ID Certification
+  { certRunId :: UUID
   , certReportContentId :: Text
+  , certTransactionId :: Text
   , certCreatedAt :: UTCTime
-  , certRunId :: UUID
   } deriving (Generic,Show)
 
 instance FromJSON Certification where
     parseJSON = withObject "Certification" $ \v -> Certification
-      <$> (pure def)
+      <$> v .: "runId"
       <*> v .: "reportContentId"
+      <*> v .: "transactionId"
       <*> v .: "createdAt"
-      <*> v .: "runId"
 
 instance ToJSON Certification where
   toJSON (Certification{..}) = object
       [ "reportContentId" .= certReportContentId
+      , "transactionId" .= certTransactionId
       , "createdAt" .= certCreatedAt
       , "runId" .= certRunId
       ]
@@ -109,6 +110,7 @@ instance ToSchema Certification where
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("reportContentId", textSchema)
+          , ("transactionId", textSchema)
           , ("createdAt", utcSchema)
           , ("runId", uuidSchema)
           ]
@@ -277,9 +279,8 @@ runs = table "run"
 
 certifications :: Table Certification
 certifications = table "certification"
-  [ #certId :- primary
+  [ #certRunId :- primary
   , #certRunId :- foreignKey runs #runId
-  , #certRunId :- unique
   ]
 
 dapps :: Table DApp

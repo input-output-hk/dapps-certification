@@ -49,11 +49,11 @@ import Plutus.Certification.Cicero
 import Plutus.Certification.Client
 import Plutus.Certification.Server
 import Plutus.Certification.Local
+import Data.Text.Encoding
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
-import Data.Text.Encoding
 import Network.HTTP.Types.Method
-
+import Plutus.Certification.WalletClient
 
 data Backend
   = Local
@@ -63,6 +63,7 @@ data Args = Args
   { port :: !Port
   , host :: !HostPreference
   , backend :: !Backend
+  , wallet :: WalletArgs
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -108,6 +109,34 @@ argsParser =  Args
      <> Opts.value "*"
       )
   <*> (localParser <|> ciceroParser)
+  <*> walletParser
+
+walletParser :: Parser WalletArgs
+walletParser = WalletArgs
+  <$> option str
+      ( long "wallet-id"
+     <> metavar "WALLET_ID"
+     <> help "the wallet id"
+      )
+  <*> option str
+      ( long "wallet-address"
+     <> metavar "WALLET_ADDRESS"
+     <> help "the wallet address"
+      )
+  <*> option str
+      ( long "wallet-passphrase"
+     <> metavar "WALLET_PASSPHRASE"
+     <> help "wallet passphrase"
+      )
+  <*> option baseUrlReader
+      ( long "wallet-url"
+     <> metavar "WALLET_URL"
+     <> help "URL for wallet api"
+     <> showDefaultWith showBaseUrl
+     <> (Opts.value $ BaseUrl Http "localhost" 8090 "")
+      )
+
+
 
 opts :: ParserInfo Args
 opts = info (argsParser <**> helper)
@@ -197,7 +226,6 @@ initDb = void $ try' $ DB.withDb $
 main :: IO ()
 main = do
   args <- execParser opts
-
   eb <- jsonHandleBackend stderr renderJSONException renderRoot
   withEvent eb Initializing \initEv -> do
     addField initEv $ VersionField Package.version
@@ -245,7 +273,7 @@ main = do
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
-        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (be r eb))
+        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (wallet args) (be r eb))
   exitFailure
   where
   be r eb = hoistEventBackend liftIO $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb

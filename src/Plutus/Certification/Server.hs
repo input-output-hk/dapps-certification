@@ -32,12 +32,14 @@ import Data.Time.LocalTime
 import Data.Maybe
 import Data.Time
 import Network.HTTP.Types
-import Network.HTTP.Client      hiding (Proxy)
+import Network.HTTP.Client      hiding (Proxy,parseUrl)
+import Servant.Client
 import Data.Text as Text hiding (replicate, last)
 import Data.Text.Encoding
 import Data.ByteString.Lazy.Char8 qualified as LSB
 import Paths_plutus_certification qualified as Package
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
+import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 
 -- | Capabilities needed to run a server for 'API'
@@ -69,6 +71,7 @@ newtype IpfsCID = IpfsCid Text
 data CreateCertificationField
   = CreateCertificationRunID !RunIDV1
   | CreateCertificationIpfsCid !IpfsCID
+  | CreateCertificationTxResponse !Wallet.TxResponse
 
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
@@ -81,18 +84,21 @@ data ServerEventSelector f where
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
-renderServerEventSelector CreateRun = ("create-run", \case
-                                            CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")
-                                            CreateRunID rid -> ("run-id", toJSON rid)
-                                        )
 renderServerEventSelector GetRun = ("get-run", absurd)
 renderServerEventSelector AbortRun = ("abort-run", renderRunIDV1)
 renderServerEventSelector GetRunLogs = ("get-run-logs", renderRunIDV1)
 renderServerEventSelector GetCertification = ("get-certification", renderRunIDV1)
+
+renderServerEventSelector CreateRun = ("create-run", \case
+    CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")
+    CreateRunID rid -> ("run-id", toJSON rid)
+  )
+
 renderServerEventSelector CreateCertification = ("create-certification", \case
-                                            CreateCertificationRunID rid -> ("run-id", toJSON $ rid)
-                                            CreateCertificationIpfsCid cid -> ("cid", toJSON cid)
-                                          )
+    CreateCertificationRunID rid -> ("run-id", toJSON $ rid)
+    CreateCertificationIpfsCid cid -> ("cid", toJSON cid)
+    CreateCertificationTxResponse txResp -> ("tx-resp",toJSON txResp)
+  )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 = \rid -> ("run-id",toJSON rid)
@@ -119,9 +125,10 @@ getLastPart uri = last $ pathSegments uri
 -- | An implementation of 'API'
 server :: (MonadMask m,MonadIO m, MonadError ServerError m)
        => ServerCaps m r
+       -> Wallet.WalletArgs
        -> EventBackend m r ServerEventSelector
        -> ServerT API m
-server ServerCaps {..} eb = NamedAPI
+server ServerCaps {..} wargs eb = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
@@ -172,11 +179,14 @@ server ServerCaps {..} eb = NamedAPI
         -- it's safe to call partial function fromJust
 
         fromJust <$> DB.getProfile profileId
-  , getCurrentProfile = \(profileId,_) ->
-      let notFound = throwError $ err404 { errBody = "Profile not found" }
-      in (DB.withDb $ DB.getProfile profileId) >>= maybe notFound pure
+  , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
 
-  -- TODO: add instrumentation
+  -- TODO: Add instrumentation
+  -- TODO: There might be an issue if more than one certification is started at
+  -- the same time for the same Run:
+  -- Multiple transactions are going to be broadcasted at the same time and
+  -- therefore we are going to pay multiple fees.
+  -- We have to somehow create a lock mechanism for every certification per run
   , createCertification = \(profileId,_) rid@RunID{..} -> withEvent eb CreateCertification \ev -> do
     addField ev (CreateCertificationRunID rid)
     -- ensure runId belongs to the owner
@@ -186,39 +196,86 @@ server ServerCaps {..} eb = NamedAPI
     certificationM <- DB.withDb $ DB.getCertification uuid
     when (isJust certificationM) $ throwError err403 { errBody = "Certification already exists" }
 
+    -- getting required profile information before further processing
+    (DB.Profile{..},dapp@DB.DApp{..}) <- getProfileAndDApp profileId
+
     -- get the runId report
-    certResultM <- toCertificationResult <$>
-      (runConduit $ getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns)
+    status <- (runConduit $ getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns)
+
+    -- sync the run with the db and return the db-run information
+    DB.Run{..} <- getRunAndSync rid status
 
     -- store the report into the ipfs
+    let certResultM = toCertificationResult status
     (IPFS.UploadResponse ipfsCid _) <- maybe
       (throwError $ err403 { errBody = "Incompatible status for certification"})
       uploadToIpfs certResultM
     addField ev (CreateCertificationIpfsCid (IpfsCid ipfsCid))
 
+    -- create the certification object
+    websiteUrl <- parseUrl website
+    FlakeRef{..} <- createFlakeRef dapp (CommitOrBranch commitHash)
+    let certificate = Wallet.CertificationMetadata uuid ipfsCid dappName websiteUrl twitter uri dappVersion
+
+    -- broadcast the certification
+    tx@Wallet.TxResponse{..} <- (Wallet.broadcastTransaction wargs certificate)
+      >>= eitherToServerError err500 (LSB.pack . show)
+    addField ev (CreateCertificationTxResponse tx)
+
     -- persist it into the db
-    (DB.withDb . DB.createCertificate uuid ipfsCid =<< getNow)
-      >>= maybe (throwError err500 { errBody = "Certification couldn't be persisted"} ) pure
+    (DB.withDb . DB.createCertificate uuid ipfsCid txRespId =<< getNow)
+      >>= maybeToServerError err500 "Certification couldn't be persisted"
+
   , getCertification = \rid@RunID{..} -> withEvent eb GetCertification \ev -> do
     addField ev rid
-    (DB.withDb $ DB.getCertification uuid) >>=
-      maybe (throwError err404 { errBody = "Certification not found"}) pure
+    (DB.withDb $ DB.getCertification uuid)
+      >>= maybeToServerError err404 "Certification not found"
 
   }
   where
-    getFlakeRef profileId CommitOrBranch{..} = do
-      let forbidden str = throwError $ err403 { errBody = str}
+    getRunAndSync RunID{..} status = do
+      run <- (DB.withDb $ DB.getRun uuid)
+        >>= maybeToServerError err404 "No Run"
+      _ <- dbSync uuid status
+      pure run
 
-      DB.DApp{..} <- (DB.withDb $ DB.getProfileDApp profileId)
-        >>= maybe (forbidden "DApp profile data not available") pure
+    getFlakeRef profileId commitOrBranch =
+      getProfileDApp profileId >>= flip createFlakeRef commitOrBranch
 
+    eitherToServerError baseHttpError f = either
+      (\cerr -> throwError baseHttpError { errBody = f cerr})
+      pure
+
+    maybeToServerError baseHttpError msg = maybe
+      (throwError baseHttpError { errBody = msg})
+      pure
+
+    createFlakeRef DB.DApp{..} CommitOrBranch{..} = do
       when (Text.null dappOwner || Text.null dappRepo )
         $ forbidden "DApp owner or repo are empty"
 
       let uri = ("github:" <> encodeUtf8 dappOwner <> "/" <> encodeUtf8 dappRepo <> "/" <> encodeUtf8 commitOrBranch )
-      either (\err -> throwError $ err400 { errBody = LSB.pack err })
-             pure
-             (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
+      eitherToServerError
+        err400 LSB.pack
+        (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
+
+    parseUrl website = eitherToServerError err403 (LSB.pack . show)
+        (maybe (Right Nothing) (fmap Just . parseBaseUrl . unpack ) website)
+
+    forbidden str = throwError $ err403 { errBody = str}
+
+    getProfileDApp profileId = (DB.withDb $ DB.getProfileDApp profileId)
+        >>= withDappNotAvailableMsg
+
+    withDappNotAvailableMsg = maybeToServerError err403 "DApp profile data not available"
+
+    getProfileAndDApp profileId = do
+      DB.ProfileDTO{..} <- getProfileDTO profileId
+      dapp' <- withDappNotAvailableMsg dapp
+      pure (profile,dapp')
+
+    getProfileDTO profileId = (DB.withDb $ DB.getProfile profileId)
+        >>= maybeToServerError err404 "Profile not found"
 
     uploadToIpfs :: (Monad m, MonadIO m, MonadError ServerError m) => CertificationResult -> m IPFS.UploadResponse
     uploadToIpfs certResultM = do
@@ -230,24 +287,30 @@ server ServerCaps {..} eb = NamedAPI
               err = ServerError code "IPFS gateway error" (LSB.fromStrict msg) []
           in throwError err
         Right result -> pure $ result
+
     requireRunIdOwner profileId uuid = do
       -- ensure is the owner of the run
       isOwner <- (== (Just profileId)) <$> (DB.withDb $ DB.getRunOwner uuid)
       unless (isOwner) $ throwError err403
+
     getCommitDateAndHash FlakeRef{..} = do
       (owner,repo,path') <- extractUriSegments uri
       commitInfoE <- liftIO $ getCommitInfo owner repo path'
       case commitInfoE of
            Left e -> throwError err400 { errBody = LSB.pack $ show e}
            Right (Commit hash (CommitDetails _ _ (Author _ _ time))) -> pure (time,hash)
+
     extractUriSegments uri = case fmap pack $ pathSegments uri of
         owner:repo:path':_ -> pure (owner,repo,path')
         _ -> throwError err400 { errBody = "Wrong flake-ref details"}
+
     getNow = liftIO $ getCurrentTime
+
     createDbRun FlakeRef{..} profileId res commitDate commitHash= do
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
       DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate commitHash profileId
+
     dbSync uuid status = do
       now <- getNow
       let dbStatus = toDbStatus status
@@ -256,6 +319,7 @@ server ServerCaps {..} eb = NamedAPI
         DB.Certified -> pure 0 -- do nothing, it is already certified
         _ -> DB.updateFinishedRun uuid (dbStatus == DB.Succeeded) now
       return status
+
     consumeRuns = await >>= \case
       Nothing -> Incomplete <$> get
       Just (Incomplete s) -> do
