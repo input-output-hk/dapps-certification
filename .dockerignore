@@ -1,0 +1,12 @@
+.git
+.github
+.gitignore
+result
+Dockerfile
+gentags.sh
+getLogs.sh
+run.sh
+.vim
+docker-compose.yml
+Dockerfile.web
+Dockerfile.ws

@@ -6,12 +6,15 @@
 {-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE EmptyCase                 #-}
 {-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE DeriveGeneric #-}
 module IOHK.Certification.Interface where
 
+import GHC.Generics
 import Control.Applicative
 import Data.Aeson hiding (Success, Error)
 import Data.Aeson.Encoding
 import Data.Text hiding (index)
+import Data.Swagger
 
 -- | Renderable certification task names.
 data CertificationTaskName
@@ -24,6 +27,10 @@ data CertificationTaskName
   | WhitelistTask
   | DLTestsTask
   | UnknownTask !String
+  deriving (Generic)
+
+instance ToSchema CertificationTaskName where
+  declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 
 -- | Render known names or 'show' unknown ones.
 renderTask :: CertificationTaskName -> Either String Text
@@ -65,7 +72,9 @@ instance FromJSON CertificationTaskName where
 data CertificationTask = CertificationTask
   { name :: !CertificationTaskName
   , index :: !Int
-  }
+  } deriving (Generic)
+
+instance ToSchema CertificationTask
 
 instance ToJSON CertificationTask where
   toJSON CertificationTask {..} = object
@@ -88,7 +97,9 @@ data QCProgress = QCProgress
   , qcFailures :: !Integer
   , qcDiscarded :: !Integer
   , qcExpected :: !(Maybe Int)
-  }
+  } deriving Generic
+
+instance ToSchema QCProgress
 
 instance ToJSON QCProgress where
   toJSON QCProgress {..} = object $
@@ -115,7 +126,9 @@ data TaskResult = TaskResult
   { task :: !CertificationTask
   , qcResult :: !QCProgress
   , succeeded :: !Bool
-  }
+  } deriving Generic
+
+instance ToSchema TaskResult
 
 instance ToJSON TaskResult where
   toJSON TaskResult {..} = object
@@ -141,7 +154,8 @@ data Progress = Progress
   , currentQc :: !QCProgress
   , finishedTasks :: ![TaskResult]
   , progressIndex :: !Integer
-  }
+  } deriving (Generic)
+instance ToSchema Progress
 
 instance ToJSON Progress where
   toJSON Progress {..} = object
@@ -165,6 +179,11 @@ instance FromJSON Progress where
 
 -- | A plutus-apps independent representation of an entire certification run
 data CertificationResult = forall a . (ToJSON a) => CertificationResult !a
+
+instance ToSchema CertificationResult where
+  --TODO: find a way to embed aeson Value to the definition
+  declareNamedSchema _  =
+    return $ NamedSchema (Just "CertificationResult") $ mempty
 
 instance ToJSON CertificationResult where
   toJSON (CertificationResult v) = toJSON v

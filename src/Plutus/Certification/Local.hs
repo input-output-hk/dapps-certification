@@ -4,6 +4,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Plutus.Certification.Local where
 
 import Plutus.Certification.Server
@@ -22,17 +24,26 @@ import Conduit
 import System.FilePath
 import System.IO.Temp
 import Control.Concurrent.Async
+
+import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Control.Exception
+
+import Control.Monad
 
 data JobState = JobState
   { statuses :: ![(Maybe [CertificationTask] -> RunStatusV1)]
   , plan :: !(Maybe [CertificationTask])
+  , logs :: (LocalActionLogs T.Text)
   }
 
+emptyLocalLog :: LocalActionLogs a
+emptyLocalLog = LocalActionLogs [] [] []
+
 emptyJobState :: JobState
-emptyJobState = JobState [] Nothing
+emptyJobState = JobState [] Nothing emptyLocalLog
 
 addStatus :: (Maybe [CertificationTask] -> RunStatusV1) -> JobState -> JobState
 addStatus st js = js { statuses = st : (statuses js) }
@@ -42,6 +53,22 @@ setPlan p js = js { plan = Just p }
 
 getStatuses :: JobState -> [RunStatusV1]
 getStatuses js = map (\f -> f $ plan js) $ statuses js
+
+type LogEntry a = (ZonedTime,a)
+data LocalActionLogs a = LocalActionLogs
+  { generate :: ![LogEntry a]
+  , build :: ![LogEntry a]
+  , certify :: ![LogEntry a]
+  }
+
+addLocalLog:: KnownActionType -> LogEntry T.Text -> JobState -> JobState
+addLocalLog actionType val js@JobState{..} = js { logs = newLogs}
+  where
+  newLogs = case actionType of
+    Generate -> logs { generate = val:(logs.generate)}
+    Build -> logs { build = val:(logs.build)}
+    Certify -> logs { certify = val:(logs.certify)}
+
 
 localServerCaps :: EventBackend IO r LocalSelector -> IO (ServerCaps IO r)
 localServerCaps backend = do
@@ -59,19 +86,30 @@ localServerCaps backend = do
       atomicModifyIORef' jobs (\js -> (Map.insert jobId emptyJobState js, ()))
 
       let
-        addStatus' :: (Maybe [CertificationTask] -> RunStatusV1) -> IO ()
-        addStatus' st = atomicModifyIORef' jobs (\js -> (Map.adjust (addStatus st) jobId js, ()))
+        changeJobState :: (JobState -> JobState) -> IO ()
+        changeJobState f = atomicModifyIORef' jobs (\js -> (Map.adjust f jobId js, ()))
 
-      -- Purposefully leak...
+        addStatus' :: (Maybe [CertificationTask] -> RunStatusV1) -> IO ()
+        addStatus' st = changeJobState (addStatus st)
+
+        addLogEntry :: KnownActionType -> T.Text -> IO ()
+        addLogEntry actionType text = do
+          time <- utcToZonedTime utc <$> getCurrentTime
+          changeJobState (addLocalLog actionType (time,text))
+
+      -- Purposefully leak
       let runJob = withSubEvent ev RunningJob \rEv -> withSystemTempDirectory "generate-flake" \dir -> do
             addField rEv $ TempDir dir
             addStatus' . const $ Incomplete (Preparing Running)
-            onException
-              (generateFlake (narrowEventBackend InjectGenerate $ subEventBackend rEv) uri dir)
-              (addStatus' . const $ Incomplete (Preparing Failed))
+            catch
+              (generateFlake (narrowEventBackend InjectGenerate $ subEventBackend rEv) (addLogEntry Generate) uri dir)
+              (\(ex :: SomeException) -> do
+                addLogEntry Generate (T.pack $ show ex)
+                addStatus' . const $ Incomplete (Preparing Failed)
+              )
             addStatus' . const $ Incomplete (Building Running)
             certifyOut <- onException
-              (buildFlake (narrowEventBackend InjectBuild $ subEventBackend rEv) dir)
+              (buildFlake (narrowEventBackend InjectBuild $ subEventBackend rEv) (addLogEntry Build) dir)
               (addStatus' . const $ Incomplete (Building Failed))
             addStatus' $ \p -> Incomplete (Certifying (CertifyingStatus Running Nothing p))
             let go = await >>= \case
@@ -80,23 +118,45 @@ localServerCaps backend = do
                     liftIO . addStatus' $ \pl -> Incomplete (Certifying $ CertifyingStatus Running (Just pr) pl)
                     go
                   Just (Plan p) -> do
-                    liftIO $ atomicModifyIORef' jobs (\js -> (Map.adjust (setPlan p) jobId js, ()))
+                    liftIO $ changeJobState (setPlan p)
                     go
                   Nothing -> pure ()
             onException
-              (runConduitRes $ runCertify (certifyOut </> "bin" </> "certify") .| go)
+              (runConduitRes $ runCertify (addLogEntry Certify) (certifyOut </> "bin" </> "certify") .| go)
               (addStatus' $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
 
       (async $ finally runJob (freeCancellation jobId)) >>= addCancellation jobId
       pure $ coerce jobId
 
     getRuns _ (RunID jobId) =
-      getStatuses <$> Map.findWithDefault emptyJobState jobId <$> (lift $ readIORef jobs) >>= yieldMany
+      getStatuses <$> (Map.findWithDefault emptyJobState jobId)<$> (lift $ readIORef jobs) >>= yieldMany
 
     abortRuns mods rid@(RunID jobId) = withEvent (modifyEventBackend mods backend) AbortJob \ev -> do
      addField ev rid
      readIORef cancellations >>= sequence_ . Map.lookup jobId
      freeCancellation jobId
+
+    getLogs _ actionTypeM (RunID jobId) = do
+      (JobState _ _ (LocalActionLogs generate build certify)) <-
+        Map.findWithDefault emptyJobState jobId <$> (lift $ readIORef jobs)
+
+      whenMatches Generate yield' generate
+      whenMatches Build yield' build
+      whenMatches Certify yield' certify
+
+      where
+        yield' logs actionType =
+          yieldMany (reverse logs) .| mapC (toRunLog (source actionType))
+
+        whenMatches actionType yieldLogs logs = when
+          (actionTypeM == Nothing || actionTypeM == (Just actionType))
+          (yieldLogs logs actionType)
+
+        toRunLog src (ztime,text) = RunLog ztime src text
+
+        source Generate ="plutus-certification/generate-flake"
+        source Build    ="plutus-certification/build-flake"
+        source Certify  ="plutus-certification/run-certify"
 
   pure $ ServerCaps {..}
 

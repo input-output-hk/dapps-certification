@@ -17,13 +17,15 @@ import Control.Concurrent.Async
 import Control.Monad.IO.Unlift
 import Data.Aeson.Internal
 import Data.Aeson.Types
+import Data.Aeson.Text
 import Data.Time.Clock.POSIX
 import Data.Text as T
-import Data.Text.IO
+import Data.Text.IO hiding (putStrLn)
 import Data.Text.Encoding
-import Data.ByteString as BS hiding (hPutStrLn, hPutStr)
+import Data.ByteString as BS hiding (hPutStr)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Internal as LBS
+import qualified Data.Text.Lazy as LT
 import Data.ByteString.Base16
 import System.Process.Typed
 import System.Process (Pid, getPid)
@@ -46,8 +48,8 @@ import IOHK.Certification.Interface hiding (Success)
 import Conduit
 import Data.Conduit.Aeson
 
-generateFlake :: EventBackend IO r GenerateFlakeSelector -> URI -> FilePath -> IO ()
-generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> do
+generateFlake :: EventBackend IO r GenerateFlakeSelector ->(Text -> IO ()) -> URI -> FilePath -> IO ()
+generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFlake \ev -> do
   addField ev $ GenerateRef flakeref
   addField ev $ GenerateDir output
 
@@ -55,6 +57,7 @@ generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> d
                   $ subEventBackend ev
   lock <- lockRef lockBackend flakeref
 
+  let logWrittenFile fname = addLogEntry $ T.pack $ fname ++ " written at " ++ output
   withSubEvent ev WriteFlakeNix \_ -> withFile (output </> "flake.nix") WriteMode \h -> do
     hPutStrLn h "{"
     hPutStrLn h "  inputs = {"
@@ -72,20 +75,26 @@ generateFlake backend flakeref output = withEvent backend GenerateFlake \ev -> d
     hPutStrLn h "  outputs = args: import ./outputs.nix args;"
     hPutStrLn h "}"
 
+  logWrittenFile "flake.nix"
+
   withSubEvent ev CopyOutputsNix \_ -> do
     outputsNix <- getDataFileName "data/outputs.nix"
     copyFile outputsNix (output </> "outputs.nix")
+
+  logWrittenFile "outputs.nix"
 
   withSubEvent ev CopyCertify \_ -> do
     certify <- getDataFileName "data/Certify.hs"
     copyFile certify (output </> "Certify.hs")
 
-buildFlake :: EventBackend IO r BuildFlakeSelector -> FilePath -> IO FilePath
-buildFlake backend dir = do
+  logWrittenFile "Certify.nix"
+
+buildFlake :: EventBackend IO r BuildFlakeSelector -> (Text -> IO ()) -> FilePath -> IO FilePath
+buildFlake backend addLogEntry dir = do
     buildJson <- withEvent backend BuildingFlake \ev -> do
       let backend' = narrowEventBackend ReadNixBuild
                    $ subEventBackend ev
-      readProcessLogStderr_ backend' cmd
+      readProcessLogStderr_ backend' cmd addLogEntry
     case eitherDecodeWith jsonEOF decodeBuild buildJson of
       Left (path, err) -> throw $ DecodeBuild path err
       Right (BuildResult {..} :| []) -> case Map.lookup "out" outputs of
@@ -101,17 +110,19 @@ buildFlake backend dir = do
                      , "--print-build-logs"
                      ]
 
--- TODO logging
-runCertify :: FilePath -> ConduitT () Message ResIO ()
-runCertify certify = do
+runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
+runCertify addLogEntry certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
             Error s -> liftIO $ fail s
             Success m -> do
+              liftIO $ addLogEntry $ LT.toStrict $ encodeToLazyText v
               yield m
               toMessage
-          Just (Left e) -> liftIO $ throw e
+          Just (Left e) -> do
+            liftIO $ addLogEntry $ T.pack $ show e
+            liftIO $ throw e
           Nothing -> release k
     sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
   where
@@ -194,9 +205,10 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
 
 logHandleText :: (MonadUnliftIO m)
               => EventBackend m r LogHandleSelector
+              -> (Text -> m ())
               -> Handle
               -> m ()
-logHandleText backend h = go
+logHandleText backend addLogEntry h = go
   where
     go = do
       acqEv <- acquireEvent backend ReadingHandleLog
@@ -206,6 +218,7 @@ logHandleText backend h = go
           then pure $ pure ()
           else do
             addField ev chunk
+            addLogEntry chunk
             pure go
 
 logDrainHandle :: (MonadUnliftIO m)
@@ -232,9 +245,11 @@ readProcessLogStderr_
   :: (MonadUnliftIO m, MonadMask m, MonadFail m)
   => EventBackend m r ReadProcessSelector
   -> ProcessConfig stdin stdoutIgnored stderrIgnored
+  -> (Text -> m() )
   -> m LBS.ByteString
-readProcessLogStderr_ backend cfg = withEvent backend LaunchingProcess \launchEv -> do
+readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProcess \launchEv -> do
     addField launchEv $ LaunchConfig cfg
+
     withProcessWait cfg' \p -> do
       Just pid <- liftIO . getPid $ unsafeProcessHandle p
       addField launchEv $ LaunchingPid pid
@@ -247,7 +262,7 @@ readProcessLogStderr_ backend cfg = withEvent backend LaunchingProcess \launchEv
           readStderrBackend = narrowEventBackend ReadingStderr
                             $ backend'
 
-          readStderr = logHandleText readStderrBackend $ getStderr p
+          readStderr = logHandleText readStderrBackend addLogEntry $ getStderr p
 
           readStdoutBackend = narrowEventBackend ReadingStdout
                             $ backend'
@@ -272,7 +287,7 @@ lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
     meta <- withSubEvent ev GettingMetadata \metaEv -> do
       let backend' = narrowEventBackend ReadNixFlakeMetadata
                    $ subEventBackend metaEv
-      readProcessLogStderr_ backend' cmd
+      readProcessLogStderr_ backend' cmd (const $ pure ()) -- TODO should we add some logs extraction here?
     case eitherDecodeWith jsonEOF decodeFlakeLock meta of
       Left (path, err) -> throw $ DecodeMeta path err
       Right lock -> do
