@@ -21,7 +21,8 @@ upsertProfile profile@Profile{..} dappM = do
       , #vendor   := fromTextMaybe vendor
       , #twitter  := fromTextMaybe twitter
       , #linkedin := fromTextMaybe linkedin
-      --TODO: authors and contacts
+      , #authors  := fromTextMaybe authors
+      , #contacts := fromTextMaybe contacts
       ])
      [#profileId (def :: ID Profile) profile]
   -- we query this because upsert returns id only when inserts
