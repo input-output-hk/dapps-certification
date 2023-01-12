@@ -30,6 +30,7 @@ import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
+import Plutus.Certification.WalletClient
 
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
@@ -98,12 +99,15 @@ type CreateCertificationRoute = "run"
   :> "certificate"
   :> Post '[JSON] DB.Certification
 
--- TODO: the certification object remains to be added in a future commit
 type GetCertificateRoute = "run"
   :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
   :> Capture "id" RunIDV1
   :> "certificate"
   :> Get '[JSON] DB.Certification
+
+type WalletAddressRoute = "wallet-address"
+  :> Description "Get the wallet address the backend operates with"
+  :> Get '[JSON] WalletAddress
 
 data CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
@@ -121,6 +125,7 @@ data NamedAPI mode = NamedAPI
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute
   , createCertification :: mode :- CreateCertificationRoute
   , getCertification :: mode :- GetCertificateRoute
+  , walletAddress :: mode :- WalletAddressRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody

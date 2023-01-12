@@ -73,6 +73,7 @@ data CreateCertificationField
 
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
+  WalletAddress :: ServerEventSelector Void
   CreateRun :: ServerEventSelector CreateRunField
   GetRun :: ServerEventSelector Void
   AbortRun :: ServerEventSelector RunIDV1
@@ -82,6 +83,7 @@ data ServerEventSelector f where
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
+renderServerEventSelector WalletAddress = ("wallet-address", absurd)
 renderServerEventSelector GetRun = ("get-run", absurd)
 renderServerEventSelector AbortRun = ("abort-run", renderRunIDV1)
 renderServerEventSelector GetRunLogs = ("get-run-logs", renderRunIDV1)
@@ -129,6 +131,7 @@ server :: (MonadMask m,MonadIO m, MonadError ServerError m)
 server ServerCaps {..} wargs eb = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
+  , walletAddress = withEvent eb WalletAddress . const $ pure wargs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
       fref <- getFlakeRef profileId commitOrBranch
       -- ensure the ref is in the right format before start the job
