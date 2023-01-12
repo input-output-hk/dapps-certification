@@ -1,10 +1,11 @@
 import React from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 
-
 import { useAppSelector } from "store/store";
 
 import NotAuthorized from "components/NotAuthorized/NotAuthorized";
+
+import { IUserProfile } from "pages/userProfile/userProfile.interface";
 
 const PrivateRoutes = () => {
   const location = useLocation();
@@ -15,8 +16,8 @@ const PrivateRoutes = () => {
       return <NotAuthorized />;
     }
   };
-  const renderOutlets = (userDetails: any) => {
-    if (location.pathname !== "/profile" && (!userDetails.dappOwner || !userDetails.dappRepository)) {
+  const renderOutlets = (userDetails: IUserProfile) => {
+    if (location.pathname !== "/profile" && (!userDetails.dapp?.owner || !userDetails.dapp?.repo)) {
       return <Navigate replace to="/profile" />;
     } else {
       return <Outlet />

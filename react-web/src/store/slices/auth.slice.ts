@@ -1,19 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { postData } from "api/api";
+import { fetchData } from "api/api";
+import { IUserProfile } from "pages/userProfile/userProfile.interface";
 
 // Define a type for the slice state
 interface AuthState {
   isLoggedIn: boolean;
   address: string;
   wallet: any;
-  userDetails: {
-    company?: string;
-    vendor?: string;
-    website?: string;
-    linkedIn?: string;
-    dappOwner?: string; //will be received only if pre-set
-    dappRepository?: string; //will be received only if pre-set
-  };
+  userDetails: IUserProfile;
   loading: boolean;
 }
 
@@ -22,14 +16,14 @@ const initialState: AuthState = {
   isLoggedIn: false,
   address: '',
   wallet: null,
-  userDetails: {},
+  userDetails: {dapp: null},
   loading: false
 };
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
   try {  
-    const response = await postData.get("/profile/current", data)
-    // FOR MOCK - const response = await postData.get(data.url || 'static/data/current-profile.json', data)
+    const response = await fetchData.get("/profile/current", data)
+    // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
     return response.data
   } catch(e) {
     return rejectWithValue(e)

@@ -58,11 +58,11 @@ const Certification = () => {
   const [repoName, setRepository] = useState('');
 
   useEffect(() => {
-    if (userDetails?.dappOwner) {
-      setUsername(userDetails.dappOwner)
+    if (userDetails?.dapp?.owner) {
+      setUsername(userDetails.dapp.owner)
     }
-    if (userDetails?.dappRepository) {
-      setRepository(userDetails.dappRepository)
+    if (userDetails?.dapp?.repo) {
+      setRepository(userDetails.dapp.repo)
     }
   }, [userDetails])
 
@@ -83,7 +83,8 @@ const Certification = () => {
 
     const triggerAPI = async () => {
       try {
-        const data = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
+        // const data = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
+        const data = githubBranchOrCommitHash
         const response = await postData.post(
           "/run",
           data
