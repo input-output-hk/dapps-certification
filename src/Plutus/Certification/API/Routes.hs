@@ -57,7 +57,7 @@ type GetRunRoute = "run"
   :> Get '[JSON] RunStatusV1
 
 type AbortRunRoute = "run"
-  :> Description "Abort a run"
+  :> Description "Abort a run and deletes the history entry if query param is provided"
   :> AuthProtect "public-key"
   :> Capture "id" RunIDV1
   :> QueryParam "delete" Bool
