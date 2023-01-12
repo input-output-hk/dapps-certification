@@ -14,6 +14,7 @@ module Plutus.Certification.WalletClient
   , WalletArgs(..)
   , broadcastTransaction
   ,CertificationMetadata(..)
+  ,WalletAddress
   ) where
 
 import Data.UUID
@@ -80,9 +81,10 @@ type API = "v2" :> "wallets"
          :> ReqBody '[JSON] TxBody
          :> Verb 'POST 202 '[JSON] TxResponse
 
+type WalletAddress = Text
 data WalletArgs = WalletArgs
   { walletId :: !Text
-  , walletAddress :: !Text
+  , walletAddress :: !WalletAddress
   --TODO: this might not be safe to be passed as a
   , walletPassphrase :: !Text
   , walletAPIAddress :: !BaseUrl

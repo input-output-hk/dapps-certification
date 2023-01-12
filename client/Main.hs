@@ -287,9 +287,16 @@ versionCommandInfo = info (pure ())
  <> header "plutus-certification-client version — Get the version of the server"
   )
 
+walletAddressCommandInfo :: ParserInfo ()
+walletAddressCommandInfo = info (pure ())
+  ( fullDesc
+ <> header "plutus-certification-client wallet-address — Get the wallet address the backend operates with"
+  )
+
 data Command
   = CmdRun !RunCommand
   | CmdVersion
+  | CmdWalletAddress
   | CmdCurrentProfile !ProfileCommand
 
 data ProfileCommand
@@ -303,6 +310,7 @@ commandParser = hsubparser
   ( command "run" (CmdRun <$> runCommandInfo)
  <> command "version" (const CmdVersion <$> versionCommandInfo)
  <> command "profile" (CmdCurrentProfile <$> currentProfileInfo)
+ <> command "wallet-address" (const CmdWalletAddress <$> walletAddressCommandInfo)
   )
 
 data Args = Args
@@ -357,6 +365,8 @@ main = do
   case args.cmd of
     CmdVersion ->
       handle $ apiClient.version
+    CmdWalletAddress ->
+      handle $ apiClient.walletAddress
     CmdRun (Create (CreateRunArgs ref pubKey)) ->
       handle $ apiClient.createRun (addAuth pubKey) ref
     CmdRun (Get ref) ->
