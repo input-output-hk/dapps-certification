@@ -26,6 +26,7 @@ import Toast from "components/Toast/Toast";
 import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
 import InformationTable from "components/InformationTable/InformationTable";
+import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { setUuid } from "./slices/certification.slice";
@@ -255,6 +256,7 @@ const Certification = () => {
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
+                  <CreateCertificate />
                 </>) : null}
               </div>
             </header>
