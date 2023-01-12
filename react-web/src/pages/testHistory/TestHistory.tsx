@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TableComponent from "components/Table/Table";
-import moment from "moment";
+import dayjs from "dayjs";
 import Button from "components/Button/Button";
 import "./TestHistory.scss";
 import { fetchData } from "api/api";
@@ -43,7 +43,7 @@ const TestHistory = () => {
       columnVisible: false,
       Cell: (props: any) => (
         <span>
-          {moment(props.row.original.certificateCreatedAt).format("YYYY-MM-DD HH:mm:ss")}
+          {dayjs(props.row.original.certificateCreatedAt).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
     },
@@ -52,7 +52,7 @@ const TestHistory = () => {
       accessor: "commitDate",
       Cell: (props: any) => (
         <span>
-          {moment(props.row.original.commitDate).format("YYYY-MM-DD HH:mm:ss")}
+          {dayjs(props.row.original.commitDate).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
     },
@@ -62,21 +62,21 @@ const TestHistory = () => {
       columnVisible: false,
       Cell: (props: any) => (
         <span>
-          {moment(props.row.original.syncedAt).format("YYYY-MM-DD HH:mm:ss")}
+          {dayjs(props.row.original.syncedAt).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
     },
     {
-      Header: "Status",
+      Header: "Run Status",
       accessor: "runStatus",
       Cell: (props: any) => {
-        if (props.row.original.status === "certified") {
+        if (props.row.original.runStatus === "certified") {
           return <span style={{color: 'green'}}>Certified</span>
-        } else if (props.row.original.status === "succeeded") {
+        } else if (props.row.original.runStatus === "succeeded") {
           return <span>OK</span>
-        } else if (props.row.original.status === "failed") {
+        } else if (props.row.original.runStatus === "failed") {
           return <span style={{color: 'red'}}>FAILED</span>
-        } else if (props.row.original.status === "queued") {
+        } else if (props.row.original.runStatus === "queued") {
           return (<>
             <span>Running</span>
             {/* TBD */}
@@ -90,7 +90,7 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewReport",
       Cell: (props: any) => {
-        if (props.row.original.status !== "queued") {
+        if (props.row.original.runStatus !== "queued") {
           return (
             <Button
               size="small"
@@ -108,7 +108,7 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewCertificate",
       Cell: (props: any) => {
-        if (props.row.original.status === "certified") {
+        if (props.row.original.runStatus === "certified") {
           return (
             <Button
               size="small"
