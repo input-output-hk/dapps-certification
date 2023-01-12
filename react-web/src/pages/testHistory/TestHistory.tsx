@@ -5,19 +5,26 @@ import Button from "components/Button/Button";
 import "./TestHistory.scss";
 import { fetchData } from "api/api";
 
+interface ICampaign {
+  "certificateCreatedAt": string,
+  "commitDate": string,
+  "commitHash": string,
+  "created": string,
+  "finishedAt": string,
+  "syncedAt": string,
+  "repoUrl": string,
+  "runStatus": "queued" | "failed" | "succeeded" | "certified",
+  "runId": string
+}
+
 const TestHistory = () => {
-  const [data, setData] = useState<any>([]);
+  const [data, setData] = useState<Array<ICampaign>>([]);
 
   useEffect(() => {
     fetchTableData();
   }, []);
 
   const columns = [
-    {
-      Header: "Campaign",
-      accessor: "campaignId", // accessor is the "key" in the data
-      disableSortBy: true,
-    },
     {
       Header: "Repo URL",
       accessor: "repoUrl",
@@ -61,12 +68,14 @@ const TestHistory = () => {
     },
     {
       Header: "Status",
-      accessor: "status", // accessor is the "key" in the data
+      accessor: "runStatus",
       Cell: (props: any) => {
-        if (props.row.original.status === "succeeded") {
+        if (props.row.original.status === "certified") {
+          return <span style={{color: 'green'}}>Certified</span>
+        } else if (props.row.original.status === "succeeded") {
           return <span>OK</span>
         } else if (props.row.original.status === "failed") {
-          return <span>FAILED</span>
+          return <span style={{color: 'red'}}>FAILED</span>
         } else if (props.row.original.status === "queued") {
           return (<>
             <span>Running</span>
@@ -81,7 +90,7 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewReport",
       Cell: (props: any) => {
-        if (props.row.original.viewReport && props.row.original.status !== "queued") {
+        if (props.row.original.status !== "queued") {
           return (
             <Button
               size="small"
@@ -99,7 +108,7 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewCertificate",
       Cell: (props: any) => {
-        if (props.row.original.viewCertificate && props.row.original.status === "succeeded") {
+        if (props.row.original.status === "certified") {
           return (
             <Button
               size="small"
@@ -122,7 +131,7 @@ const TestHistory = () => {
     //       <button
     //         className="trash-icon-btn"
     //         onClick={() => {
-    //           onDelete(props.row.original.campaignId);
+    //           onDelete(props.row.original.runId);
     //         }}
     //       >
     //         <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
