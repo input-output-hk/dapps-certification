@@ -206,19 +206,20 @@ instance ToSchema Run where
     utcSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe UTCTime))
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     statusSchema <- declareSchemaRef (Proxy :: Proxy Status)
+    uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
     return $ NamedSchema (Just "Run") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("created", utcSchema)
+          , ("runId", uuidSchema)
           , ("finishedAt", utcSchemaM)
           , ("syncedAt", utcSchema)
           , ("repoUrl", textSchema)
           , ("commitDate", utcSchema)
           , ("commitHash", textSchema)
           , ("runStatus", statusSchema)
-          , ("certificateCreatedAt", utcSchemaM)
           ]
-      & required .~ [ "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
+      & required .~ [ "runId", "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
 
 instance ToJSON Run where
   toJSON (Run{..}) = object
