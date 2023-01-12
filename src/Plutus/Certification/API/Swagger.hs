@@ -46,7 +46,5 @@ swaggerJson = toSwagger (Proxy :: Proxy UnnamedApi)
   & info.title          .~ "Plutus Certification API"
   & info.(SWG.version)  .~ "1.0"
   & info.description    ?~ "This is an API for the Plutus Certification Service"
-  {-& info.license        ?~ "IOG"-}
-  {-& host                ?~ "localhost:9671" -}
 
 type APIWithSwagger = SwaggerSchemaUI "swagger-ui" "swagger.json" :<|> API
