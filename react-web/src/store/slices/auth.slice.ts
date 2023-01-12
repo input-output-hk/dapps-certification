@@ -49,6 +49,7 @@ export const authSlice = createSlice({
         state.userDetails = actions.payload;
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
+          localStorage.setItem('address', state.address)
           if (actions?.meta?.arg?.wallet) {
             state.wallet = actions.meta.arg.wallet;
           }
