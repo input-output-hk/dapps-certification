@@ -29,9 +29,9 @@ const Header = () => {
 
   useDelayedApi(
     async () => {
-      setPollForAddress(false)
-      const newAddress = await wallet.getChangeAddress()
-      if (address !== newAddress) {
+      setPollForAddress(false);
+      const newAddress = wallet ? await wallet.getChangeAddress() : null;
+      if (newAddress && address !== newAddress) {
         // account has been changed. Force logout the user
         dispatch(logout());
         setPollForAddress(false)
