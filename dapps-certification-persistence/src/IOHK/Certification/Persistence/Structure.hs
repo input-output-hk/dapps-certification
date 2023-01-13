@@ -199,7 +199,13 @@ data Run = Run
   , profileId :: ID Profile
   } deriving (Generic,Show)
 
-instance ToSchema Status
+instance ToSchema Status where
+   declareNamedSchema _ = do
+    let values = ["queued", "failed", "succeeded", "certified"] :: [Value]
+    return $ NamedSchema (Just "RunStatus") $ mempty
+      & type_ ?~ SwaggerString
+      & enum_ ?~ values
+
 instance ToSchema Run where
    declareNamedSchema _ = do
     utcSchema <- declareSchemaRef (Proxy :: Proxy UTCTime)
