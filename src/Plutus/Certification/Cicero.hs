@@ -1,5 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE LambdaCase #-}
@@ -56,19 +58,11 @@ ciceroClient = cicero `clientIn` m
 
     m = Proxy @m
 
--- | Types of Cicero actions we know and care about
-data KnownActionType
-  = -- | @plutus-certification/generate-flake@
-    Generate
-  | -- | @plutus-certification/build-flake@
-    Build
-  | -- | @plutus-certification/run-certify@
-    Certify
-
 -- | Types of Cicero actions
 data ActionType
   = Known !KnownActionType
   | Unknown
+  deriving stock (Show,Eq,Ord)
 
 data CertifyOutput
   = CertifyFailed
@@ -124,6 +118,34 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
         . ciceroClient.run.abort
         . (.nomadJobId)
 
+    getLogs mods actionTypeM rid = do
+      -- TODO: make a decision if there will be more then 3 runs
+      runs <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getAll True [rid'] Nothing Nothing
+      sorted <- List.sort <$> ( lift . runConduit
+        $ yieldMany runs
+        .| mapMC actionTypeAndRunId
+        .| filterC (actionTypeCond . fst)
+        .| sinkList
+        )
+      yieldMany sorted .| mapC snd .| getLogs'
+      where
+        actionTypeCond (Known actionType) = isNothing actionTypeM || (Just actionType) == actionTypeM
+        actionTypeCond Unknown = False
+
+        getLogs' :: ConduitT Cicero.Run.RunID Cicero.Run.RunLog m ()
+        getLogs' = await >>= \case
+          Nothing -> pure ()
+          Just jobId -> do
+            (Cicero.Run.RunLogs xs) <- lift . runClientOrDie clientCaps eb $ ciceroClient.run.getLogs jobId
+            yieldMany xs
+            getLogs'
+
+        actionTypeAndRunId :: Cicero.Run.RunV2 -> m (ActionType,Cicero.Run.RunID)
+        actionTypeAndRunId r = do
+          inv <- runClientOrDie clientCaps eb $ ciceroClient.invocation.get r.invocationId
+          (,r.nomadJobId) . getActionType <$> (runClientOrDie clientCaps eb $ ciceroClient.action.get inv.actionId)
+        eb = modifyEventBackend mods backend
+        rid' = Cicero.Fact.FactID $ rid.uuid
     status eb = await >>= \case
       Nothing -> pure ()
       Just r ->  do

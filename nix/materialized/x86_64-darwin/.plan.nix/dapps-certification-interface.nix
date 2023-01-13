@@ -39,6 +39,7 @@
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
+          (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
           ];
         buildable = true;
         modules = [ "IOHK/Certification/Interface" ];

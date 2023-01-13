@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  plutus-certification-ws:
+    build:
+      context: .
+      dockerfile: Dockerfile.ws
+    ports:
+      - "9671:9671"
+  plutus-certification-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "3000:3000"

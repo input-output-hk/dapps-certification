@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "store/slices/auth.slice";
 import { useAppDispatch } from "store/store";
@@ -59,4 +59,4 @@ const AvatarDropDown = () => {
   );
 };
 
-export default AvatarDropDown;
+export default memo(AvatarDropDown);

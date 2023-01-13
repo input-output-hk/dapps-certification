@@ -15,3 +15,7 @@ The ~plutus-certification~ program has a ~--local~ flag to run the service local
 8. Click ~plutus-certification/build-flake~, then once loaded go back and click ~plutus-certification/generate-flake~, then once loaded go back and click ~plutus-certification/run-certify~
 
 Now ~Cicero~ is running at http://localhost:18080, which you can pass as ~--cicero-url~ to ~plutus-certification~.
+
+** Docker  local-mode
+1. ~docker compose build~
+2. ~docker compose up~ or for daemon mode ~docker compose up -d~
