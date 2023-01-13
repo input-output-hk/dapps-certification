@@ -51,7 +51,6 @@ const UserProfile = () => {
 
   const formHandler = (formData: any) => {
     const submitProfile = async () => {
-      // FOR MOCK - await postData.get("static/data/current-profile.json", formData);
       const reqData: IUserProfile = {
         "authors": formData.authors,
         "contacts": formData.contacts,
@@ -67,10 +66,13 @@ const UserProfile = () => {
         "website": formData.website
       }
 
-      await fetchData.put("/profile/current", reqData);
+      await fetchData.put("/profile/current", formData);
+      /** For mock */
+      // await fetchData.get("static/data/current-profile.json", formData);
       await dispatch(
-        // FOR MOCK - getProfileDetails({url: "static/data/new-profile.json"})
         getProfileDetails()
+        /** For mock */
+        // getProfileDetails({url: "static/data/new-profile.json"})
       );
       navigate('/')
     };
