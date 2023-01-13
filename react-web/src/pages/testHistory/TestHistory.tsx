@@ -6,7 +6,6 @@ import "./TestHistory.scss";
 import { fetchData } from "api/api";
 
 interface ICampaign {
-  "certificateCreatedAt": string,
   "commitDate": string,
   "commitHash": string,
   "created": string,
@@ -36,16 +35,6 @@ const TestHistory = () => {
       Cell: (props: any) => (
         <span className="trim-cell-text" title={props.row.original.commitHash}>{props.row.original.commitHash}</span>
       )
-    },
-    {
-      Header: "Certificate Created At",
-      accessor: "certificateCreatedAt",
-      columnVisible: false,
-      Cell: (props: any) => (
-        <span>
-          {dayjs(props.row.original.certificateCreatedAt).format("YYYY-MM-DD HH:mm:ss")}
-        </span>
-      ),
     },
     {
       Header: "Commit Date",
