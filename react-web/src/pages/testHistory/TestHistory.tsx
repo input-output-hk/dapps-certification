@@ -134,7 +134,7 @@ const TestHistory = () => {
     const result = await fetchData.get("/run")
     /** For mock */
     // const result = await fetchData.get("static/data/history.json");
-    setData(result.data.data);
+    setData(result.data);
   };
 
   // TBD
