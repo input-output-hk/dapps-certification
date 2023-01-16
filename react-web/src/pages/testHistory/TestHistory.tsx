@@ -39,6 +39,8 @@ dayjs.extend(tz)
 
 const TestHistory = () => {
   const [data, setData] = useState<Array<ICampaign>>([]);
+  const [runningSpinner, setRunningSpinner] = useState("");
+  const [highlightLabelFor, setHighlightLabelFor] = useState("");
   const [skipPageReset, setSkipPageReset] = useState(false);
   const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
 
@@ -92,9 +94,11 @@ const TestHistory = () => {
   }: any) => {
     const { index, original } = row;
     const triggerApi = async (e: any) => {
+      setRunningSpinner(original.runId)
       const res: any = await fetchData.get("/run/" + original.runId).catch(handleError);
       /** For mock */
       // const res = await fetchData.get("static/data/certifying.json")
+      
       if (res) {
         setErrorToast({display: false})
         const status = res.data.status;
@@ -112,23 +116,38 @@ const TestHistory = () => {
             // retain response='queued'
           }
         } 
+        setRunningSpinner(prevValue => {
+          if (prevValue !== "") {
+            // show a highlight over the label
+            setHighlightLabelFor(prevValue)
+            setTimeout(() => { setHighlightLabelFor("") }, 1500)
+          }
+          return ""
+        })
         updateMyData(index, id, response);
+      } else {
+        setRunningSpinner("")
       }
     };
+    const runId = original.runId; // get the run id
     if (value === "certified") {
-      return <span style={{ color: "green" }}>Certified</span>;
+      return <span 
+        style={{ color: "green" }}
+        className={highlightLabelFor === runId ? "cell-highlight" : ""}>Certified</span>;
     } else if (value === "succeeded") {
-      return <span>OK</span>;
+      return <span 
+        className={highlightLabelFor === runId ? "cell-highlight" : ""}>OK</span>;
     } else if (value === "failed") {
-      return <span style={{ color: "red" }}>FAILED</span>;
+      return <span 
+        style={{ color: "red" }}
+        className={highlightLabelFor === runId ? "cell-highlight" : ""}>FAILED</span>;
     } else if (value === "queued") {
-      const id = original.runId; // get the run id
       return (
         <>
-          <span>Running</span>
-          <button onClick={(e) => triggerApi(id)} className="sync-btn">
+          <span className={highlightLabelFor === runId ? "cell-highlight" : ""}>Running</span>
+          <button onClick={() => triggerApi(runId)} className="sync-btn">
             <img
-              className="icon"
+              className={`icon ${runningSpinner === runId ? 'spin' : ''}`}
               src="images/refresh.svg"
               alt="refresh"
               title="Sync latest Status"

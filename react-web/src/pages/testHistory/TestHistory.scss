@@ -35,6 +35,14 @@
     display: block;
     cursor: default;
   }
+  td {
+    span.run-status {
+      padding: 0 1px;
+    }
+    .cell-highlight {
+      background: yellow;
+    }
+  }
 }
 
 
