@@ -4,24 +4,98 @@ import dayjs from "dayjs";
 import Button from "components/Button/Button";
 import "./TestHistory.scss";
 import { fetchData } from "api/api";
+import { processFinishedJson } from "components/TimelineItem/timeline.helper";
+import { isAnyTaskFailure } from "pages/certification/Certification.helper";
 
 interface ICampaign {
-  "commitDate": string,
-  "commitHash": string,
-  "created": string,
-  "finishedAt": string,
-  "syncedAt": string,
-  "repoUrl": string,
-  "runStatus": "queued" | "failed" | "succeeded" | "certified",
-  "runId": string
+  commitDate: string;
+  commitHash: string;
+  created: string;
+  finishedAt: string;
+  syncedAt: string;
+  repoUrl: string;
+  runStatus: "queued" | "failed" | "succeeded" | "certified";
+  runId: string;
 }
 
 const TestHistory = () => {
   const [data, setData] = useState<Array<ICampaign>>([]);
+  const [skipPageReset, setSkipPageReset] = useState(false);
 
   useEffect(() => {
     fetchTableData();
   }, []);
+
+  useEffect(() => { console.log('data updated')
+    setSkipPageReset(false);
+  }, [data]);
+
+  const updateMyData = (rowIndex: any, columnID: any, value: any) => {
+    setSkipPageReset(true); // turn on flag to not reset the page
+    setData((old) =>
+      old.map((row, index) => {
+        if (index === rowIndex) {
+          return {
+            ...old[rowIndex],
+            [columnID]: value,
+          };
+        }
+        return row;
+      })
+    );
+  };
+
+  const RunStatusCell = ({
+    value,
+    row,
+    column: { id },
+    updateMyData, // This is a custom function that we supplied to our table instance
+  }: any) => {
+    const { index, original } = row;
+    const triggerApi = async (e: any) => {
+      const res = await fetchData.get("/run/" + original.runId);
+      /** For mock */
+      // const res = await fetchData.get("static/data/certifying.json")
+      const status = res.data.status;
+      const state = res.data.hasOwnProperty("state") ? res.data.state : "";
+      let response: string = 'queued';
+      // show failed if either states failed or unitTest/certTasks failed
+      if (state === 'failed') {
+        response = 'failed'
+      } else {
+        if (status === 'finished') {
+          const isUnitTestSuccess = processFinishedJson(res.data.result);
+          const isComplete = isUnitTestSuccess && !isAnyTaskFailure(res.data.result);
+          response = isComplete ? 'succeeded' : 'failed';
+        } else {
+          // retain response='queued'
+        }
+      } 
+      updateMyData(index, id, response);
+    };
+    if (value === "certified") {
+      return <span style={{ color: "green" }}>Certified</span>;
+    } else if (value === "succeeded") {
+      return <span>OK</span>;
+    } else if (value === "failed") {
+      return <span style={{ color: "red" }}>FAILED</span>;
+    } else if (value === "queued") {
+      const id = original.runId; // get the run id
+      return (
+        <>
+          <span>Running</span>
+          <button onClick={(e) => triggerApi(id)} className="sync-btn">
+            <img
+              className="icon"
+              src="images/refresh.svg"
+              alt="refresh"
+              title="Sync latest Status"
+            />
+          </button>
+        </>
+      );
+    }
+  };
 
   const columns = [
     {
@@ -58,21 +132,10 @@ const TestHistory = () => {
     {
       Header: "Run Status",
       accessor: "runStatus",
-      Cell: (props: any) => {
-        if (props.row.original.runStatus === "certified") {
-          return <span style={{color: 'green'}}>Certified</span>
-        } else if (props.row.original.runStatus === "succeeded") {
-          return <span>OK</span>
-        } else if (props.row.original.runStatus === "failed") {
-          return <span style={{color: 'red'}}>FAILED</span>
-        } else if (props.row.original.runStatus === "queued") {
-          return (<>
-            <span>Running</span>
-            {/* TBD */}
-            {/* <img className="icon" src="images/refresh.svg" alt="refresh" title="Sync latest Status" /> */}
-          </>)
-        }
-      }
+      cellStyle: {
+        display: 'flex'
+      },
+      Cell: RunStatusCell
     },
     {
       Header: "",
@@ -144,7 +207,10 @@ const TestHistory = () => {
   
   return (
     <div id="testHistory">
-      <TableComponent dataSet={data} config={columns} showColViz={true} />
+      <TableComponent dataSet={data} config={columns} showColViz={true} 
+        updateMyData={updateMyData}
+        skipPageReset={skipPageReset}
+      />
     </div>
   );
 }

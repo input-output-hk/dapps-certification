@@ -4,6 +4,14 @@
   th {
     font-weight: bold !important;
   }
+  .sync-btn {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    border: none;
+    cursor: pointer;
+    overflow: hidden;
+    outline: none;
+  }
   .icon {
     width: 15px;
     vertical-align: text-top;
@@ -26,5 +34,21 @@
     white-space: nowrap;
     display: block;
     cursor: default;
+  }
+}
+
+
+.spin {
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
   }
 }
