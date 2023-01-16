@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
-import TableComponent from "components/Table/Table";
 import dayjs from "dayjs";
-import Button from "components/Button/Button";
-import "./TestHistory.scss";
+import utc from "dayjs/plugin/utc";
+import tz from "dayjs/plugin/timezone";
+
 import { fetchData } from "api/api";
+
+import TableComponent from "components/Table/Table";
+import Button from "components/Button/Button";
+import Toast from "components/Toast/Toast";
 import { processFinishedJson } from "components/TimelineItem/timeline.helper";
 import { isAnyTaskFailure } from "pages/certification/Certification.helper";
-import Toast from "components/Toast/Toast";
+import "./TestHistory.scss";
 
 interface ICampaign {
   commitDate: string;
@@ -29,12 +33,17 @@ interface ICampaignCertificate {
 interface IRunCertifications {
   [key: string]: ICampaignCertificate
 }
+
+dayjs.extend(utc)
+dayjs.extend(tz)
+
 const TestHistory = () => {
   const [data, setData] = useState<Array<ICampaign>>([]);
   const [skipPageReset, setSkipPageReset] = useState(false);
   const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
 
-  const certificationData: IRunCertifications = {}
+  const certificationData: IRunCertifications = {};
+  const timeZone = dayjs.tz.guess()
 
   useEffect(() => {
     fetchTableData();
@@ -174,9 +183,19 @@ const TestHistory = () => {
     {
       Header: "Commit Date",
       accessor: "commitDate",
+      columnVisible: false,
       Cell: (props: any) => (
         <span>
-          {dayjs(props.row.original.commitDate).format("YYYY-MM-DD HH:mm:ss")}
+          {dayjs.utc(props.row.original.commitDate).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
+        </span>
+      ),
+    },
+    {
+      Header: "Finished At",
+      accessor: "finishedAt",
+      Cell: (props: any) => (
+        <span>
+          {dayjs.utc(props.row.original.finishedAt).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
     },
@@ -186,7 +205,7 @@ const TestHistory = () => {
       columnVisible: false,
       Cell: (props: any) => (
         <span>
-          {dayjs(props.row.original.syncedAt).format("YYYY-MM-DD HH:mm:ss")}
+          {dayjs.utc(props.row.original.syncedAt).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
     },
