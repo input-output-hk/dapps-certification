@@ -9,7 +9,7 @@ const FileCoverageContainer: React.FC<{
 }> = ({ result, githubLink, coverageFile = '' }) => {
     const [isOpen, setIsOpen] = useState("")
     const onOpenModal = setIsOpen
-    const onCloseModal = (flag: boolean) => {
+    const onCloseModal = () => {
         setIsOpen("")
     }
 
@@ -74,7 +74,7 @@ const FileCoverageContainer: React.FC<{
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
                 <>
-                    <li className="coverage-file">
+                    <li className="coverage-file" key={index}>
                         <>
                             {/* To be changed to location of the file code coverage UI */}
                             <span className="link" onClick={(_) => onOpenModal(file)}>{file}</span>
