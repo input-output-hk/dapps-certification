@@ -241,7 +241,7 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewReport",
       Cell: (props: any) => {
-        if (props.row.original.runStatus !== "queued") {
+        if (props.row.original.runStatus === "succeeded" || props.row.original.runStatus === "certified") {
           return (
             <Button
               size="small"
