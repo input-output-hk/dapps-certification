@@ -176,7 +176,7 @@ getRuns :: MonadSelda m => ID Profile -> Maybe UTCTime -> Maybe Int -> m [Run]
 getRuns pid afterM topM = query $
   case topM of
     Just top -> limit 0 top select'
-    Nothing -> select runs
+    Nothing -> select'
   where
   select' = do
     run <- select runs
