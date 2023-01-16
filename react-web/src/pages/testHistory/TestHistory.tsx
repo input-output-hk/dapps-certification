@@ -19,12 +19,22 @@ interface ICampaign {
   runId: string;
 }
 
+interface ICampaignCertificate {
+  runId: string;
+  transactionId: string;
+  reportContentId: string;
+  createdAt: string;
+}
+
+interface IRunCertifications {
+  [key: string]: ICampaignCertificate
+}
 const TestHistory = () => {
   const [data, setData] = useState<Array<ICampaign>>([]);
   const [skipPageReset, setSkipPageReset] = useState(false);
-  const [certificationData, setCertificationData] = useState(null);
-  const [currentSelectedRunId, setCurrentSelectedRunId] = useState("");
   const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
+
+  const certificationData: IRunCertifications = {}
 
   useEffect(() => {
     fetchTableData();
@@ -33,6 +43,14 @@ const TestHistory = () => {
   useEffect(() => {
     setSkipPageReset(false);
   }, [data]);
+
+  const setCertificationData = (runId: string, response: ICampaignCertificate) => {
+    certificationData[runId] = response;
+  }
+
+  const getCertificationData = (runId: string): ICampaignCertificate | null => {
+    return certificationData[runId] ? certificationData[runId] : null
+  }
 
   const handleError = (error: any) => {
     if (error.response) {
@@ -113,18 +131,18 @@ const TestHistory = () => {
   };
 
   const viewReportOrCertificate = async (type: string, runId: string) => {
-    if (currentSelectedRunId !== runId) {
+    const certData = getCertificationData(runId)
+    if (!certData) {
       const response: any = await fetchData.get("/run/" + runId + "/certificate").catch(handleError);
       /** For mock */
       // const response = await fetchData.get("static/data/certicate.json");
       if (response) {
         setErrorToast({display: false})
-        setCurrentSelectedRunId(runId);
-        setCertificationData(response.data);
+        setCertificationData(runId, response.data);
         triggerNavigation(type, response.data);
       }
     } else {
-      triggerNavigation(type, certificationData);
+      triggerNavigation(type, certData);
     }
   };
 
