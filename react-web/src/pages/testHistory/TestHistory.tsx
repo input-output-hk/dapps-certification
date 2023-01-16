@@ -6,6 +6,7 @@ import "./TestHistory.scss";
 import { fetchData } from "api/api";
 import { processFinishedJson } from "components/TimelineItem/timeline.helper";
 import { isAnyTaskFailure } from "pages/certification/Certification.helper";
+import Toast from "components/Toast/Toast";
 
 interface ICampaign {
   commitDate: string;
@@ -23,6 +24,7 @@ const TestHistory = () => {
   const [skipPageReset, setSkipPageReset] = useState(false);
   const [certificationData, setCertificationData] = useState(null);
   const [currentSelectedRunId, setCurrentSelectedRunId] = useState("");
+  const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
 
   useEffect(() => {
     fetchTableData();
@@ -32,6 +34,14 @@ const TestHistory = () => {
     setSkipPageReset(false);
   }, [data]);
 
+  const handleError = (error: any) => {
+    if (error.response) {
+      setErrorToast({display: true, statusText: error.response.statusText, message: error.response.data || undefined})
+    } else {
+      setErrorToast({display: true})
+    }
+    setTimeout(() => { setErrorToast({display: false}) }, 3000)
+  }
   const updateMyData = (rowIndex: any, columnID: any, value: any) => {
     setSkipPageReset(true); // turn on flag to not reset the page
     setData((old) =>
@@ -55,25 +65,28 @@ const TestHistory = () => {
   }: any) => {
     const { index, original } = row;
     const triggerApi = async (e: any) => {
-      const res = await fetchData.get("/run/" + original.runId);
+      const res: any = await fetchData.get("/run/" + original.runId).catch(handleError);
       /** For mock */
       // const res = await fetchData.get("static/data/certifying.json")
-      const status = res.data.status;
-      const state = res.data.hasOwnProperty("state") ? res.data.state : "";
-      let response: string = 'queued';
-      // show failed if either states failed or unitTest/certTasks failed
-      if (state === 'failed') {
-        response = 'failed'
-      } else {
-        if (status === 'finished') {
-          const isUnitTestSuccess = processFinishedJson(res.data.result);
-          const isComplete = isUnitTestSuccess && !isAnyTaskFailure(res.data.result);
-          response = isComplete ? 'succeeded' : 'failed';
+      if (res) {
+        setErrorToast({display: false})
+        const status = res.data.status;
+        const state = res.data.hasOwnProperty("state") ? res.data.state : "";
+        let response: string = 'queued';
+        // show failed if either states failed or unitTest/certTasks failed
+        if (state === 'failed') {
+          response = 'failed'
         } else {
-          // retain response='queued'
-        }
-      } 
-      updateMyData(index, id, response);
+          if (status === 'finished') {
+            const isUnitTestSuccess = processFinishedJson(res.data.result);
+            const isComplete = isUnitTestSuccess && !isAnyTaskFailure(res.data.result);
+            response = isComplete ? 'succeeded' : 'failed';
+          } else {
+            // retain response='queued'
+          }
+        } 
+        updateMyData(index, id, response);
+      }
     };
     if (value === "certified") {
       return <span style={{ color: "green" }}>Certified</span>;
@@ -101,16 +114,14 @@ const TestHistory = () => {
 
   const viewReportOrCertificate = async (type: string, runId: string) => {
     if (currentSelectedRunId !== runId) {
-      setCurrentSelectedRunId(runId);
-      try {
-        const response = await fetchData.get("/run/" + runId + "/certificate");
-        /** For mock */
-        // const response = await fetchData.get("static/data/certicate.json");
+      const response: any = await fetchData.get("/run/" + runId + "/certificate").catch(handleError);
+      /** For mock */
+      // const response = await fetchData.get("static/data/certicate.json");
+      if (response) {
+        setErrorToast({display: false})
+        setCurrentSelectedRunId(runId);
         setCertificationData(response.data);
         triggerNavigation(type, response.data);
-      } catch (e) {
-        console.log(e);
-        // TBD => error handling
       }
     } else {
       triggerNavigation(type, certificationData);
@@ -240,12 +251,19 @@ const TestHistory = () => {
   // const onDelete = (id: any) => {};
   
   return (
-    <div id="testHistory">
-      <TableComponent dataSet={data} config={columns} showColViz={true} 
-        updateMyData={updateMyData}
-        skipPageReset={skipPageReset}
-      />
-    </div>
+    <>
+      <div id="testHistory">
+        <TableComponent dataSet={data} config={columns} showColViz={true} 
+          updateMyData={updateMyData}
+          skipPageReset={skipPageReset}
+        />
+      </div>
+      {(errorToast && errorToast.display) ? (
+        ((errorToast.message && errorToast.statusText) ? 
+        <Toast message={errorToast.message} title={errorToast.statusText}/> :
+        <Toast />))
+      : null}
+    </>
   );
 }
 
