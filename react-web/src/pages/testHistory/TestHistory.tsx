@@ -21,12 +21,14 @@ interface ICampaign {
 const TestHistory = () => {
   const [data, setData] = useState<Array<ICampaign>>([]);
   const [skipPageReset, setSkipPageReset] = useState(false);
+  const [certificationData, setCertificationData] = useState(null);
+  const [currentSelectedRunId, setCurrentSelectedRunId] = useState("");
 
   useEffect(() => {
     fetchTableData();
   }, []);
 
-  useEffect(() => { console.log('data updated')
+  useEffect(() => {
     setSkipPageReset(false);
   }, [data]);
 
@@ -97,6 +99,36 @@ const TestHistory = () => {
     }
   };
 
+  const viewReportOrCertificate = async (type: string, runId: string) => {
+    if (currentSelectedRunId !== runId) {
+      setCurrentSelectedRunId(runId);
+      try {
+        const response = await fetchData.get("/run/" + runId + "/certificate");
+        /** For mock */
+        // const response = await fetchData.get("static/data/certicate.json");
+        setCertificationData(response.data);
+        triggerNavigation(type, response.data);
+      } catch (e) {
+        console.log(e);
+        // TBD => error handling
+      }
+    } else {
+      triggerNavigation(type, certificationData);
+    }
+  };
+
+  const triggerNavigation = (type: string, data: any) => {
+    const { reportContentId, transactionId } = data;
+    let url;
+    if (type === "report") {
+      url = `https://${reportContentId}.ipfs.w3s.link/`;
+      // TBD => if browser protocol ipfs is enabled, make sure to open - `ipfs://${reportContentId}/`
+    } else {
+      url = `https://preprod.cardanoscan.io/transaction/${transactionId}`;
+    }
+    window.open(url, "_blank");
+  };
+
   const columns = [
     {
       Header: "Repo URL",
@@ -147,9 +179,10 @@ const TestHistory = () => {
             <Button
               size="small"
               type="submit"
-              disabled={true} //To be removed
               buttonLabel={"View Report"}
-              onClick={() => {}}
+              onClick={() => {
+                viewReportOrCertificate("report", props.row.original.runId);
+              }}
             />
           );
         }
@@ -165,9 +198,10 @@ const TestHistory = () => {
             <Button
               size="small"
               type="submit"
-              disabled={true} //To be removed
               buttonLabel={"View Certificate"}
-              onClick={() => {}}
+              onClick={() => {
+                viewReportOrCertificate("certificate", props.row.original.runId);
+              }}
             />
           );
         }
