@@ -178,8 +178,8 @@ const TestHistory = () => {
     const { reportContentId, transactionId } = data;
     let url;
     if (type === "report") {
-      url = `https://${reportContentId}.ipfs.w3s.link/`;
-      // TBD => if browser protocol ipfs is enabled, make sure to open - `ipfs://${reportContentId}/`
+      // url = `https://${reportContentId}.ipfs.w3s.link/`;
+      url = `ipfs://${reportContentId}/`
     } else {
       url = `https://preprod.cardanoscan.io/transaction/${transactionId}`;
     }
