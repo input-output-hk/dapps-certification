@@ -1,19 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { postData } from "api/api";
+import { fetchData } from "api/api";
+import { IUserProfile } from "pages/userProfile/userProfile.interface";
 
 // Define a type for the slice state
 interface AuthState {
   isLoggedIn: boolean;
   address: string;
   wallet: any;
-  userDetails: {
-    company?: string;
-    vendor?: string;
-    website?: string;
-    linkedIn?: string;
-    dappOwner?: string; //will be received only if pre-set
-    dappRepository?: string; //will be received only if pre-set
-  };
+  userDetails: IUserProfile;
   loading: boolean;
 }
 
@@ -22,14 +16,15 @@ const initialState: AuthState = {
   isLoggedIn: false,
   address: '',
   wallet: null,
-  userDetails: {},
+  userDetails: {dapp: null},
   loading: false
 };
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
-  try {  
-    const response = await postData.get("/profile/current", data)
-    // FOR MOCK - const response = await postData.get(data.url || 'static/data/current-profile.json', data)
+  try { 
+    localStorage.setItem('address', data.address) 
+    const response = await fetchData.get("/profile/current", data)
+    // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
     return response.data
   } catch(e) {
     return rejectWithValue(e)
@@ -42,6 +37,7 @@ export const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
+      localStorage.removeItem('address')
       return initialState
     },
   },
@@ -53,12 +49,14 @@ export const authSlice = createSlice({
         state.userDetails = actions.payload;
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
+          localStorage.setItem('address', state.address)
           if (actions?.meta?.arg?.wallet) {
             state.wallet = actions.meta.arg.wallet;
           }
         }
       })
       .addCase(getProfileDetails.rejected, (state) => {
+        localStorage.removeItem('address')
         return initialState
       })
   }
