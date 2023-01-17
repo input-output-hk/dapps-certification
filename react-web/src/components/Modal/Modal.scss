@@ -2,6 +2,9 @@
     position: absolute;
     top: 100px;
     border-radius: 10px;
+    &#coverageHtmlModal {
+        max-width: calc(100vw - 80px);
+    }
 }
 .MuiDialogContent-root {
     border: 0 !important;

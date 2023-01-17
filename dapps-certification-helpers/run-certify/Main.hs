@@ -46,4 +46,6 @@ printMessage = await >>= \case
 main :: IO ()
 main = do
   Args {..} <- execParser argsInfo
-  runConduitRes $ runCertify (buildOut </> "bin" </> "certify") .| printMessage
+  let noLogExtraction = const $ pure ()
+      certifyPath = buildOut </> "bin" </> "certify"
+  runConduitRes $ runCertify noLogExtraction certifyPath .| printMessage

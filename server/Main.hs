@@ -1,46 +1,57 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 module Main where
 
+import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
 import Control.Monad.IO.Class
 import Data.Aeson
+import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
+import Data.Bits
 import Data.Function
 import Data.Singletons
 import Data.Version
-import Data.Void
 import Network.Wai.Handler.Warp
+import Data.Foldable
 import Network.Wai.Middleware.Cors
 import Options.Applicative as Opts
 import Servant
 import Servant.Client.Core.BaseUrl
 import System.Exit
 import Observe.Event
+import Servant.Server.Experimental.Auth
 import Observe.Event.BackendModification
 import Observe.Event.Crash
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
-import Observe.Event.Wai
+import Observe.Event.Wai hiding (OnException)
 import Observe.Event.Servant.Client
 import System.IO
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Concurrent.Async
-
+import Network.Wai
 import Plutus.Certification.API
-import Plutus.Certification.Cache
+import Plutus.Certification.Cache hiding (lookup)
 import Plutus.Certification.Cicero
 import Plutus.Certification.Client
 import Plutus.Certification.Server
 import Plutus.Certification.Local
 import Paths_plutus_certification qualified as Package
+import IOHK.Certification.Persistence qualified as DB
+import Data.Text.Encoding
 
 data Backend
   = Local
@@ -109,11 +120,10 @@ data InitializingField
 
 data RootEventSelector f where
   Initializing :: RootEventSelector InitializingField
-  MainOnException :: RootEventSelector Void
+  OnException :: RootEventSelector OnExceptionField
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
   InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
-  InjectOnException :: forall f . !(OnException f) -> RootEventSelector f
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
@@ -130,18 +140,57 @@ renderRoot Initializing =
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
   )
-renderRoot MainOnException =
+renderRoot OnException =
   ( "handling-exception"
-  , absurd
+  , renderOnExceptionField renderJSONException
   )
 renderRoot (InjectServerSel serverSel) =
   renderServerEventSelector serverSel
 renderRoot (InjectCrashing s) = renderCrashing s
 renderRoot (InjectRunRequest s) = runRequestJSON s
-renderRoot (InjectOnException s) = renderOnException renderJSONException s
 renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
+
+--TODO: remove after proper DB is implemented
+dummyHash :: ByteString -> Int
+dummyHash = foldl' (\h c -> 33*h `xor` fromEnum c) 5381 . unpack
+
+authHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
+authHandler = mkAuthHandler handler
+  where
+  handler req = either throw401 ensureProfile $ do
+    maybeToEither "Missing Authorization header" $ lookup "Authorization" $ requestHeaders req
+
+  maybeToEither e = maybe (Left e) Right
+  throw401 msg = throwError $ err401 { errBody = msg }
+  getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
+
+  --NOTE: this will create a new profile if there isn't any with the given address
+  ensureProfile :: ByteString -> Handler (DB.ProfileId,UserAddress)
+  ensureProfile bs = do
+    let address = decodeUtf8 bs
+    profileIdM <- (getProfileFromDb bs)
+    case profileIdM of
+      Just pid -> pure (pid, UserAddress address)
+      Nothing -> do
+        pidM <- DB.withDb $ DB.upsertProfile
+          (DB.Profile undefined address Nothing Nothing Nothing Nothing Nothing Nothing)
+          Nothing
+        case pidM of
+          Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
+          Just pid -> pure (pid,UserAddress address)
+
+
+genAuthServerContext :: Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
+genAuthServerContext = authHandler :. EmptyContext
+
+initDb :: IO ()
+initDb = void $ try' $ DB.withDb $
+    DB.createTables
+  where
+  try' :: IO a -> IO (Either SomeException a)
+  try' = try
 
 main :: IO ()
 main = do
@@ -180,15 +229,18 @@ main = do
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
-                   & setOnException (\r e -> withEvent eb MainOnException \ev -> do
-                                        onExceptionCallback (narrowEventBackend InjectOnException $ subEventBackend ev) r e
+                   & setOnException (\r e -> when (defaultShouldDisplayException e) $ withEvent eb OnException \ev -> do
+                                        addField ev $ OnExceptionField r e
                                         schedule scheduleCrash (setAncestor $ reference ev))
                    & setInstallShutdownHandler (putMVar closeSocketVar)
                    & setBeforeMainLoop (finalize initEv)
           corsPolicy = simpleCorsResourcePolicy { corsRequestHeaders = ["Content-Type"] }
 
+      _ <- initDb
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serve (Proxy @API) .
-        (\r -> server caps (hoistEventBackend liftIO  $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb))
+        serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
+        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (be r eb))
   exitFailure
+  where
+  be r eb = hoistEventBackend liftIO $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb

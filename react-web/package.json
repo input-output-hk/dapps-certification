@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "proxy": "https://testing.dapps.iog.io/",
-  "homepage": "https://localhost:3000/",
+  "homepage": "https://input-output-hk.github.io/dapps-certification/",
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
@@ -21,6 +21,7 @@
     "@types/react-table": "^7.7.12",
     "axios": "^0.27.2",
     "dayjs": "^1.11.7",
+    "html-react-parser": "^3.0.4",
     "node-sass": "^7.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

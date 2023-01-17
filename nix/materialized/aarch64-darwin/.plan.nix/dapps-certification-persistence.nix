@@ -12,13 +12,13 @@
     package = {
       specVersion = "2.4";
       identifier = {
-        name = "dapps-certification-interface";
+        name = "dapps-certification-persistence";
         version = "0.1.0.0";
         };
       license = "NONE";
       copyright = "";
-      maintainer = "shea.levy@iohk.io";
-      author = "Shea Levy";
+      maintainer = "bogdan.manole@iohk.io";
+      author = "Bogdan Manole";
       homepage = "";
       url = "";
       synopsis = "";
@@ -37,13 +37,23 @@
       "library" = {
         depends = [
           (hsPkgs."base" or (errorHandler.buildDepError "base"))
-          (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+          (hsPkgs."selda" or (errorHandler.buildDepError "selda"))
+          (hsPkgs."selda-sqlite" or (errorHandler.buildDepError "selda-sqlite"))
+          (hsPkgs."selda-postgresql" or (errorHandler.buildDepError "selda-postgresql"))
+          (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
+          (hsPkgs."time" or (errorHandler.buildDepError "time"))
+          (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
+          (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           ];
         buildable = true;
-        modules = [ "IOHK/Certification/Interface" ];
+        modules = [
+          "IOHK/Certification/Persistence/Structure"
+          "IOHK/Certification/Persistence/API"
+          "IOHK/Certification/Persistence"
+          ];
         hsSourceDirs = [ "src" ];
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault ../dapps-certification-interface; }
+    } // rec { src = (pkgs.lib).mkDefault ../dapps-certification-persistence; }
