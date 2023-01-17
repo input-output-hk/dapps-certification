@@ -1,0 +1,69 @@
+@import "styles/colors.scss";
+
+.input-wrapper {
+  &:not(:last-child) {
+    margin-bottom: 20px;
+  }
+
+  .input {
+    padding: 20px 24px;
+    border-radius: 16px;
+    display: flex;
+    flex-flow: column;
+    cursor: text;
+    border: 1.5px solid $border-gray;
+
+    &:hover {
+      background: $muted-gray;
+    }
+
+    &.active {
+      padding-top: 7px;
+      padding-bottom: 7px;
+
+      label {
+        font-size: 12px;
+        line-height: 16px;
+        transform: translateY(-12%);
+        transition: 0.2s ease all;
+      }
+
+      input {
+        position: relative;
+        opacity: 1;
+        transition: opacity 0.2s ease-out all;
+      }      
+    }
+    
+    &.error {
+      border-color: $danger;
+    }
+
+    &.disabled {
+      background: $muted-gray;
+      border-color: transparent;
+    }
+
+    label {
+      color: $input-label-gray;
+      cursor: text;
+      z-index: 1;
+    }
+
+    input {
+      border: 0;
+      background: inherit;
+      outline: none;
+      color: $input-gray;
+      font-size: 18px;
+      line-height: 24px;
+      cursor: text;
+      position: absolute;
+      opacity: 0;
+    }
+  }
+
+  ::placeholder {
+    color: $input-gray;
+  }
+}

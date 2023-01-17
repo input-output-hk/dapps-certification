@@ -1,0 +1,65 @@
+{
+  "name": "react-web",
+  "version": "0.1.0",
+  "private": true,
+  "proxy": "https://testing.dapps.iog.io/",
+  "homepage": "https://input-output-hk.github.io/dapps-certification/",
+  "dependencies": {
+    "@emotion/react": "^11.10.5",
+    "@emotion/styled": "^11.10.5",
+    "@hookform/resolvers": "^2.9.7",
+    "@mui/icons-material": "5.10.14",
+    "@mui/material": "5.10.14",
+    "@reduxjs/toolkit": "^1.9.0",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.45",
+    "@types/react": "^18.0.15",
+    "@types/react-dom": "^18.0.6",
+    "@types/react-table": "^7.7.12",
+    "axios": "^0.27.2",
+    "dayjs": "^1.11.7",
+    "html-react-parser": "^3.0.4",
+    "node-sass": "^7.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-google-charts": "^4.0.0",
+    "react-hook-form": "^7.34.0",
+    "react-redux": "^7.2.9",
+    "react-router-dom": "6",
+    "react-scripts": "5.0.1",
+    "react-table": "^7.8.0",
+    "typescript": "^4.7.4",
+    "web-vitals": "^2.1.4",
+    "yup": "^0.32.11",
+    "zod": "^3.17.10"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "build:production": "REACT_APP_ENV=production yarn build",
+    "test": "react-scripts test --passWithNoTests",
+    "test:coverage": "react-scripts test --coverage --passWithNoTests",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

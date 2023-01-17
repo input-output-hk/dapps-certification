@@ -1,0 +1,51 @@
+@import "styles/colors.scss";
+
+.is-show {
+  display: block;
+}
+
+.is-hide,
+.hidden {
+  display: none;
+}
+
+.common {
+  &-top {
+    margin-top: 24px;
+  }
+
+  &-bottom {
+    margin-bottom: 24px;
+  }
+}
+
+.title {
+  font-weight: 600;
+  font-size: 24px;
+  padding-bottom: 24px;
+  @media (max-width: 768px) {
+    font-size: 18px;
+  }
+}
+
+.description {
+  font-weight: 400;
+  font-size: 14px;
+  @media (max-width: 768px) {
+    font-size: 12px;
+  }
+}
+
+.text {
+  &-primary {
+    color: $primary;
+  }
+
+  &-secondary {
+    color: $secondary;
+  }
+}
+
+.danger {
+  color: $danger;
+}

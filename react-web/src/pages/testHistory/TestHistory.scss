@@ -1,0 +1,30 @@
+#testHistory {
+  margin: 2rem;
+  position: relative;
+  th {
+    font-weight: bold !important;
+  }
+  .icon {
+    width: 15px;
+    vertical-align: text-top;
+    margin-left: 8px;
+    cursor: pointer;
+  }
+  .trash-icon-btn {
+    border: none;
+    cursor: pointer;
+    appearance: none;
+    background-color: inherit;
+    .icon-trash {
+      height: 40px;
+    }
+  }
+  .trim-cell-text {
+    max-width: 85px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    display: block;
+    cursor: default;
+  }
+}

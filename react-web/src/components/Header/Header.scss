@@ -1,0 +1,124 @@
+.header {
+    background-color: #fff;
+    width: 100%;
+    z-index: 3;
+    font-size: 1rem;
+    display: inline-block;
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background-color: #fff;
+      display: none;
+      .button-wrap {
+        button {
+          min-width: 200px;
+        }
+      }
+      li {
+        margin: 10px;
+        a, .link {
+          display: block;
+          padding: 20px 20px;
+          border-right: 1px solid #f4f4f4;
+          text-decoration: none;
+          &:hover {
+            background-color: #f4f4f4;
+          }
+        }
+      }
+    }
+    .menu-btn {
+      &:hover {
+        background-color: #f4f4f4;
+      }
+    }
+    .menu {
+      clear: both;
+      max-height: 0;
+      transition: max-height 0.2s ease-out;
+    }
+    .active-ul {
+      display: block;
+    }
+    .menu-icon {
+      cursor: pointer;
+      display: inline-block;
+      float: right;
+      padding: 28px 20px;
+      position: relative;
+      user-select: none;
+      .navicon {
+        background: #333;
+        display: block;
+        height: 2px;
+        position: relative;
+        transition: background 0.2s ease-out;
+        width: 18px;
+        &:before {
+          top: 5px;
+          background: #333;
+          content: "";
+          display: block;
+          height: 100%;
+          position: absolute;
+          transition: all 0.2s ease-out;
+          width: 100%;
+        }
+        &:after {
+          top: -5px;
+          background: #333;
+          content: "";
+          display: block;
+          height: 100%;
+          position: absolute;
+          transition: all 0.2s ease-out;
+          width: 100%;
+        }
+      }
+    }
+    .menu-btn {
+      display: none;
+      &:checked ~ .menu {
+        max-height: 100vh;
+      }
+      &:checked ~ .menu-icon .navicon {
+        background: transparent;
+      }
+      &:checked ~ .menu-icon .navicon:before {
+        transform: rotate(-45deg);
+      }
+      &:checked ~ .menu-icon .navicon:after {
+        transform: rotate(45deg);
+      }
+      &:checked ~ .menu-icon:not(.steps) .navicon:before {
+        top: 0;
+      }
+      &:checked ~ .menu-icon:not(.steps) .navicon:after {
+        top: 0;
+      }
+    }
+  }
+  
+  @media (min-width: 48em) {
+    .header ul {
+      display: block;
+    }
+    .header li {
+      float: left;
+    }
+    .header li a {
+      padding: 20px 30px;
+    }
+    .header .menu {
+      clear: none;
+      float: right;
+      max-height: none;
+      display: flex;
+      align-items: center;
+      padding-right: 30px;
+    }
+    .header .menu-icon {
+      display: none;
+    }
+  }
