@@ -50,6 +50,7 @@ const Modal = (props: any) => {
         onClose={handleClose}
         aria-labelledby="customized-dialog-title"
         open={props.open}
+        PaperProps={{id: props.id}}
       >
         <BootstrapDialogTitle id="customized-dialog-title" onClose={handleClose}>
           {props.title}

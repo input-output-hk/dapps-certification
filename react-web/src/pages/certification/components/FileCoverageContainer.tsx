@@ -1,9 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
+import Modal from "components/Modal/Modal";
+import parse from 'html-react-parser';
 
 const FileCoverageContainer: React.FC<{
     result: { [x: string]: any };
     githubLink: string;
-}> = ({ result, githubLink }) => {
+    coverageFile?: string
+}> = ({ result, githubLink, coverageFile = '' }) => {
+    const [isOpen, setIsOpen] = useState("")
+    const onOpenModal = setIsOpen
+    const onCloseModal = () => {
+        setIsOpen("")
+    }
+
+    const parseHTMLContents = (filename: string) => {
+        const pattern = new RegExp("<h2(.*)>"+filename+"<\/h2>")
+        const pre = coverageFile.split(pattern)
+        const content = pre[2].split('</pre>')[0] + '</pre>'
+        return parse(content);
+    }
+
     const coverageIndexFiles: Array<string> = [];
     const coverageIndexReport: any = {};
     if (result._certRes_coverageReport?._coverageIndex?._coverageMetadata) {
@@ -47,7 +63,7 @@ const FileCoverageContainer: React.FC<{
         );
     }
     
-    const percentagePerFile: any = {};
+    const percentagePerFile: {[x: string]: string} = {};
     coverageIndexFiles.forEach(filename => {
         if (coverageReport[filename] && coverageIndexReport[filename]) {
             percentagePerFile[filename] = ((coverageReport[filename].length / coverageIndexReport[filename].length) * 100).toFixed(2)
@@ -58,10 +74,14 @@ const FileCoverageContainer: React.FC<{
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
                 <>
-                    <div key={index} style={{paddingBottom: "10px"}}><label>Coverage</label></div>
-                    <li className="coverage-file">
-                        {/* To be changed to location of the file code coverage UI */}
-                        {/* <a href={githubLink + "/" + file}>{file}</a>*/}
+                    <li className="coverage-file" key={index}>
+                        <>
+                            {/* To be changed to location of the file code coverage UI */}
+                            <span className="link" onClick={(_) => onOpenModal(file)}>{file}</span>
+                            <Modal id="coverageHtmlModal" open={isOpen===file} onCloseModal={onCloseModal}>
+                                <div>{parseHTMLContents(file)}</div>
+                            </Modal>
+                        </>
                         <div>
                             <div className="meter-bar">
                                 <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
