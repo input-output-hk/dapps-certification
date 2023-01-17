@@ -56,6 +56,7 @@ const Certification = () => {
   const [apiFetching, setApiFetching] = useState(false); // to be used for 'Abort'
   const [username, setUsername] = useState('');
   const [repoName, setRepository] = useState('');
+  const [coverageFile, setCoverageFile] = useState("");
 
   useEffect(() => {
     if (userDetails?.dappOwner) {
@@ -133,9 +134,14 @@ const Certification = () => {
         return setManyStatus(index, config, item, status, "passed");
       });
       if (status === "finished") {
-        const unitTestResult = processFinishedJson(res.data.result);
+        const isArrayResult = Array.isArray(res.data.result)
+        const resultJson = isArrayResult ? res.data.result[0] : res.data.result;
+        if (isArrayResult) {
+          setCoverageFile(res.data.result[1])
+        }
+        const unitTestResult = processFinishedJson(resultJson);
         setUnitTestSuccess(unitTestResult);
-        setResultData(res.data.result);
+        setResultData(resultJson);
       }
       if (state === "failed" || status === "finished") {
         setSubmitting(false);
@@ -277,7 +283,7 @@ const Certification = () => {
 
           {unitTestSuccess && Object.keys(resultData).length ? (
             <>
-              <FileCoverageContainer githubLink={githubLink} result={resultData} />
+              <FileCoverageContainer githubLink={githubLink} result={resultData} coverageFile={coverageFile}/>
               <ResultContainer result={resultData} />
             </>
           ) : null}
