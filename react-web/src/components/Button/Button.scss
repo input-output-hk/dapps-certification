@@ -86,4 +86,12 @@
     cursor: default;
     pointer-events: none;
   }
+
+  &.btn-small {
+    font-size: 13px;
+    line-height: inherit;
+    padding: 9px 16px;
+    border-radius: 10px;
+    max-width: inherit;
+  }
 }
