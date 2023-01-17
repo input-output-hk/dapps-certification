@@ -104,3 +104,6 @@ button.link {
   cursor: default;
   pointer-events: none;
 }
+button:focus {
+  outline: none;
+}

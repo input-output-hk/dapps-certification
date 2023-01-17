@@ -5,7 +5,6 @@
 
 module Plutus.Certification.GithubClient (
   getCommitInfo,
-  CommonResponse(..),
   Author(..),
   Commit(..),
   CommitDetails(..)
@@ -21,7 +20,7 @@ import Servant.Client
 import Data.Text
 import Data.Time
 
-data CommonResponse = CommonResponse {
+data BranchResponse = BranchResponse {
     commonRespCommit :: Commit
 } deriving (Show, Generic)
 
@@ -42,8 +41,8 @@ data Commit = Commit
   , commit :: CommitDetails
   } deriving (Show, Generic)
 
-instance FromJSON CommonResponse where
-    parseJSON = withObject "CommonResponse" $ \v -> CommonResponse <$> v .: "commit"
+instance FromJSON BranchResponse where
+    parseJSON = withObject "BranchResponse" $ \v -> BranchResponse <$> v .: "commit"
 
 instance FromJSON Commit
 instance FromJSON CommitDetails
@@ -53,14 +52,14 @@ type API = "repos"
          :> Header "User-Agent" Text
          :> Capture "owner" Text
          :> Capture "repo" Text
-         :> (  "branches" :> Capture "branch" Text :> Get '[JSON] CommonResponse
-          :<|> "commits" :> Capture "commit" Text :> Get '[JSON] CommonResponse
+         :> (  "branches" :> Capture "branch" Text :> Get '[JSON] BranchResponse
+          :<|> "commits" :> Capture "commit" Text :> Get '[JSON] Commit
             )
 
 api :: Proxy API
 api = Proxy
 
-mkClient :: Text -> Text -> (Text -> ClientM CommonResponse) :<|> (Text -> ClientM CommonResponse)
+mkClient :: Text -> Text -> (Text -> ClientM BranchResponse) :<|> (Text -> ClientM Commit)
 mkClient = (client api) (Just "")
 
 getCommitInfo :: Text
@@ -73,9 +72,8 @@ getCommitInfo owner repo path' = do
   let getBranch :<|> getCommit = mkClient owner repo
 
   -- first try branch
-  fmap commonRespCommit <$> do
-        respE <- runClientM (getBranch path' ) settings
-        case respE of
-          Left _ -> runClientM (getCommit path' ) settings
-          _ -> pure respE
+  respE <- runClientM (getBranch path' ) settings
+  case respE of
+    Left _ -> runClientM (getCommit path' ) settings
+    Right (BranchResponse commit') -> pure (Right commit')
 
