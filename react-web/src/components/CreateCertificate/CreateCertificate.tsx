@@ -25,10 +25,12 @@ const CreateCertificate = () => {
     const { uuid } = useAppSelector((state) => state.certification);
     const { address, wallet } = useAppSelector((state) => state.auth);
     const [ certifying, setCertifying ] = useState(false);
-    let showError = "";
+    const [ certified, setCertified ] = useState(false);
+    const [ showError, setShowError ] = useState("");
 
     const handleError = (errorObj: any) => {
-        showError = errorObj.response.message
+        setShowError(typeof errorObj === 'string' ? errorObj : errorObj.response.message + '. Please resolve the issue and retry.')
+        setTimeout(() => { setShowError("") }, 5000)
         setCertifying(false);
     }
 
@@ -37,13 +39,15 @@ const CreateCertificate = () => {
         console.log('broadcasted tnx data ', response.data);
         // TBD - show clickable link in a confirmation
         setCertifying(false)
+        setCertified(true)
     }
 
     const triggerGetCertificate = async () => {
         setCertifying(true);
+        setShowError("")
         try {
-            // To be replaced with API
-            const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc';
+            const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
+            const applicationWallet_receiveAddr = walletAddressRes.data;
             // To be replaced with API
             const cert_fee_ada = 3
             const cert_fee_lovelace = BigNum.from_str((cert_fee_ada * 1000000).toString())
@@ -69,7 +73,6 @@ const CreateCertificate = () => {
                 BigNum.from_str(protocolParams.linearFee.minFeeA),
                 BigNum.from_str(protocolParams.linearFee.minFeeB)
             );
-            console.log("Config TxBuilderConfig")
             let txnBuilderConfigBuilder = TransactionBuilderConfigBuilder.new()
                 .fee_algo(linearFee)
                 .coins_per_utxo_byte(BigNum.from_str(protocolParams.coinsPerUtxoByte))
@@ -79,36 +82,23 @@ const CreateCertificate = () => {
                 .max_tx_size(protocolParams.maxTxSize)
             
             let txBuilder = TransactionBuilder.new(txnBuilderConfigBuilder.build())
-            console.log("txBuilder available")
 
             wallet.getUtxos().then((utxos: any) =>{
                 let txnUnspentOutputs = TransactionUnspentOutputs.new()
-                
                 utxos.forEach((utxo: any) => {
                     txnUnspentOutputs.add(TransactionUnspentOutput.from_hex(utxo))
                 })
-
                 txBuilder.add_output(TransactionOutput.new(Address.from_bech32(applicationWallet_receiveAddr), Value.new(cert_fee_lovelace) ))
-
                 txBuilder.add_inputs_from(txnUnspentOutputs, CoinSelectionStrategyCIP2.LargestFirst)
                 txBuilder.add_change_if_needed(Address.from_hex(address))
-                console.log(txBuilder.build_tx().to_hex())
-                console.log(txBuilder.build_tx().to_json())
 
                 const encodedTx = Buffer.from(txBuilder.build_tx().to_bytes()).toString("hex");
-
-
                 wallet.signTx(encodedTx).then((signed: string) =>{
-                    console.log(signed)
-
                     const txVkeyWitnesses = TransactionWitnessSet.from_bytes(
                         Buffer.from(signed, "hex")
                     );
-
                     const txSigned = Transaction.new(txBuilder.build(), txVkeyWitnesses );
-
                     const encodedSignedTx = Buffer.from(txSigned.to_bytes()).toString("hex");
-                
                     wallet.submitTx(encodedSignedTx).then((txnId: string) => {
                         console.log(' transaction id - ', txnId)
                         triggerSubmitCertificate(txnId)
@@ -121,13 +111,13 @@ const CreateCertificate = () => {
     }
 
     return (<>
-        <Button
+        {certified ? null : (<Button
             displayStyle="gradient"
             onClick={() => triggerGetCertificate()}
             buttonLabel="Get Certificate"
             showLoader={certifying}
-        />
-        {showError ? <Toast /> : null}
+        />)}
+        {showError ? <Toast message={showError} /> : null}
     </>);
 }
 
