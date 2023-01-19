@@ -7,6 +7,7 @@
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
+    "@emurgo/cardano-serialization-lib-asmjs": "^11.2.1",
     "@hookform/resolvers": "^2.9.7",
     "@mui/icons-material": "5.10.14",
     "@mui/material": "5.10.14",
@@ -20,7 +21,7 @@
     "@types/react-dom": "^18.0.6",
     "@types/react-table": "^7.7.12",
     "axios": "^0.27.2",
-    "lucid-cardano": "^0.8.7",
+    "buffer": "^6.0.3",
     "dayjs": "^1.11.7",
     "html-react-parser": "^3.0.4",
     "node-sass": "^7.0.1",
