@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useAppSelector } from "store/store";
 
 import Button from "components/Button/Button";
+import Modal from "components/Modal/Modal";
+
 
 import { Address,
     Value,
@@ -26,10 +28,22 @@ const CreateCertificate = () => {
     const { address, wallet } = useAppSelector((state) => state.auth);
     const [ certifying, setCertifying ] = useState(false);
     const [ certified, setCertified ] = useState(false);
+    const [ transactionId, setTransactionId ] = useState("")
     const [ showError, setShowError ] = useState("");
+    let openModal = false;
+
+    const onCloseModal = () => { openModal = false; }
 
     const handleError = (errorObj: any) => {
-        setShowError(typeof errorObj === 'string' ? errorObj : errorObj.response.message + '. Please resolve the issue and retry.')
+        let errorMsg = ''
+        if (typeof errorObj === 'string') {
+            errorMsg = errorObj + ' Please try again.'
+        } else if (errorObj.info) {
+            errorMsg = errorObj.info + ' Please resolve the issue and retry.'
+        } else if (errorObj.response?.message) {
+            errorMsg = errorObj.response.message + ' Please resolve the issue and retry.'
+        }
+        setShowError(errorMsg);
         setTimeout(() => { setShowError("") }, 5000)
         setCertifying(false);
     }
@@ -38,6 +52,8 @@ const CreateCertificate = () => {
         const response: any = await fetchData.post('/run/' + uuid + '/certificate' + '?transactionid=' + txnId).catch(handleError)
         console.log('broadcasted tnx data ', response.data);
         // TBD - show clickable link in a confirmation
+        setTransactionId(response.data.transactionId)
+        openModal = true;
         setCertifying(false)
         setCertified(true)
     }
@@ -46,8 +62,10 @@ const CreateCertificate = () => {
         setCertifying(true);
         setShowError("")
         try {
-            const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
-            const applicationWallet_receiveAddr = walletAddressRes.data;
+            // const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
+            // const applicationWallet_receiveAddr = walletAddressRes.data;
+            /** For mock */
+            const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
             // To be replaced with API
             const cert_fee_ada = 3
             const cert_fee_lovelace = BigNum.from_str((cert_fee_ada * 1000000).toString())
@@ -117,6 +135,14 @@ const CreateCertificate = () => {
             buttonLabel="Get Certificate"
             showLoader={certifying}
         />)}
+        {transactionId ? (
+            <Modal open={openModal} title="Certification Successful" onCloseModal={onCloseModal}>
+                <span>
+                    View your certification broadcasted on-chain&nbsp;
+                    <a target="_blank" rel="noreferrer" href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}>here</a>!
+                </span>
+            </Modal>
+        ): null}
         {showError ? <Toast message={showError} /> : null}
     </>);
 }
