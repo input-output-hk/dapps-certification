@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -29,15 +29,20 @@ import InformationTable from "components/InformationTable/InformationTable";
 import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
-import { setUuid } from "./slices/certification.slice";
+import { clearUuid, setUuid } from "./slices/certification.slice";
 
 const TIMEOFFSET = 1000;
 
-const Certification = () => {
+const Certification: FC<{props?: any}> = ({ props }) => {
   const form: any = useForm({
     schema: certificationSchema,
     mode: "onChange",
   });
+
+
+  if (props?.location?.state?.insideNavigation) {
+    clearUuid();
+  }
 
   const { uuid } = useAppSelector((state) => state.certification);
   const { userDetails } = useAppSelector((state) => state.auth);
@@ -58,7 +63,7 @@ const Certification = () => {
   const [username, setUsername] = useState('');
   const [repoName, setRepository] = useState('');
   const [coverageFile, setCoverageFile] = useState("");
-
+  
   useEffect(() => {
     if (userDetails?.dapp?.owner) {
       setUsername(userDetails.dapp.owner)
@@ -67,6 +72,20 @@ const Certification = () => {
       setRepository(userDetails.dapp.repo)
     }
   }, [userDetails])
+
+  const resetStates = () => {
+    setRunState("")
+    setRunStatus("")
+    setResultData({})
+    setUnitTestSuccess(true)
+    setSubmitting(false)
+    setFormSubmitted(false)
+    setGithubLink("")
+    setUsername("")
+    setRepository("")
+    setCoverageFile("")
+    setTimelineConfig(TIMELINE_CONFIG)
+  }
 
   const formHandler = (formData: ISearchForm) => {
     const { branch, commit } = formData;
@@ -175,6 +194,8 @@ const Certification = () => {
   useEffect(() => {
     if (uuid.length) {
       triggerFetchRunStatus();
+    } else {
+      resetStates()
     }
     // eslint-disable-next-line
   }, [uuid]);

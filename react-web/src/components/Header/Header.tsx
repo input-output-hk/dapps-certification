@@ -90,7 +90,7 @@ const Header = () => {
 
   return (
     <header className="header">
-      <Link to="/">
+      <Link to="/" state={{insideNavigation: true}}>
         <img
           src="images/logo.png"
           alt="IOHK logo"
