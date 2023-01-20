@@ -30,32 +30,40 @@ const CreateCertificate = () => {
     const [ certified, setCertified ] = useState(false);
     const [ transactionId, setTransactionId ] = useState("")
     const [ showError, setShowError ] = useState("");
-    let openModal = false;
+    const [ openModal, setOpenModal ] = useState(false);
+    const [ disableCertify, setDisableCertify ] = useState(false);
 
-    const onCloseModal = () => { openModal = false; }
+    const onCloseModal = () => { setOpenModal(false) }
 
     const handleError = (errorObj: any) => {
         let errorMsg = ''
         if (typeof errorObj === 'string') {
             errorMsg = errorObj + ' Please try again.'
-        } else if (errorObj.info) {
+        } else if (errorObj?.info) {
             errorMsg = errorObj.info + ' Please resolve the issue and retry.'
-        } else if (errorObj.response?.message) {
-            errorMsg = errorObj.response.message + ' Please resolve the issue and retry.'
+        } else if (errorObj?.response?.message) {
+            errorMsg = errorObj?.response.message + ' Please resolve the issue and retry.'
+        } else if (errorObj?.response?.data) {
+            errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
         }
         setShowError(errorMsg);
         setTimeout(() => { setShowError("") }, 5000)
         setCertifying(false);
+        if (errorObj?.response?.status === 403) {
+            setDisableCertify(true)
+        }
     }
 
     const triggerSubmitCertificate = async (txnId: string) => {
         const response: any = await fetchData.post('/run/' + uuid + '/certificate' + '?transactionid=' + txnId).catch(handleError)
-        console.log('broadcasted tnx data ', response.data);
-        // TBD - show clickable link in a confirmation
-        setTransactionId(response.data.transactionId)
-        openModal = true;
-        setCertifying(false)
-        setCertified(true)
+        try {
+            console.log('broadcasted tnx data ', response.data);
+            // TBD - show clickable link in a confirmation
+            setTransactionId(response.data.transactionId)
+            setOpenModal(true)
+            setCertifying(false)
+            setCertified(true)
+        } catch(e) { }
     }
 
     const triggerGetCertificate = async () => {
@@ -129,7 +137,7 @@ const CreateCertificate = () => {
     }
 
     return (<>
-        {certified ? null : (<Button
+        {certified || disableCertify ? null : (<Button
             displayStyle="gradient"
             onClick={() => triggerGetCertificate()}
             buttonLabel="Get Certificate"
