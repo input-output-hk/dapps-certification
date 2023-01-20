@@ -58,7 +58,6 @@ const CreateCertificate = () => {
         const response: any = await fetchData.post('/run/' + uuid + '/certificate' + '?transactionid=' + txnId).catch(handleError)
         try {
             console.log('broadcasted tnx data ', response.data);
-            // TBD - show clickable link in a confirmation
             setTransactionId(response.data.transactionId)
             setOpenModal(true)
             setCertifying(false)

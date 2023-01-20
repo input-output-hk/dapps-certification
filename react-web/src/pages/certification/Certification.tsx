@@ -42,8 +42,9 @@ const Certification = () => {
 
   let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
   useEffect(() => {
-    if (location?.state?.insideNavigation) {
-      clearUuid();
+    if (location?.pathname === '/' && location?.state?.insideNavigation) {
+      // resetStates()
+      // clearUuid()
     }
   }, [location])
 
@@ -84,8 +85,6 @@ const Certification = () => {
     setSubmitting(false)
     setFormSubmitted(false)
     setGithubLink("")
-    setUsername("")
-    setRepository("")
     setCoverageFile("")
     setTimelineConfig(TIMELINE_CONFIG)
   }
