@@ -26,13 +26,12 @@ import ColViz from "./components/ColViz/ColViz";
 // const TableComponent: FC<any> = ({ dataSet, config, showColViz }) => {
 const TableComponent: FC<any> = ({
   dataSet,
-  config,
+  columns,
   showColViz,
   updateMyData,
   skipPageReset,
 }) => {
   const data = useMemo(() => dataSet, [dataSet]);
-  const columns = useMemo(() => config, [config]);
   const [showPivot, setShowPivot] = useState(false);
   const [pageNo, setPageNo] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);

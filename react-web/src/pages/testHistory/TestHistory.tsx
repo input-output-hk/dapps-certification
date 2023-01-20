@@ -109,11 +109,13 @@ const TestHistory = () => {
           response = 'failed'
         } else {
           if (status === 'finished') {
-            const isUnitTestSuccess = processFinishedJson(res.data.result);
-            const isComplete = isUnitTestSuccess && !isAnyTaskFailure(res.data.result);
+            const isArrayResult = Array.isArray(res.data.result)
+            const resultJson = isArrayResult ? res.data.result[0] : res.data.result;
+            const isUnitTestSuccess = processFinishedJson(resultJson);
+            const isComplete = isUnitTestSuccess && !isAnyTaskFailure(resultJson);
             response = isComplete ? 'succeeded' : 'failed';
           } else {
-            // retain response='queued'
+            // do nothing; retain response='queued'
           }
         } 
         setRunningSpinner(prevValue => {
@@ -186,7 +188,7 @@ const TestHistory = () => {
     window.open(url, "_blank");
   };
 
-  const columns = [
+  const columns = React.useMemo(() => [
     {
       Header: "Repo URL",
       accessor: "repoUrl",
@@ -292,7 +294,9 @@ const TestHistory = () => {
     //     </>);
     //   },
     // }
-  ];
+    ],
+    []
+  );
 
   const fetchTableData = async () => {
     const result = await fetchData.get("/run")
@@ -309,7 +313,7 @@ const TestHistory = () => {
   return (
     <>
       <div id="testHistory">
-        <TableComponent dataSet={data} config={columns} showColViz={true} 
+        <TableComponent dataSet={data} columns={columns} showColViz={true} 
           updateMyData={updateMyData}
           skipPageReset={skipPageReset}
         />
