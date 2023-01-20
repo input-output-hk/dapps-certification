@@ -30,19 +30,22 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
+import { useLocation } from "react-router-dom";
 
 const TIMEOFFSET = 1000;
 
-const Certification: FC<{props?: any}> = ({ props }) => {
+const Certification = () => {
   const form: any = useForm({
     schema: certificationSchema,
     mode: "onChange",
   });
 
-
-  if (props?.location?.state?.insideNavigation) {
-    clearUuid();
-  }
+  let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
+  useEffect(() => {
+    if (location?.state?.insideNavigation) {
+      clearUuid();
+    }
+  }, [location])
 
   const { uuid } = useAppSelector((state) => state.certification);
   const { userDetails } = useAppSelector((state) => state.auth);

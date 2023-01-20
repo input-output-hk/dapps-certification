@@ -18,6 +18,7 @@ let CardanoNS = window.cardano;
 const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
+    const [walletName, setWalletName] = useState("")
     const [address, setAddress] = useState(null)
     const [isOpen, setIsOpen] = useState(false)
 
@@ -29,6 +30,7 @@ const ConnectWallet = () => {
         try {
             const enabledWallet = await CardanoNS[walletName].enable();
             setWallet(enabledWallet)
+            setWalletName(walletName)
             if (enabledWallet) {
                 setAddress(await enabledWallet.getChangeAddress())
             }
@@ -40,9 +42,9 @@ const ConnectWallet = () => {
 
     useEffect(() => {
         if (address) {
-            dispatch(getProfileDetails({"address": address, "wallet": wallet}))            
+            dispatch(getProfileDetails({"address": address, "wallet": wallet, "walletName": walletName}))
         }
-    }, [dispatch, address, wallet])
+    }, [dispatch, address, wallet, walletName])
 
     return (
         <>

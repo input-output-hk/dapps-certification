@@ -1,7 +1,7 @@
 import React, { useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "store/store";
-import { logout } from "store/slices/auth.slice";
+import { logout, getProfileDetails } from "store/slices/auth.slice";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
@@ -14,6 +14,23 @@ const Header = () => {
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // check if address, walletName is in localStorage - login user without having to connect to wallet again
+    const addressCache = localStorage.getItem('address')
+    const walletNameCache = localStorage.getItem('walletName')
+    if (addressCache?.length && walletNameCache?.length) {
+      (async () => {
+        try {
+          const enabledWallet = await window.cardano[walletNameCache].enable()
+          dispatch(getProfileDetails({"address": addressCache, "wallet": enabledWallet, "walletName": walletNameCache}))
+        } catch(e) {
+          console.log(e)
+        }
+      })()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -42,6 +59,22 @@ const Header = () => {
     pollForAddress
   );
 
+  const hasCachedAddress = () => {
+    return (!localStorage.getItem('address')?.length || !localStorage.getItem('walletName')?.length)
+  }
+
+  const ShowConnectWallet = memo(() => {
+    return (<>
+      {hasCachedAddress() ? <ConnectWallet /> : null}
+    </>)
+  })
+
+  const ShowAvatarDropdown = memo(() => {
+    return (<>
+      {(address && wallet) ? <AvatarDropDown /> : null}
+    </>)
+  })
+
   const NoAuthMenu = memo(() => {
     return (
       <>
@@ -55,7 +88,7 @@ const Header = () => {
           <Link to="support">Support</Link>
         </li>
         <li className="button-wrap">
-          <ConnectWallet />
+          <ShowConnectWallet />
         </li>
       </>
     );
@@ -73,7 +106,7 @@ const Header = () => {
           <Link to="history">Test History</Link>
         </li>
         <li>
-          <AvatarDropDown />
+          <ShowAvatarDropdown />
         </li>
       </>
     );
