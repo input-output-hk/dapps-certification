@@ -40,9 +40,9 @@ const CreateCertificate = () => {
         if (typeof errorObj === 'string') {
             errorMsg = errorObj + ' Please try again.'
         } else if (errorObj?.info) {
-            errorMsg = errorObj.info + ' Please resolve the issue and retry.'
+            errorMsg = errorObj.info + ' Please try again.'
         } else if (errorObj?.response?.message) {
-            errorMsg = errorObj?.response.message + ' Please resolve the issue and retry.'
+            errorMsg = errorObj?.response.message + ' Please try again.'
         } else if (errorObj?.response?.data) {
             errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
         }
