@@ -26,13 +26,10 @@ const clearLSCache = () => {
 }
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
-    localStorage.setItem('address', data.address) 
-    const response = await fetchData.get("/profile/current", data)
-    // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
-    return response.data
-  } catch(e) {
-    return rejectWithValue(e)
-  }
+  localStorage.setItem('address', data.address) 
+  const response = await fetchData.get("/profile/current", data)
+  // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
+  return response.data
 })
 
 export const authSlice = createSlice({
