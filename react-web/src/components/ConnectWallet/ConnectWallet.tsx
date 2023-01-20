@@ -35,19 +35,11 @@ const ConnectWallet = () => {
         try {
             setWalletLoading(true)
             const enabledWallet = await CardanoNS[walletName].enable();
-            enabledWallet.getNetworkId().then(async (data: number) => {
-                // assuming id-2 is for Preprod. There is no option to distinguish networks other than mainnet, testnet
-                if (data.toString() === process.env.REACT_APP_WALLET_NETWORK) {
-                    setWallet(enabledWallet)
-                    setWalletName(walletName)
-                    if (enabledWallet) {
-                        setAddress(await enabledWallet.getChangeAddress())
-                    }
-                } else {
-                    setWalletLoading(false)
-                    handleError({info: "Please connect to a wallet in Preprod Network to use our services."})
-                }
-            })
+            setWallet(enabledWallet)
+            setWalletName(walletName)
+            if (enabledWallet) {
+                setAddress(await enabledWallet.getChangeAddress())
+            }
         } catch (err) {
             handleError(err)
         }
