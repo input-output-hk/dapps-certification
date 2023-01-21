@@ -128,6 +128,10 @@ syncRun runId time= update runs
     (\run -> run ! #runId .== literal runId)
     (`with` [ #syncedAt := literal time ])
 
+deleteRun :: MonadSelda m => UUID -> m Int
+deleteRun runId = deleteFrom runs
+  (\run -> (run ! #runId .== literal runId ) .&& (run ! #runStatus ./= literal Certified))
+
 createCertificate :: (MonadSelda m,MonadMask m)
                   => UUID
                   -> IpfsCid

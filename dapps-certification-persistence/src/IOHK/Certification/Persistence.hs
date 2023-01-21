@@ -30,4 +30,5 @@ import IOHK.Certification.Persistence.API as X
   , getRunOwner
   , getCertification
   , createCertificate
+  , deleteRun
   )
