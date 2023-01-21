@@ -143,20 +143,22 @@ server ServerCaps {..} wargs eb = NamedAPI
         $ getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
       ) >>= dbSync uuid
 
-  , abortRun = \(profileId,_) rid@RunID{..} -> withEvent eb AbortRun \ev -> do
+  , abortRun = \(profileId,_) rid@RunID{..} deleteRun -> withEvent eb AbortRun \ev -> do
       addField ev rid
-      -- ensure is no already finished
+      requireRunIdOwner profileId uuid
+      -- abort the run if is still running
       status <- runConduit $
         getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
-      unless (toDbStatus status == DB.Queued) $
-        throwError err403 { errBody = "Run already finished"}
-      requireRunIdOwner profileId uuid
-      -- finally abort the run
-      resp <- const NoContent <$> (abortRuns (setAncestor $ reference ev) rid)
-      -- if abortion succeeded mark it in the db
-      void (getNow >>= DB.withDb . DB.updateFinishedRun uuid False)
+      when (toDbStatus status == DB.Queued) $ do
+        -- finally abort the run
+        (abortRuns (setAncestor $ reference ev) rid)
+        -- if abortion succeeded mark it in the db
+        void (getNow >>= DB.withDb . DB.updateFinishedRun uuid False)
 
-      pure resp
+      when (deleteRun == Just True) $
+        -- detele the run from the db
+        void (DB.withDb $ DB.deleteRun uuid)
+      pure NoContent
   , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do
       addField ev rid
       let dropCond = case afterM of
