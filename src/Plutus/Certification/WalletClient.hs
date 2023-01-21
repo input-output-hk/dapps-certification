@@ -6,6 +6,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Plutus.Certification.WalletClient
   ( TxResponse(..)
@@ -26,6 +27,7 @@ import Servant.Client
 import Data.Text
 import Data.Aeson.QQ
 import Control.Monad.IO.Class
+import IOHK.Certification.Persistence
 
 data TxBody = forall a . (ToJSON a) => TxBody
   { passphrase :: !Text
@@ -61,7 +63,7 @@ instance ToJSON Amount where
 
 data TxResponse = TxResponse
   { txRespAmount :: !Amount
-  , txRespId :: !Text
+  , txRespId :: !TxId
   } deriving Show
 
 instance FromJSON TxResponse where
@@ -88,7 +90,7 @@ data WalletArgs = WalletArgs
 
 data CertificationMetadata = CertificationMetadata
   { crtmId :: !UUID
-  , crtmIpfsCid :: !Text
+  , crtmIpfsCid :: !IpfsCid
   , crtmProjectName :: !Text
   , crtmLink :: !(Maybe BaseUrl)
   , crtmTwitter :: !(Maybe Text)
@@ -109,7 +111,7 @@ split64 = splitString 64
 instance ToJSON CertificationMetadata where
   toJSON CertificationMetadata{..} =  object
     [ "id" .= crtmId
-    , "ipfsCid" .= split64 crtmIpfsCid
+    , "ipfsCid" .= split64 (crtmIpfsCid.ipfsCid)
     , "projectName" .= split64 crtmProjectName
     , "link" .= fmap (split64 . pack . showBaseUrl ) crtmLink
     , "twitter" .= fmap split64 crtmTwitter

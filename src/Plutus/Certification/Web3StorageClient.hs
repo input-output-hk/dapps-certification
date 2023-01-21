@@ -10,7 +10,7 @@ module Plutus.Certification.Web3StorageClient where
 import Data.Aeson
 import Network.HTTP.Client      hiding (Proxy)
 import Network.HTTP.Client.TLS
-import Control.Monad.IO.Class 
+import Control.Monad.IO.Class
 import Network.HTTP.Types.Header
 import Data.ByteString.Char8 as BS hiding (hPutStrLn)
 import Servant.Client.Core hiding (responseBody,Response,DecodeFailure)
@@ -19,8 +19,8 @@ import Servant.API hiding (addHeader)
 import Network.HTTP.Types.Status
 import Network.HTTP.Client.MultipartFormData
 import System.IO.Temp
-
-import qualified Data.ByteString.Lazy.Char8 as BSL 
+import IOHK.Certification.Persistence
+import qualified Data.ByteString.Lazy.Char8 as BSL
 
 import GHC.IO.Handle
 type instance AuthClientData (AuthProtect "api-key") = ByteString
@@ -29,7 +29,7 @@ addAuth :: ByteString -> AuthenticatedRequest (AuthProtect "api-key")
 addAuth = flip mkAuthenticatedRequest (\v -> addHeader hAuthorization ("Bearer " <> BS.unpack v))
 
 data UploadResponse = UploadResponse
-  { uploadCid :: Text
+  { uploadCid :: IpfsCid
   , uploadCarCid :: Text
   } deriving Show
 

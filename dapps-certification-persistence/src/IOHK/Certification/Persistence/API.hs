@@ -128,8 +128,13 @@ syncRun runId time= update runs
     (\run -> run ! #runId .== literal runId)
     (`with` [ #syncedAt := literal time ])
 
-createCertificate :: (MonadSelda m,MonadMask m) => UUID -> Text -> Text -> UTCTime -> m (Maybe Certification)
-createCertificate runId ipfsCID txId time = transaction $ do
+createCertificate :: (MonadSelda m,MonadMask m)
+                  => UUID
+                  -> IpfsCid
+                  -> TxId
+                  -> UTCTime
+                  -> m (Maybe Certification)
+createCertificate runId IpfsCid{..} TxId{..} time = transaction $ do
   result <- query $ do
     run <- select runs
     restrict (run ! #runId .== literal runId)
@@ -142,7 +147,7 @@ createCertificate runId ipfsCID txId time = transaction $ do
         (`with` [ #runStatus := literal Certified
                 , #syncedAt := literal time
                 ])
-      let cert = Certification runId ipfsCID txId time
+      let cert = Certification runId ipfsCid txId time
       _ <- insert certifications [cert]
       pure $ Just $ cert
     _ -> pure Nothing

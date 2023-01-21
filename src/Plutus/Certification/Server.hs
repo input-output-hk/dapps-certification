@@ -66,11 +66,9 @@ data CreateRunField
   = CreateRunRef !FlakeRefV1
   | CreateRunID !RunIDV1
 
-newtype IpfsCID = IpfsCid Text
-  deriving (ToJSON )
 data CreateCertificationField
   = CreateCertificationRunID !RunIDV1
-  | CreateCertificationIpfsCid !IpfsCID
+  | CreateCertificationIpfsCid !DB.IpfsCid
   | CreateCertificationTxResponse !Wallet.TxResponse
 
 data ServerEventSelector f where
@@ -210,7 +208,7 @@ server ServerCaps {..} wargs eb = NamedAPI
     (IPFS.UploadResponse ipfsCid _) <- maybe
       (throwError $ err403 { errBody = "Incompatible status for certification"})
       uploadToIpfs certResultM
-    addField ev (CreateCertificationIpfsCid (IpfsCid ipfsCid))
+    addField ev (CreateCertificationIpfsCid ipfsCid)
 
     -- create the certification object
     websiteUrl <- parseUrl website
