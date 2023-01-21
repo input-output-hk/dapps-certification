@@ -10,6 +10,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module IOHK.Certification.Persistence.Structure where
 
@@ -20,6 +21,12 @@ import Data.Aeson.Types
 import Data.Proxy
 import Data.Swagger hiding (Contact)
 import Control.Lens hiding ((.=),index)
+
+newtype IpfsCid = IpfsCid { ipfsCid :: Text}
+  deriving (ToJSON,FromJSON,Show )
+
+newtype TxId = TxId { txId :: Text}
+  deriving (ToJSON,FromJSON,Show,Read)
 
 data Profile = Profile
   { profileId :: ID Profile   -- TODO: do we need an internal id?

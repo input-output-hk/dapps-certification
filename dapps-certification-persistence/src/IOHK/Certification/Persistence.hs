@@ -12,6 +12,8 @@ import IOHK.Certification.Persistence.Structure as X
   , contacts
   , createTables
   , ProfileId
+  , IpfsCid(..)
+  , TxId(..)
   )
 import IOHK.Certification.Persistence.API as X
   ( upsertProfile
