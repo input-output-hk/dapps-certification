@@ -60,6 +60,7 @@ type AbortRunRoute = "run"
   :> Description "Abort a run"
   :> AuthProtect "public-key"
   :> Capture "id" RunIDV1
+  :> QueryParam "delete" Bool
   :> DeleteNoContent
 
 type GetLogsRoute = "run"
