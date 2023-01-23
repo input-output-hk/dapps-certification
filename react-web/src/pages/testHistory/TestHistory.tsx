@@ -314,8 +314,9 @@ const TestHistory = () => {
 
   const onDelete = (runId: string) => {
     confirm({ title: "", description: "You want to delete this item!" })
-      .then(() => {
-        dispatch(deleteTestHistoryData({ url: "/run/" + runId }));
+      .then(async () => {
+        await dispatch(deleteTestHistoryData({ url: "/run/" + runId + "?delete=true" }));
+        fetchTableData()
       })
       .catch((err) => {
         handleError(err)

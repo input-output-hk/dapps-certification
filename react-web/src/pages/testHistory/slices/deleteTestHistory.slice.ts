@@ -28,7 +28,7 @@ const deleteTestHistoryDataSlice = createSlice({
         state.loading = false;
       })
       .addCase(deleteTestHistoryData.pending, (state) => {
-        state.loading = false;
+        state.loading = true;
       })
       .addCase(deleteTestHistoryData.fulfilled, (state) => {
         state.loading = false;
