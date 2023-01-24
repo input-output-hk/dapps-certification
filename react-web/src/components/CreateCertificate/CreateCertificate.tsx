@@ -69,11 +69,11 @@ const CreateCertificate = () => {
         setCertifying(true);
         setShowError("")
         try {
-            // const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
-            // const applicationWallet_receiveAddr = walletAddressRes.data;
+            const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
+            const applicationWallet_receiveAddr = walletAddressRes.data;
             /** For mock */
-            const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
-            // To be replaced with API
+            // const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
+            /** To be replaced with API */
             const cert_fee_ada = 3
             const cert_fee_lovelace = BigNum.from_str((cert_fee_ada * 1000000).toString())
 

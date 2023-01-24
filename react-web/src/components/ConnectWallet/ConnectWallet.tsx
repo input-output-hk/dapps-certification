@@ -38,10 +38,11 @@ const ConnectWallet = () => {
             if (enabledWallet) {
                 setAddress(await enabledWallet.getChangeAddress())
             }
-        } catch (err) {
-            // do nothing
-            console.log(err);
-        }
+        } catch (e) { handleError(e); }
+    }
+
+    const handleError = (err: any) => {
+        console.log(err)
     }
 
     useEffect(() => {
