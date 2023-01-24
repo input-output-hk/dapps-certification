@@ -4,6 +4,14 @@
   th {
     font-weight: bold !important;
   }
+  .col-header {
+    display: flex;
+    white-space: nowrap;
+    img {
+      width: 15px;
+      margin-left: 5px;
+    }
+  }
   .sync-btn {
     background-color: transparent;
     background-repeat: no-repeat;
@@ -23,9 +31,6 @@
     cursor: pointer;
     appearance: none;
     background-color: inherit;
-    .icon-trash {
-      height: 40px;
-    }
   }
   .trim-cell-text {
     max-width: 85px;
