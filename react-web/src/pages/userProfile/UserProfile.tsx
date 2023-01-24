@@ -66,7 +66,7 @@ const UserProfile = () => {
         "website": formData.website
       }
 
-      await fetchData.put("/profile/current", formData);
+      await fetchData.put("/profile/current", reqData);
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
       await dispatch(
