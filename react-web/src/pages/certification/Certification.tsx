@@ -30,7 +30,7 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
-import { useLocation } from "react-router-dom";
+// import { useLocation } from "react-router-dom";
 
 const TIMEOFFSET = 1000;
 
@@ -40,13 +40,14 @@ const Certification = () => {
     mode: "onChange",
   });
 
-  let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
-  useEffect(() => {
-    if (location?.pathname === '/' && location?.state?.insideNavigation) {
-      // resetStates()
-      // clearUuid()
-    }
-  }, [location])
+  // /** To be fixed */ 
+  // let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
+  // useEffect(() => {
+  //   if (location?.pathname === '/' && location?.state?.insideNavigation) {
+  //     // resetStates()
+  //     // clearUuid()
+  //   }
+  // }, [location])
 
   const { uuid } = useAppSelector((state) => state.certification);
   const { userDetails } = useAppSelector((state) => state.auth);
@@ -197,7 +198,7 @@ const Certification = () => {
     if (uuid.length) {
       triggerFetchRunStatus();
     } else {
-      resetStates()
+      // resetStates()
     }
     // eslint-disable-next-line
   }, [uuid]);
