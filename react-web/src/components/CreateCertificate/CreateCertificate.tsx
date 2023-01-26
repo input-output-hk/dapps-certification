@@ -47,7 +47,7 @@ const CreateCertificate = () => {
             errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
         }
         setShowError(errorMsg.length > 50 ? 'Something wrong occurred. Please try again later.' : errorMsg);
-        setTimeout(() => { setShowError("") }, 5000)
+        const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
         setCertifying(false);
         if (errorObj?.response?.status === 403) {
             setDisableCertify(true)

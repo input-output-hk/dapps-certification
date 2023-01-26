@@ -181,7 +181,8 @@ const Certification = () => {
     // show an api error toast
     setErrorToast(true);
     form.reset();
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
+      clearTimeout(timeout)
       setErrorToast(false);
       // TBD - blur out of input fields
     }, 5000); // hide after 5 seconds
