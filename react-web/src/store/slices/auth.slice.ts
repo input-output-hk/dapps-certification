@@ -25,14 +25,11 @@ const clearLSCache = () => {
   localStorage.removeItem('walletName')
 }
 
-export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
+export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { }) => {
     localStorage.setItem('address', data.address) 
     const response = await fetchData.get("/profile/current", data)
     // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
     return response.data
-  } catch(e) {
-    return rejectWithValue(e)
-  }
 })
 
 export const authSlice = createSlice({
