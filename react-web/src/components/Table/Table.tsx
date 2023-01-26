@@ -2,11 +2,11 @@ import React, { useMemo, FC, useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import { usePagination, useTable, useSortBy } from "react-table";
-import {
-  TableInstance,
-  UsePaginationInstanceProps,
-  UsePaginationState,
-} from "react-table";
+// import {
+//   TableInstance,
+//   UsePaginationInstanceProps,
+//   UsePaginationState,
+// } from "react-table";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
@@ -18,14 +18,20 @@ import "./Table.scss";
 import ColViz from "./components/ColViz/ColViz";
 
 
-export type PaginationTableInstance<T extends object> = TableInstance<T> &
-  UsePaginationInstanceProps<T> & {
-    state: UsePaginationState<T>;
-  };
+// export type PaginationTableInstance<T extends object> = TableInstance<T> &
+//   UsePaginationInstanceProps<T> & {
+//     state: UsePaginationState<T>;
+//   };
 
-const TableComponent: FC<any> = ({ dataSet, config, showColViz }) => {
+// const TableComponent: FC<any> = ({ dataSet, config, showColViz }) => {
+const TableComponent: FC<any> = ({
+  dataSet,
+  columns,
+  showColViz,
+  updateMyData,
+  skipPageReset,
+}) => {
   const data = useMemo(() => dataSet, [dataSet]);
-  const columns = useMemo(() => config, [config]);
   const [showPivot, setShowPivot] = useState(false);
   const [pageNo, setPageNo] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -43,11 +49,20 @@ const TableComponent: FC<any> = ({ dataSet, config, showColViz }) => {
     {
       columns,
       data,
+      // use the skipPageReset option to disable page resetting temporarily
+      autoResetPage: !skipPageReset,
+      // updateMyData isn't part of the API, but
+      // anything we put into these options will
+      // automatically be available on the instance.
+      // That way we can call this function from our
+      // cell renderer!
+      updateMyData,
       initialState: { pageIndex: 0, pageSize: 5 } as any,
     },
     useSortBy,
     usePagination
-  ) as PaginationTableInstance<any>;
+  );
+  // ) as PaginationTableInstance<any>;
 
   const updateColumnOptions = (updatedColumnsList: any) => {
     const hideColumns = updatedColumnsList

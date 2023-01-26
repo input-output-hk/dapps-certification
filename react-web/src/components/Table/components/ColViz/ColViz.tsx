@@ -61,7 +61,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
         {columnDetails.map((column: any, index: any) => {
           if (column.Header.length) {
             return (
-              <li key={index + 1}>
+              <li key={index}>
                 <FormGroup>
                   <FormControlLabel
                     control={
