@@ -2,8 +2,8 @@
   "name": "react-web",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://testing.dapps.iog.io/",
-  "homepage": "https://input-output-hk.github.io/dapps-certification/",
+  "proxy": "http://excuse.ro:9672/",
+  "homepage": "http://localhost:3000/",
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
