@@ -9,6 +9,7 @@ interface InputProps extends ComponentProps<"input"> {
  disabled?: boolean;
  disablefocus?: boolean;
  name: string;
+ required?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
@@ -19,6 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
    className = "",
    disablefocus = false,
    name,
+   required = false,
    ...props
  },
  ref
@@ -46,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
          document.getElementById(name || "")?.focus();
        }}
      >
-       <label>{label}</label>
+       <label>{label} {required ? <span style={{color: 'red'}}>*</span> : null}</label>
        <input
          type={type}
          ref={ref}

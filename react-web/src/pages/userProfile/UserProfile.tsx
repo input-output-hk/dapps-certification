@@ -14,7 +14,7 @@ import { IUserProfile } from "./userProfile.interface";
 const UserProfile = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { userDetails } = useAppSelector((state: any) => state.auth);
+  const { userDetails, address, wallet, walletName } = useAppSelector((state: any) => state.auth);
   const [isEdit, setIsEdit] = useState(false);
   
   const form: any = useForm({
@@ -66,15 +66,16 @@ const UserProfile = () => {
         "website": formData.website
       }
 
-      await fetchData.put("/profile/current", reqData);
+      fetchData.put("/profile/current", reqData).then(async (res) => {
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
-      await dispatch(
-        getProfileDetails()
-        /** For mock */
-        // getProfileDetails({url: "static/data/new-profile.json"})
-      );
-      navigate('/')
+        const response = await dispatch(
+          getProfileDetails({address: address, wallet: wallet, walletName: walletName})
+          /** For mock */
+          // getProfileDetails({url: "static/data/new-profile.json"})
+        );
+        navigate('/')
+      })
     };
     submitProfile();
   };
@@ -87,6 +88,7 @@ const UserProfile = () => {
             label="dApp Name"
             type="text"
             id="name"
+            required={true}
             disabled={!isEdit}
             disablefocus="true"
             {...form.register("name")}
@@ -95,6 +97,7 @@ const UserProfile = () => {
             label="dApp Owner"
             disabled={!isEdit}
             type="text"
+            required={true}
             disablefocus="true"
             {...form.register("owner")}
           />
@@ -102,6 +105,7 @@ const UserProfile = () => {
             label="dApp Repository"
             disabled={!isEdit}
             type="text"
+            required={true}
             disablefocus="true"
             {...form.register("repo")}
           />
@@ -109,6 +113,7 @@ const UserProfile = () => {
             label="dApp Version"
             type="text"
             id="version"
+            required={true}
             disabled={!isEdit}
             disablefocus="true"
             {...form.register("version")}
