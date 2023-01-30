@@ -318,7 +318,7 @@ const TestHistory = () => {
         await dispatch(deleteTestHistoryData({ url: "/run/" + runId + "?delete=true" }));
         fetchTableData()
       })
-      .catch((err) => {
+      .catch((err: any) => {
         handleError(err)
       });
   };
