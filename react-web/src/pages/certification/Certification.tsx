@@ -88,6 +88,10 @@ const Certification = () => {
     setGithubLink("")
     setCoverageFile("")
     setTimelineConfig(TIMELINE_CONFIG)
+    dispatch(clearUuid());
+    form.reset({
+      commit: "",
+    });
   }
 
   const formHandler = (formData: ISearchForm) => {
@@ -204,6 +208,13 @@ const Certification = () => {
     // eslint-disable-next-line
   }, [uuid]);
 
+  // while unmount of component
+  useEffect(() => {
+    return () => {
+      resetStates();
+    };
+  }, []);
+
   useEffect(() => {
     runStatus === "certifying" ? setRefetchMin(2) : setRefetchMin(5);
     if (
@@ -271,6 +282,23 @@ const Certification = () => {
         <>
           <div id="resultContainer">
             <header>
+              {runStatus === "finished" ? (
+                <button
+                  className="back-btn"
+                  onClick={(e) => {
+                    resetStates();
+                  }}
+                >
+                  {" "}
+                  <img
+                    src="images/back.png"
+                    alt="back_btn"
+                    style={{ width: "30px", padding: "10px" }}
+                  />
+                </button>
+              ) : (
+                ""
+              )}
               <h2
                 id="breadcrumb"
                 style={{alignSelf:"center"}}
