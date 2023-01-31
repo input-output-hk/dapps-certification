@@ -77,17 +77,20 @@
 }
 
 #resultContainer {
-
+  button.back-btn {
+    background: transparent;
+    cursor: pointer;
+    border: none;
+    img {
+      width: "30px";
+      padding: "10px";
+    }
+  }
   header {
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 15px;
-    .back-btn {
-      background: transparent;
-      cursor: pointer;
-      border: none;
-    }
     &>div {
       display: flex;
       flex-wrap: wrap;

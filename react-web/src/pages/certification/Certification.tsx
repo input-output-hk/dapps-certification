@@ -281,24 +281,21 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
+            {runStatus !== "finished" ? (
+              <button
+                className="back-btn"
+                onClick={(e) => {
+                  resetStates();
+                }}
+              >
+                {" "}
+                <img
+                  src="images/back.png"
+                  alt="back_btn"
+                />
+              </button>
+            ) : null}
             <header>
-              {runStatus === "finished" ? (
-                <button
-                  className="back-btn"
-                  onClick={(e) => {
-                    resetStates();
-                  }}
-                >
-                  {" "}
-                  <img
-                    src="images/back.png"
-                    alt="back_btn"
-                    style={{ width: "30px", padding: "10px" }}
-                  />
-                </button>
-              ) : (
-                ""
-              )}
               <h2
                 id="breadcrumb"
                 style={{alignSelf:"center"}}
