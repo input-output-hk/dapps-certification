@@ -5,6 +5,10 @@ import tz from "dayjs/plugin/timezone";
 
 import { fetchData } from "api/api";
 
+import { useConfirm } from "material-ui-confirm";
+import { useAppDispatch } from "store/store";
+import { deleteTestHistoryData } from "./slices/deleteTestHistory.slice";
+
 import TableComponent from "components/Table/Table";
 import Button from "components/Button/Button";
 import Toast from "components/Toast/Toast";
@@ -43,6 +47,8 @@ const TestHistory = () => {
   const [highlightLabelFor, setHighlightLabelFor] = useState("");
   const [skipPageReset, setSkipPageReset] = useState(false);
   const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
+  const dispatch = useAppDispatch();
+  const confirm = useConfirm();
 
   const certificationData: IRunCertifications = {};
   const timeZone = dayjs.tz.guess()
@@ -275,25 +281,24 @@ const TestHistory = () => {
           );
         }
       },
+    },
+    {
+      Header: "",
+      disableSortBy: true,
+      accessor: "delete",
+      Cell: (props: any) => {
+        return (<>
+          <button
+            className="trash-icon-btn"
+            onClick={() => {
+              onDelete(props.row.original.runId);
+            }}
+          >
+            <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
+          </button>
+        </>);
+      },
     }
-    // TBD
-    // {
-    //   Header: "",
-    //   disableSortBy: true,
-    //   accessor: "delete",
-    //   Cell: (props: any) => {
-    //     return (<>
-    //       <button
-    //         className="trash-icon-btn"
-    //         onClick={() => {
-    //           onDelete(props.row.original.runId);
-    //         }}
-    //       >
-    //         <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
-    //       </button>
-    //     </>);
-    //   },
-    // }
     ],
     []
   );
@@ -307,8 +312,16 @@ const TestHistory = () => {
     }
   };
 
-  // TBD
-  // const onDelete = (id: any) => {};
+  const onDelete = (runId: string) => {
+    confirm({ title: "", description: "You want to delete this item!" })
+      .then(async () => {
+        await dispatch(deleteTestHistoryData({ url: "/run/" + runId + "?delete=true" }));
+        fetchTableData()
+      })
+      .catch((err: any) => {
+        handleError(err)
+      });
+  };
   
   return (
     <>
