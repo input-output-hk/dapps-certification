@@ -23,19 +23,21 @@ const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const PageLayout = () => {
   const { network } = useAppSelector((state) => state.auth);
 
-  const networkNames:{[x:string]:string} = {
-    '0': 'Testnet',
-    '1': 'Mainnet'
-  }
+  // const networkNames:{[x:string]:string} = {
+  //   '0': 'Testnet',
+  //   '1': 'Mainnet'
+  // }
 
   const Banner = memo(() => {
     const networkEnvVar: any = process.env.REACT_APP_WALLET_NETWORK
 
     return (<>
       {network !== null && network !== 1 ? 
+        // always show Info if not in Mainnet
         <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
-      {network !== null && network === 1 && network?.toString() !== networkEnvVar ? 
-        <Alert severity="warning">Please make sure you are connected to wallet in {networkNames[networkEnvVar]}.</Alert> : null}
+        {/* if not in Mainnet and app-wallet not Mainnet (i.e. in Testnet), show Warning to connect to Preprod. */}
+      {network !== null && network !== 1 && networkEnvVar !== '1' ? 
+        <Alert severity="warning">Being in a test network, please make sure you are connected to wallet in <strong>Preprod</strong> to avail services without any issues.</Alert> : null}
     </>)
   })
 
