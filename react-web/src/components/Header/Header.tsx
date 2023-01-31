@@ -33,14 +33,14 @@ const Header = () => {
         }
       })()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [dispatch])
 
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // can't add navigate to the array as it would break internal navigations
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
   useEffect(() => {

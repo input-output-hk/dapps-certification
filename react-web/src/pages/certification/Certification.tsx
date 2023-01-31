@@ -30,7 +30,7 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
-import { useLocation } from "react-router-dom";
+// import { useLocation } from "react-router-dom";
 
 const TIMEOFFSET = 1000;
 
@@ -40,13 +40,14 @@ const Certification = () => {
     mode: "onChange",
   });
 
-  let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
-  useEffect(() => {
-    if (location?.pathname === '/' && location?.state?.insideNavigation) {
-      // resetStates()
-      // clearUuid()
-    }
-  }, [location])
+  // /** To be fixed */ 
+  // let location: any = useLocation() // Error - using type Location throws TS errors at Line45:location.state.insideNavigation
+  // useEffect(() => {
+  //   if (location?.pathname === '/' && location?.state?.insideNavigation) {
+  //     // resetStates()
+  //     // clearUuid()
+  //   }
+  // }, [location])
 
   const { uuid } = useAppSelector((state) => state.certification);
   const { userDetails } = useAppSelector((state) => state.auth);
@@ -87,6 +88,10 @@ const Certification = () => {
     setGithubLink("")
     setCoverageFile("")
     setTimelineConfig(TIMELINE_CONFIG)
+    dispatch(clearUuid());
+    form.reset({
+      commit: "",
+    });
   }
 
   const formHandler = (formData: ISearchForm) => {
@@ -180,7 +185,8 @@ const Certification = () => {
     // show an api error toast
     setErrorToast(true);
     form.reset();
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
+      clearTimeout(timeout)
       setErrorToast(false);
       // TBD - blur out of input fields
     }, 5000); // hide after 5 seconds
@@ -197,10 +203,17 @@ const Certification = () => {
     if (uuid.length) {
       triggerFetchRunStatus();
     } else {
-      resetStates()
+      // resetStates()
     }
     // eslint-disable-next-line
   }, [uuid]);
+
+  // while unmount of component
+  useEffect(() => {
+    return () => {
+      resetStates();
+    };
+  }, []);
 
   useEffect(() => {
     runStatus === "certifying" ? setRefetchMin(2) : setRefetchMin(5);
@@ -269,6 +282,23 @@ const Certification = () => {
         <>
           <div id="resultContainer">
             <header>
+              {runStatus === "finished" ? (
+                <button
+                  className="back-btn"
+                  onClick={(e) => {
+                    resetStates();
+                  }}
+                >
+                  {" "}
+                  <img
+                    src="images/back.png"
+                    alt="back_btn"
+                    style={{ width: "30px", padding: "10px" }}
+                  />
+                </button>
+              ) : (
+                ""
+              )}
               <h2
                 id="breadcrumb"
                 style={{alignSelf:"center"}}

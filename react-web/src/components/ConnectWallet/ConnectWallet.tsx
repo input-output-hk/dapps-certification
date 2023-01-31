@@ -43,9 +43,7 @@ const ConnectWallet = () => {
                     setAddress(await enabledWallet.getChangeAddress())
                 }
             })
-        } catch (err) {
-            handleError(err)
-        }
+        } catch (e) { handleError(e); }
     }
 
     const handleError = (error: any) => {
