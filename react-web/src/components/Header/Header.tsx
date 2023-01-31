@@ -1,7 +1,7 @@
 import React, { useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "store/store";
-import { logout, getProfileDetails } from "store/slices/auth.slice";
+import { logout, getProfileDetails, setNetwork } from "store/slices/auth.slice";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
@@ -9,10 +9,11 @@ import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import { useDelayedApi } from "hooks/useDelayedApi";
 
 const Header = () => {
-  const { isLoggedIn, address, wallet } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, address, wallet, network } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
+  const [pollForNetwork, setPollForNetwork] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +25,9 @@ const Header = () => {
         try {
           const enabledWallet = await window.cardano[walletNameCache].enable()
           dispatch(getProfileDetails({"address": addressCache, "wallet": enabledWallet, "walletName": walletNameCache}))
+          enabledWallet.getNetworkId().then(async (data: number) => { console.log('new network -', data)
+            dispatch(setNetwork(data))
+          })
         } catch(e) {
           console.log(e)
         }
@@ -41,23 +45,44 @@ const Header = () => {
 
   useEffect(() => {
     setPollForAddress(wallet && address && isLoggedIn);
-  }, [wallet, address, isLoggedIn]);
+    setPollForNetwork(wallet && address && isLoggedIn && network !== null)
+  }, [wallet, address, isLoggedIn, network]);
+
+  const forceUserLogout = () => {
+    // account/network has been changed. Force logout the user
+    setPollForAddress(false);
+    setPollForNetwork(false)
+    dispatch(logout());
+  }
 
   useDelayedApi(
     async () => {
       setPollForAddress(false);
       const newAddress = wallet ? await wallet.getChangeAddress() : null;
       if (newAddress && address !== newAddress) {
-        // account has been changed. Force logout the user
-        dispatch(logout());
-        setPollForAddress(false);
+        forceUserLogout()
       } else {
         setPollForAddress(true);
       }
     },
-    3 * 1000,
+    1 * 1000,
     pollForAddress
   );
+
+  useDelayedApi(
+    async() => {
+      setPollForNetwork(false)
+      wallet.getNetworkId().then((id: number) => {
+        if (id !== network) {
+          forceUserLogout();
+        } else {
+          setPollForNetwork(false)
+        }
+      })
+    },
+    1 * 1000,
+    pollForNetwork
+  )
 
   const hasCachedAddress = () => {
     return (!localStorage.getItem('address')?.length || !localStorage.getItem('walletName')?.length)

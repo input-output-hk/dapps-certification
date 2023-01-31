@@ -9,6 +9,7 @@ interface AuthState {
   wallet: any;
   userDetails: IUserProfile;
   loading: boolean;
+  network: number | null;
 }
 
 // Define the initial state using that type
@@ -17,7 +18,8 @@ const initialState: AuthState = {
   address: '',
   wallet: null,
   userDetails: {dapp: null},
-  loading: false
+  loading: false,
+  network: null
 };
 
 const clearLSCache = () => {
@@ -41,9 +43,13 @@ export const authSlice = createSlice({
       clearLSCache();
     },
     logout: (state) => {
-      clearLSCache()
+      clearLSCache();
+      state.loading = false;
       return initialState
     },
+    setNetwork: (state, actions) => {
+      state.network = actions.payload
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(getProfileDetails.pending, (state) => {state.loading = true;})
@@ -70,6 +76,6 @@ export const authSlice = createSlice({
 });
 
 
-export const { logout, clearCache } = authSlice.actions;
+export const { logout, clearCache, setNetwork } = authSlice.actions;
 
 export default authSlice.reducer;

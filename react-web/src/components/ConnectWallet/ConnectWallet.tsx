@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAppDispatch } from "store/store";
-import { getProfileDetails } from "store/slices/auth.slice";
+import { getProfileDetails, setNetwork } from "store/slices/auth.slice";
 
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
@@ -35,11 +35,14 @@ const ConnectWallet = () => {
         try {
             setWalletLoading(true)
             const enabledWallet = await CardanoNS[walletName].enable();
-            setWallet(enabledWallet)
-            setWalletName(walletName)
-            if (enabledWallet) {
-                setAddress(await enabledWallet.getChangeAddress())
-            }
+            enabledWallet.getNetworkId().then(async (data: number) => { console.log('new network -', data)
+                dispatch(setNetwork(data))
+                setWallet(enabledWallet)
+                setWalletName(walletName)
+                if (enabledWallet) {
+                    setAddress(await enabledWallet.getChangeAddress())
+                }
+            })
         } catch (err) {
             handleError(err)
         }

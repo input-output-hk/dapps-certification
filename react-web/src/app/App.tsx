@@ -1,12 +1,14 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, memo, Suspense } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { BASE_URL } from "constants/route";
+import Alert from '@mui/material/Alert';
 
 import "./App.scss";
 import Header from "components/Header/Header";
 import PrivateRoutes from "components/PrivateRoutes/PrivateRoutes";
 import NotFound from "components/NotFound/NotFound";
 import Loader from "components/Loader/Loader";
+import { useAppSelector } from "store/store";
 
 const Certification = lazy(() => import("../pages/certification/Certification"));
 const MaintenancePage = lazy(() => import("../pages/maintenance/Maintenance"));
@@ -19,9 +21,31 @@ const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 
 
 const PageLayout = () => {
+  const { network } = useAppSelector((state) => state.auth);
+
+  const networkNames:{[x:string]:string} = {
+    '0': 'Mainnet',
+    '1': 'Testnet',
+    '2': 'Preprod'
+  }
+
+  const Banner = memo(() => {
+    const networkEnvVar: any = process.env.REACT_APP_WALLET_NETWORK
+
+    return (<>
+      {network !== null && network !== 1 ? 
+        <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
+      {network !== null && network?.toString() !== networkEnvVar ? 
+        <Alert severity="warning">Please make sure you are connected to wallet in {networkNames[networkEnvVar]}.</Alert> : null}
+    </>)
+  })
+
   return (
     <>
       <Header />
+      <section id="globalBanners">
+        <Banner />
+      </section>
       {/* Load page content here */}
       <section data-testid="contentWrapper" id="contentWrapper">
         <Suspense fallback={<Loader />}>
