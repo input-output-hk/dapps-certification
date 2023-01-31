@@ -276,6 +276,7 @@ const Certification = () => {
               />
               {(apiFetching && submitting) && (
                 <Button
+                  type="button"
                   displayStyle="primary-outline"
                   buttonLabel="Abort Run"
                   onClick={(_) => abortRun()}
