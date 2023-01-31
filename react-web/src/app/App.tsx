@@ -24,9 +24,8 @@ const PageLayout = () => {
   const { network } = useAppSelector((state) => state.auth);
 
   const networkNames:{[x:string]:string} = {
-    '0': 'Mainnet',
-    '1': 'Testnet',
-    '2': 'Preprod'
+    '0': 'Testnet',
+    '1': 'Mainnet'
   }
 
   const Banner = memo(() => {
@@ -35,7 +34,7 @@ const PageLayout = () => {
     return (<>
       {network !== null && network !== 1 ? 
         <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
-      {network !== null && network?.toString() !== networkEnvVar ? 
+      {network !== null && network === 1 && network?.toString() !== networkEnvVar ? 
         <Alert severity="warning">Please make sure you are connected to wallet in {networkNames[networkEnvVar]}.</Alert> : null}
     </>)
   })

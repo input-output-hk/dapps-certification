@@ -73,10 +73,12 @@ const Header = () => {
     async() => {
       setPollForNetwork(false)
       wallet.getNetworkId().then((id: number) => {
+        // Preview/Preprod/Testnet are all 0. Switching among them cannot be distinguished.
+        // But, switching to-and-fro Mainnet is triggered
         if (id !== network) {
           forceUserLogout();
         } else {
-          setPollForNetwork(false)
+          setPollForNetwork(true)
         }
       })
     },
