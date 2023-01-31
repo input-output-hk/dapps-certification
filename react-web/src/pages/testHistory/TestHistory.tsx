@@ -313,14 +313,12 @@ const TestHistory = () => {
   };
 
   const onDelete = (runId: string) => {
-    confirm({ title: "", description: "You want to delete this item!" })
+    confirm({ title: "", description: "Are you sure want to remove this run campaign from logs!" })
       .then(async () => {
         await dispatch(deleteTestHistoryData({ url: "/run/" + runId + "?delete=true" }));
         fetchTableData()
       })
-      .catch((err: any) => {
-        handleError(err)
-      });
+      .catch(() => { });
   };
   
   return (
