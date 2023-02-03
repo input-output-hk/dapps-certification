@@ -17,7 +17,7 @@ import { Address,
     Transaction,
     TransactionOutput,
     CoinSelectionStrategyCIP2
- } from '@emurgo/cardano-serialization-lib-asmjs';
+ } from '@emurgo/cardano-serialization-lib-browser';
 import Toast from "components/Toast/Toast";
 import { fetchData } from "api/api";
 
