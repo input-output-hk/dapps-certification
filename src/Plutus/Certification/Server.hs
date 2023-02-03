@@ -216,7 +216,9 @@ server ServerCaps {..} wargs eb = NamedAPI
     addField ev (CreateCertificationIpfsCid ipfsCid)
 
     -- create the certification object
-    websiteUrl <- parseUrl website
+    websiteUrl <- parseUrl $ case fmap strip website of
+                              Just "" -> Nothing
+                              x -> x
     FlakeRef{..} <- createFlakeRef dapp (CommitOrBranch commitHash)
     let certificate = Wallet.CertificationMetadata uuid ipfsCid dappName websiteUrl twitter uri dappVersion
 
