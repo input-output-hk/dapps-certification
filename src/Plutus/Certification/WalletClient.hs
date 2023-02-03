@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE BlockArguments            #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -111,15 +111,14 @@ split64 :: Text -> Value
 split64 = splitString 64
 
 instance ToJSON CertificationMetadata where
-  toJSON CertificationMetadata{..} =  object
+  toJSON CertificationMetadata{..} =  object $
     [ "id" .= crtmId
     , "ipfsCid" .= split64 (crtmIpfsCid.ipfsCid)
     , "projectName" .= split64 crtmProjectName
-    , "link" .= fmap (split64 . pack . showBaseUrl ) crtmLink
-    , "twitter" .= fmap split64 crtmTwitter
     , "contractLink" .= split64 (pack $ show crtmContractLink)
     , "version" .= split64 crtmVersion
-    ]
+    ] ++ (maybe [] (\x -> [ "twitter" .= split64 x]) crtmTwitter)
+      ++ (maybe [] (\x -> [ "link" .= (split64 . pack . showBaseUrl $ x )]) crtmLink)
 
 
 broadcastTransaction :: (MonadIO m, ToJSON metadata)
