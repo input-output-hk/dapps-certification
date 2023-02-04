@@ -21,8 +21,9 @@
       compiler-nix-name = "ghc924";
       shell.tools = {
           cabal = {};
-          haskell-language-server = {};
+          haskell-language-server = {version = "latest";};
           hlint = {};
+          stylish-haskell = {};
       };
       materialized = if builtins.pathExists materializedPath then materializedPath else null;
     };
