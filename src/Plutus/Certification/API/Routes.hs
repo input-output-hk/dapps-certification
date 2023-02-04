@@ -97,7 +97,7 @@ type CreateCertificationRoute = "run"
   :> AuthProtect "public-key"
   :> Capture "id" RunIDV1
   :> "certificate"
-  :> Post '[JSON] DB.Certification
+  :> PostNoContent
 
 type GetCertificateRoute = "run"
   :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
@@ -105,11 +105,18 @@ type GetCertificateRoute = "run"
   :> "certificate"
   :> Get '[JSON] DB.Certification
 
+type GetBalanceRoute = "profile"
+  :> Description "Get the current balance of the profile"
+  :> "current"
+  :> "balance"
+  :> AuthProtect "public-key"
+  :> Get '[JSON] Int
+
 type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
   :> Get '[JSON] WalletAddress
 
-data CertificateCreationResponse = CertificateCreationResponse
+newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
 
@@ -126,6 +133,7 @@ data NamedAPI mode = NamedAPI
   , createCertification :: mode :- CreateCertificationRoute
   , getCertification :: mode :- GetCertificateRoute
   , walletAddress :: mode :- WalletAddressRoute
+  , getProfileBalance :: mode :- GetBalanceRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -221,7 +229,7 @@ instance MimeRender OctetStream RunIDV1 where
 instance MimeUnrender OctetStream RunIDV1 where
   mimeUnrender _ ridbs = case fromByteString ridbs of
     Just rid -> pure $ RunID rid
-    Nothing -> Left $ "couldn't parse '" ++ (BSL8.unpack ridbs) ++ "' as a run ID"
+    Nothing -> Left $ "couldn't parse '" ++ BSL8.unpack ridbs ++ "' as a run ID"
 
 data StepState
   = Running
@@ -294,8 +302,8 @@ instance ToJSON IncompleteRunStatus where
   toEncoding (Certifying (CertifyingStatus {..})) = pairs
     ( "status" .= ("certifying" :: Text)
    <> "state"  .= certifyingState
-   <> (maybe mempty ("progress" .=) certifyingProgress)
-   <> (maybe mempty ("plan" .=) certifyingPlan)
+   <> maybe mempty ("progress" .=) certifyingProgress
+   <> maybe mempty ("plan" .=) certifyingPlan
     )
 
 instance FromJSON IncompleteRunStatus where
@@ -369,7 +377,7 @@ instance ToParamSchema KnownActionType
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
-    return $ NamedSchema (Just "DAppBody") $ profileSchema
+    return $ NamedSchema (Just "DAppBody") profileSchema
 
 instance ToSchema ProfileBody
 

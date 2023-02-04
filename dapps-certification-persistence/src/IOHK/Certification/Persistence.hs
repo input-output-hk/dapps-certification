@@ -14,9 +14,13 @@ import IOHK.Certification.Persistence.Structure as X
   , ProfileId
   , IpfsCid(..)
   , TxId(..)
+  , Transaction(..)
+  , TxStatus(..)
+  , TransactionEntry(..)
   )
 import IOHK.Certification.Persistence.API as X
   ( upsertProfile
+  , upsertTransaction
   , getProfile
   , getProfileDApp
   , createRun
@@ -31,4 +35,10 @@ import IOHK.Certification.Persistence.API as X
   , getCertification
   , createCertificate
   , deleteRun
+  , getRunStatus
+  , markAsReadyForCertification
+  , getAllCertifiedRunsForAddress
+  , getRunsToCertify
+  , getAllAmountsForAddress
+  , getProfileBalance
   )

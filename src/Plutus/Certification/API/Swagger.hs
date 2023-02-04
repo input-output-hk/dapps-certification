@@ -37,6 +37,7 @@ type UnnamedApi
   :<|> UpdateCurrentProfileRoute
   :<|> CreateCertificationRoute
   :<|> GetCertificateRoute
+  :<|> GetBalanceRoute
   :<|> WalletAddressRoute
 
 instance (HasSwagger sub) => HasSwagger (AuthProtect  "public-key" :> sub) where
