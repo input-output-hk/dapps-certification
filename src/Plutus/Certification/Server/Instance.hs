@@ -71,7 +71,11 @@ server ServerCaps {..} wargs eb = NamedAPI
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
       ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
       ) >>= dbSync uuid
-
+  , getRunDetails = \rid@RunID{..} -> withEvent eb GetRunDetails \ev -> do
+      addField ev rid
+      -- get the run details from the db
+      DB.withDb ( DB.getRun uuid )
+        >>= maybeToServerError err404 "Run not found"
   , abortRun = \(profileId,_) rid@RunID{..} deleteRun -> withEvent eb AbortRun \ev -> do
       addField ev rid
       requireRunIdOwner profileId uuid
