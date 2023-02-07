@@ -11,6 +11,8 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Plutus.Certification.API.Routes where
 
 import Control.Applicative
@@ -79,6 +81,12 @@ type GetRunsRoute = "run"
   :> QueryParam "count" Int
   :> Get '[JSON] [DB.Run]
 
+type GetRunDetailsRoute = "run"
+  :> Description "Get the details of a run"
+  :> Capture "id" RunIDV1
+  :> "details"
+  :> Get '[JSON] DB.Run
+
 type GetCurrentProfileRoute = "profile"
   :> Description "Get the current profile information"
   :> "current"
@@ -134,6 +142,7 @@ data NamedAPI mode = NamedAPI
   , getCertification :: mode :- GetCertificateRoute
   , walletAddress :: mode :- WalletAddressRoute
   , getProfileBalance :: mode :- GetBalanceRoute
+  , getRunDetails :: mode :- GetRunDetailsRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -393,7 +402,7 @@ instance ToSchema CommitOrBranch  where
 
 instance ToSchema Cicero.Run.RunLog where
   --TODO: find a way to embed aeson Value to the definition
-  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") $ mempty
+  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") mempty
 instance ToSchema IncompleteRunStatus where
   declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 

@@ -56,6 +56,7 @@ data ServerEventSelector f where
   CreateRun :: ServerEventSelector CreateRunField
   GetRun :: ServerEventSelector Void
   AbortRun :: ServerEventSelector RunIDV1
+  GetRunDetails :: ServerEventSelector RunIDV1
   GetRunLogs :: ServerEventSelector RunIDV1
   GetProfileBalance :: ServerEventSelector DB.ProfileId
   GetCertification :: ServerEventSelector RunIDV1
@@ -67,6 +68,7 @@ renderServerEventSelector WalletAddress = ("wallet-address", absurd)
 renderServerEventSelector GetRun = ("get-run", absurd)
 renderServerEventSelector AbortRun = ("abort-run", renderRunIDV1)
 renderServerEventSelector GetRunLogs = ("get-run-logs", renderRunIDV1)
+renderServerEventSelector GetRunDetails = ("get-run-details", renderRunIDV1)
 renderServerEventSelector GetProfileBalance = ("get-profile-balance", renderProfileId)
 renderServerEventSelector GetCertification = ("get-certification", renderRunIDV1)
 

@@ -1,18 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedLists #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.Certification.API.Swagger where
 
@@ -39,6 +36,7 @@ type UnnamedApi
   :<|> GetCertificateRoute
   :<|> GetBalanceRoute
   :<|> WalletAddressRoute
+  :<|> GetRunDetailsRoute
 
 instance (HasSwagger sub) => HasSwagger (AuthProtect  "public-key" :> sub) where
   toSwagger _ = toSwagger (Proxy :: Proxy (Servant.Header "Authorization" Text :> sub))
