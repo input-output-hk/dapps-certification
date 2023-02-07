@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails } from "store/slices/auth.slice";
 
@@ -21,7 +22,7 @@ const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [walletName, setWalletName] = useState("")
-    const [address, setAddress] = useState(null)
+    const [address, setAddress] = useState("")
     const [isOpen, setIsOpen] = useState(false)
     const [walletLoading, setWalletLoading] = useState(false)
 
@@ -36,7 +37,8 @@ const ConnectWallet = () => {
             setWallet(enabledWallet)
             setWalletName(walletName)
             if (enabledWallet) {
-                setAddress(await enabledWallet.getChangeAddress())
+                const response = await enabledWallet.getChangeAddress()
+                setAddress(Address.from_bytes(Buffer.from(response, "hex")).to_bech32())
             }
         } catch (e) { handleError(e); }
     }
