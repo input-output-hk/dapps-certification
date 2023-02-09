@@ -12,12 +12,15 @@ import IOHK.Certification.Persistence.Structure as X
   , contacts
   , createTables
   , ProfileId
+  , IpfsCid(..)
+  , TxId(..)
   )
 import IOHK.Certification.Persistence.API as X
   ( upsertProfile
   , getProfile
   , getProfileDApp
   , createRun
+  , getRun
   , updateFinishedRun
   , getRuns
   , withDb
@@ -27,4 +30,5 @@ import IOHK.Certification.Persistence.API as X
   , getRunOwner
   , getCertification
   , createCertificate
+  , deleteRun
   )

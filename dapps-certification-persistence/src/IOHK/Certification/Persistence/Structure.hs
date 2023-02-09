@@ -10,6 +10,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module IOHK.Certification.Persistence.Structure where
 
@@ -20,6 +21,12 @@ import Data.Aeson.Types
 import Data.Proxy
 import Data.Swagger hiding (Contact)
 import Control.Lens hiding ((.=),index)
+
+newtype IpfsCid = IpfsCid { ipfsCid :: Text}
+  deriving (ToJSON,FromJSON,Show )
+
+newtype TxId = TxId { txId :: Text}
+  deriving (ToJSON,FromJSON,Show,Read)
 
 data Profile = Profile
   { profileId :: ID Profile   -- TODO: do we need an internal id?
@@ -80,22 +87,23 @@ profileJSONPairs Profile{..} =
 instance SqlRow Profile
 
 data Certification = Certification
-  { certId :: ID Certification
+  { certRunId :: UUID
   , certReportContentId :: Text
+  , certTransactionId :: Text
   , certCreatedAt :: UTCTime
-  , certRunId :: UUID
   } deriving (Generic,Show)
 
 instance FromJSON Certification where
     parseJSON = withObject "Certification" $ \v -> Certification
-      <$> (pure def)
+      <$> v .: "runId"
       <*> v .: "reportContentId"
+      <*> v .: "transactionId"
       <*> v .: "createdAt"
-      <*> v .: "runId"
 
 instance ToJSON Certification where
   toJSON (Certification{..}) = object
       [ "reportContentId" .= certReportContentId
+      , "transactionId" .= certTransactionId
       , "createdAt" .= certCreatedAt
       , "runId" .= certRunId
       ]
@@ -109,6 +117,7 @@ instance ToSchema Certification where
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("reportContentId", textSchema)
+          , ("transactionId", textSchema)
           , ("createdAt", utcSchema)
           , ("runId", uuidSchema)
           ]
@@ -197,19 +206,20 @@ instance ToSchema Run where
     utcSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe UTCTime))
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     statusSchema <- declareSchemaRef (Proxy :: Proxy Status)
+    uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
     return $ NamedSchema (Just "Run") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("created", utcSchema)
+          , ("runId", uuidSchema)
           , ("finishedAt", utcSchemaM)
           , ("syncedAt", utcSchema)
           , ("repoUrl", textSchema)
           , ("commitDate", utcSchema)
           , ("commitHash", textSchema)
           , ("runStatus", statusSchema)
-          , ("certificateCreatedAt", utcSchemaM)
           ]
-      & required .~ [ "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
+      & required .~ [ "runId", "created", "utcSchema", "repoUrl", "commitDate","commitHash", "runStatus" ]
 
 instance ToJSON Run where
   toJSON (Run{..}) = object
@@ -277,9 +287,8 @@ runs = table "run"
 
 certifications :: Table Certification
 certifications = table "certification"
-  [ #certId :- primary
+  [ #certRunId :- primary
   , #certRunId :- foreignKey runs #runId
-  , #certRunId :- unique
   ]
 
 dapps :: Table DApp
