@@ -24,6 +24,7 @@
     "buffer": "^6.0.3",
     "dayjs": "^1.11.7",
     "html-react-parser": "^3.0.4",
+    "material-ui-confirm": "^3.0.7",
     "node-sass": "^7.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
