@@ -24,7 +24,9 @@ const PageLayout = () => {
       <Header />
       {/* Load page content here */}
       <section data-testid="contentWrapper" id="contentWrapper">
-        <Outlet />
+        <Suspense fallback={<Loader />}>
+          <Outlet />
+        </Suspense>
       </section>
     </>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -26,9 +26,10 @@ import Toast from "components/Toast/Toast";
 import { exportObjectToJsonFile } from "../../utils/utils";
 import DownloadIcon from "assets/images/download.svg";
 import InformationTable from "components/InformationTable/InformationTable";
+import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
-import { setUuid } from "./slices/certification.slice";
+import { clearUuid, setUuid } from "./slices/certification.slice";
 
 const TIMEOFFSET = 1000;
 
@@ -57,7 +58,7 @@ const Certification = () => {
   const [username, setUsername] = useState('');
   const [repoName, setRepository] = useState('');
   const [coverageFile, setCoverageFile] = useState("");
-
+  
   useEffect(() => {
     if (userDetails?.dapp?.owner) {
       setUsername(userDetails.dapp.owner)
@@ -66,6 +67,22 @@ const Certification = () => {
       setRepository(userDetails.dapp.repo)
     }
   }, [userDetails])
+
+  const resetStates = () => {
+    setRunState("")
+    setRunStatus("")
+    setResultData({})
+    setUnitTestSuccess(true)
+    setSubmitting(false)
+    setFormSubmitted(false)
+    setGithubLink("")
+    setCoverageFile("")
+    setTimelineConfig(TIMELINE_CONFIG)
+    dispatch(clearUuid());
+    form.reset({
+      commit: "",
+    });
+  }
 
   const formHandler = (formData: ISearchForm) => {
     const { branch, commit } = formData;
@@ -84,7 +101,6 @@ const Certification = () => {
 
     const triggerAPI = async () => {
       try {
-        // const data = "github:" + [username, repoName, githubBranchOrCommitHash].join("/")
         const data = githubBranchOrCommitHash
         const response = await postData.post(
           "/run",
@@ -158,7 +174,8 @@ const Certification = () => {
     // show an api error toast
     setErrorToast(true);
     form.reset();
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
+      clearTimeout(timeout)
       setErrorToast(false);
       // TBD - blur out of input fields
     }, 5000); // hide after 5 seconds
@@ -174,9 +191,18 @@ const Certification = () => {
   useEffect(() => {
     if (uuid.length) {
       triggerFetchRunStatus();
+    } else {
+      // resetStates()
     }
     // eslint-disable-next-line
   }, [uuid]);
+
+  // while unmount of component
+  useEffect(() => {
+    return () => {
+      resetStates();
+    };
+  }, []);
 
   useEffect(() => {
     runStatus === "certifying" ? setRefetchMin(2) : setRefetchMin(5);
@@ -245,6 +271,23 @@ const Certification = () => {
         <>
           <div id="resultContainer">
             <header>
+              {runStatus === "finished" ? (
+                <button
+                  className="back-btn"
+                  onClick={(e) => {
+                    resetStates();
+                  }}
+                >
+                  {" "}
+                  <img
+                    src="images/back.png"
+                    alt="back_btn"
+                    style={{ width: "30px", padding: "10px" }}
+                  />
+                </button>
+              ) : (
+                ""
+              )}
               <h2
                 id="breadcrumb"
                 style={{alignSelf:"center"}}
@@ -262,6 +305,7 @@ const Certification = () => {
                     buttonLabel="Download Report"
                     iconUrl={DownloadIcon}
                   />
+                  <CreateCertificate />
                 </>) : null}
               </div>
             </header>

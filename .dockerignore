@@ -10,3 +10,4 @@ run.sh
 docker-compose.yml
 Dockerfile.web
 Dockerfile.ws
+docker-files/wallet-container-instructions.md

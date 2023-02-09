@@ -15,7 +15,8 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
 
     const showLogView = () => {
         setShowLogs(true);
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
+            clearTimeout(timeout)
             bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
             logContentRef.current?.scrollIntoView({behavior: 'smooth'})
         }, 2);
