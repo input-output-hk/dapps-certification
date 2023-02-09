@@ -176,7 +176,7 @@ const TableComponent: FC<any> = ({
               </>
             </TableBody>
           </Table>
-          {data.length === 0 && <div className="no-data">No data found</div>}
+          {data.length === 0 && <div className="no-data"><p style={{textAlign: "center", margin: "10px auto"}}>No data found</p></div>}
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[5, 10, 20]}

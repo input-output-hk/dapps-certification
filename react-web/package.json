@@ -2,11 +2,12 @@
   "name": "react-web",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://testing.dapps.iog.io/",
-  "homepage": "https://input-output-hk.github.io/dapps-certification/",
+  "proxy": "http://excuse.ro:9672/",
+  "homepage": "http://localhost:3000/",
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
+    "@emurgo/cardano-serialization-lib-browser": "^11.2.1",
     "@hookform/resolvers": "^2.9.7",
     "@mui/icons-material": "5.10.14",
     "@mui/material": "5.10.14",
@@ -20,6 +21,7 @@
     "@types/react-dom": "^18.0.6",
     "@types/react-table": "^7.7.12",
     "axios": "^0.27.2",
+    "buffer": "^6.0.3",
     "dayjs": "^1.11.7",
     "html-react-parser": "^3.0.4",
     "node-sass": "^7.0.1",
@@ -33,16 +35,15 @@
     "react-table": "^7.8.0",
     "typescript": "^4.7.4",
     "web-vitals": "^2.1.4",
-    "yup": "^0.32.11",
-    "zod": "^3.17.10"
+    "yup": "^0.32.11"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
     "build:production": "REACT_APP_ENV=production yarn build",
-    "test": "react-scripts test --passWithNoTests",
-    "test:coverage": "react-scripts test --coverage --passWithNoTests",
-    "eject": "react-scripts eject"
+    "test": "react-app-rewired test --passWithNoTests",
+    "test:coverage": "react-app-rewired test --coverage --passWithNoTests",
+    "eject": "react-app-rewired eject"
   },
   "eslintConfig": {
     "extends": [
@@ -61,5 +62,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "react-app-rewired": "^2.2.1",
+    "webpack-cli": "^5.0.1"
   }
 }

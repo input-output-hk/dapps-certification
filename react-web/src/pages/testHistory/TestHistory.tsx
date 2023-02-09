@@ -69,7 +69,7 @@ const TestHistory = () => {
     } else {
       setErrorToast({display: true})
     }
-    setTimeout(() => { setErrorToast({display: false}) }, 3000)
+    const timeout = setTimeout(() => { clearTimeout(timeout); setErrorToast({display: false}) }, 3000)
   }
   const updateMyData = (rowIndex: any, columnID: any, value: any) => {
     setSkipPageReset(true); // turn on flag to not reset the page
@@ -122,7 +122,7 @@ const TestHistory = () => {
           if (prevValue !== "") {
             // show a highlight over the label
             setHighlightLabelFor(prevValue)
-            setTimeout(() => { setHighlightLabelFor("") }, 1500)
+            const timeout = setTimeout(() => { clearTimeout(timeout); setHighlightLabelFor("") }, 1500)
           }
           return ""
         })

@@ -83,6 +83,11 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 15px;
+    .back-btn {
+      background: transparent;
+      cursor: pointer;
+      border: none;
+    }
     &>div {
       display: flex;
       flex-wrap: wrap;

@@ -13,7 +13,7 @@ export const useDelayedApi = (
   useEffect(() => {
     let timeout: any;
     if (enabled && delay !== null) {
-      timeout = setTimeout(savedCallback.current, delay);
+      timeout = setTimeout(() => {clearTimeout(timeout); savedCallback.current() }, delay);
     } else {
       clearTimeout(timeout);
     }
