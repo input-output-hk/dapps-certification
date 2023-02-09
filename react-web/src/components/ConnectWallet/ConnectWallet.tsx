@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails, setNetwork } from "store/slices/auth.slice";
 
@@ -22,7 +23,7 @@ const ConnectWallet = () => {
     const dispatch = useAppDispatch();
     const [wallet, setWallet] = useState(null)
     const [walletName, setWalletName] = useState("")
-    const [address, setAddress] = useState(null)
+    const [address, setAddress] = useState("")
     const [isOpen, setIsOpen] = useState(false)
     const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
     const [walletLoading, setWalletLoading] = useState(false)
@@ -35,12 +36,13 @@ const ConnectWallet = () => {
         try {
             setWalletLoading(true)
             const enabledWallet = await CardanoNS[walletName].enable();
-            enabledWallet.getNetworkId().then(async (data: number) => { console.log('new network -', data)
+            enabledWallet.getNetworkId().then(async (data: number) => {
                 dispatch(setNetwork(data))
                 setWallet(enabledWallet)
                 setWalletName(walletName)
                 if (enabledWallet) {
-                    setAddress(await enabledWallet.getChangeAddress())
+                    const response = await enabledWallet.getChangeAddress()
+                    setAddress(Address.from_bytes(Buffer.from(response, "hex")).to_bech32())
                 }
             })
         } catch (e) { handleError(e); }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch, useAppSelector } from "store/store";
 import { logout, getProfileDetails, setNetwork } from "store/slices/auth.slice";
 import "./Header.scss";
@@ -58,7 +59,11 @@ const Header = () => {
   useDelayedApi(
     async () => {
       setPollForAddress(false);
-      const newAddress = wallet ? await wallet.getChangeAddress() : null;
+      let newAddress = "";
+      if (wallet) {
+        const response = await wallet.getChangeAddress()
+        newAddress = Address.from_bytes(Buffer.from(response, "hex")).to_bech32()
+      }
       if (newAddress && address !== newAddress) {
         forceUserLogout()
       } else {

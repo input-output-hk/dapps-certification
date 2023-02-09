@@ -60,6 +60,7 @@ library
     Plutus.Certification.Server
     Plutus.Certification.Local
     Plutus.Certification.GithubClient
+    Plutus.Certification.WalletClient
   other-modules:
     Paths_plutus_certification
     Plutus.Certification.API.Routes
