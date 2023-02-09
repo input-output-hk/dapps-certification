@@ -17,11 +17,9 @@ import { Address,
     Transaction,
     TransactionOutput,
     CoinSelectionStrategyCIP2
- } from '@emurgo/cardano-serialization-lib-asmjs';
+ } from '@emurgo/cardano-serialization-lib-browser';
 import Toast from "components/Toast/Toast";
 import { fetchData } from "api/api";
-
-let Buffer = require("buffer/").Buffer;
 
 const CreateCertificate = () => {
     const { uuid } = useAppSelector((state) => state.certification);
@@ -115,7 +113,7 @@ const CreateCertificate = () => {
                 })
                 txBuilder.add_output(TransactionOutput.new(Address.from_bech32(applicationWallet_receiveAddr), Value.new(cert_fee_lovelace) ))
                 txBuilder.add_inputs_from(txnUnspentOutputs, CoinSelectionStrategyCIP2.LargestFirst)
-                txBuilder.add_change_if_needed(Address.from_hex(address))
+                txBuilder.add_change_if_needed(Address.from_bech32(address))
 
                 const encodedTx = Buffer.from(txBuilder.build_tx().to_bytes()).toString("hex");
                 wallet.signTx(encodedTx).then((signed: string) =>{

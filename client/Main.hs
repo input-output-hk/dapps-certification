@@ -111,6 +111,12 @@ abortRunParser :: Parser AbortRunArgs
 abortRunParser = AbortRunArgs
   <$> getRunParser
   <*> publicKeyParser
+  <*> optional ( option auto
+        ( long "delete-run"
+       <> metavar "DELETE_RUN"
+       <> help "to delete the run from db as well"
+        )
+      )
 
 generalReader :: FromHttpApiData a => ReadM a
 generalReader = do
@@ -173,7 +179,8 @@ data CreateRunArgs = CreateRunArgs !CommitOrBranch !PublicKey
 
 data GetRunsArgs = GetRunsArgs !PublicKey !(Maybe UTCTime) !(Maybe Int)
 
-data AbortRunArgs = AbortRunArgs !RunIDV1 !PublicKey
+type DeleteRun = Maybe Bool
+data AbortRunArgs = AbortRunArgs !RunIDV1 !PublicKey !DeleteRun
 data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !PublicKey
 
 data GetLogsArgs = GetLogsArgs
@@ -354,8 +361,8 @@ main = do
       handle $ apiClient.createRun (addAuth pubKey) ref
     CmdRun (Get ref) ->
       handle $ apiClient.getRun ref
-    CmdRun (Abort (AbortRunArgs ref pubKey)) ->
-      handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref)
+    CmdRun (Abort (AbortRunArgs ref pubKey deleteRun)) ->
+      handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref deleteRun)
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
       handle $ apiClient.getLogs ref zt act
