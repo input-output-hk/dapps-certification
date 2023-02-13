@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ws
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "9671:9671"
   plutus-certification-web:
