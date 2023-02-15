@@ -59,7 +59,7 @@ library
     Plutus.Certification.Client
     Plutus.Certification.Server
     Plutus.Certification.Local
-    Plutus.Certification.GithubClient
+    Plutus.Certification.GitHubClient
     Plutus.Certification.WalletClient
     Plutus.Certification.Synchronizer
   other-modules:
@@ -67,6 +67,7 @@ library
     Plutus.Certification.API.Routes
     Plutus.Certification.API.Swagger
     Plutus.Certification.Web3StorageClient
+    Plutus.Certification.Internal
     Plutus.Certification.WalletClient.Transaction
     Plutus.Certification.TransactionBroadcaster
     Plutus.Certification.Server.Internal
@@ -98,6 +99,7 @@ executable plutus-certification
     exceptions ^>= 0.10.4,
     plutus-certification,
     dapps-certification-persistence,
+    dapps-certification-helpers,
     swagger2,
     servant-swagger-ui,
   main-is: Main.hs

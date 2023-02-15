@@ -72,8 +72,9 @@
           "Plutus/Certification/API/Routes"
           "Plutus/Certification/API/Swagger"
           "Plutus/Certification/Web3StorageClient"
+          "Plutus/Certification/Internal"
           "Plutus/Certification/WalletClient/Transaction"
-          "Plutus/Certification/Server/TransactionBroadcaster"
+          "Plutus/Certification/TransactionBroadcaster"
           "Plutus/Certification/Server/Internal"
           "Plutus/Certification/Server/Instance"
           "Plutus/Certification/API"
@@ -82,7 +83,7 @@
           "Plutus/Certification/Client"
           "Plutus/Certification/Server"
           "Plutus/Certification/Local"
-          "Plutus/Certification/GithubClient"
+          "Plutus/Certification/GitHubClient"
           "Plutus/Certification/WalletClient"
           "Plutus/Certification/Synchronizer"
           ];
@@ -113,6 +114,7 @@
             (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
+            (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
             (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
             (hsPkgs."servant-swagger-ui" or (errorHandler.buildDepError "servant-swagger-ui"))
             ];

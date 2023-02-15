@@ -48,6 +48,10 @@ data StartCertificationField
   = StartCertificationRunID !RunIDV1
   | StartCertificationIpfsCid !DB.IpfsCid
 
+data GetRepoInfoField
+  = GetRepoInfoOwner !Text
+  | GetRepoInfoRepo !Text
+
   -- | CreateCertificationTxResponse !Wallet.TxResponse
 
 data ServerEventSelector f where
@@ -60,6 +64,7 @@ data ServerEventSelector f where
   GetRunLogs :: ServerEventSelector RunIDV1
   GetProfileBalance :: ServerEventSelector DB.ProfileId
   GetCertification :: ServerEventSelector RunIDV1
+  GetRepoInfo :: ServerEventSelector GetRepoInfoField
   StartCertification :: ServerEventSelector StartCertificationField
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
@@ -80,7 +85,11 @@ renderServerEventSelector CreateRun = ("create-run", \case
 renderServerEventSelector StartCertification = ("start-certification", \case
     StartCertificationRunID rid -> ("run-id", toJSON rid)
     StartCertificationIpfsCid cid -> ("cid", toJSON cid)
-    --CreateCertificationTxResponse txResp -> ("tx-resp",toJSON txResp)
+  )
+
+renderServerEventSelector GetRepoInfo = ("get-repo-info", \case
+    GetRepoInfoOwner owner -> ("owner", toJSON owner)
+    GetRepoInfoRepo repo -> ("repo", toJSON repo)
   )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1

@@ -36,7 +36,7 @@ type UnnamedApi
   :<|> GetCertificateRoute
   :<|> GetBalanceRoute
   :<|> WalletAddressRoute
-  :<|> GetRunDetailsRoute
+  :<|> GitHubRoute
 
 instance (HasSwagger sub) => HasSwagger (AuthProtect  "public-key" :> sub) where
   toSwagger _ = toSwagger (Proxy :: Proxy (Servant.Header "Authorization" Text :> sub))

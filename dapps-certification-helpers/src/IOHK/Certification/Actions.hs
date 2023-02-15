@@ -15,9 +15,10 @@ import Network.URI hiding (path)
 import Control.Exception
 import Control.Concurrent.Async
 import Control.Monad.IO.Unlift
-import Data.Aeson.Internal
-import Data.Aeson.Types
-import Data.Aeson.Text
+import Data.Aeson.Internal as Aeson
+import Data.Aeson.Types as Aeson
+import Data.Aeson.Text as Aeson
+import Data.Function
 import Data.Time.Clock.POSIX
 import Data.Text as T
 import Data.Text.IO hiding (putStrLn)
@@ -47,15 +48,16 @@ import Control.Monad.Trans.Resource
 import IOHK.Certification.Interface hiding (Success)
 import Conduit
 import Data.Conduit.Aeson
+import Options.Applicative as Optparse
 
-generateFlake :: EventBackend IO r GenerateFlakeSelector ->(Text -> IO ()) -> URI -> FilePath -> IO ()
-generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFlake \ev -> do
+generateFlake :: EventBackend IO r GenerateFlakeSelector -> (Text -> IO ()) -> Maybe GitHubAccessToken -> URI -> FilePath -> IO ()
+generateFlake backend addLogEntry ghAccessTokenM flakeref output = withEvent backend GenerateFlake \ev -> do
   addField ev $ GenerateRef flakeref
   addField ev $ GenerateDir output
 
   let lockBackend = narrowEventBackend LockFlake
                   $ subEventBackend ev
-  lock <- lockRef lockBackend flakeref
+  lock <- lockRef lockBackend ghAccessTokenM flakeref
 
   let logWrittenFile fname = addLogEntry $ T.pack $ fname ++ " written at " ++ output
   withSubEvent ev WriteFlakeNix \_ -> withFile (output </> "flake.nix") WriteMode \h -> do
@@ -89,8 +91,8 @@ generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFl
 
   logWrittenFile "Certify.nix"
 
-buildFlake :: EventBackend IO r BuildFlakeSelector -> (Text -> IO ()) -> FilePath -> IO FilePath
-buildFlake backend addLogEntry dir = do
+buildFlake :: EventBackend IO r BuildFlakeSelector ->  (Text -> IO ()) -> Maybe GitHubAccessToken -> FilePath -> IO FilePath
+buildFlake backend addLogEntry ghAccessTokenM dir = do
     buildJson <- withEvent backend BuildingFlake \ev -> do
       let backend' = narrowEventBackend ReadNixBuild
                    $ subEventBackend ev
@@ -108,15 +110,15 @@ buildFlake backend addLogEntry dir = do
                      , "--no-link"
                      , "--json"
                      , "--print-build-logs"
-                     ]
+                     ] &  setGitHubAccessToken ghAccessTokenM
 
 runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
 runCertify addLogEntry certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
-            Error s -> liftIO $ fail s
-            Success m -> do
+            Aeson.Error s -> liftIO $ fail s
+            Aeson.Success m -> do
               liftIO $ addLogEntry $ LT.toStrict $ encodeToLazyText v
               yield m
               toMessage
@@ -195,7 +197,7 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
     ghTy :: Text
     ghTy = "github"
 
-    decodeRev :: JSONPath -> Text -> Parser SHA1Hash
+    decodeRev :: JSONPath -> Text -> Aeson.Parser SHA1Hash
     decodeRev path r = case parseSHA1Hash r of
       Left (NotBase16 msg) ->
         parserThrowError path $ "rev " ++ (show r) ++ " is not valid base16: " ++ (show msg)
@@ -260,14 +262,14 @@ readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProc
           backend' = causedEventBackend launchEv
 
           readStderrBackend = narrowEventBackend ReadingStderr
-                            $ backend'
+                            backend'
 
           readStderr = logHandleText readStderrBackend addLogEntry $ getStderr p
 
           readStdoutBackend = narrowEventBackend ReadingStdout
-                            $ backend'
+                            backend'
 
-          readStdout = (LBS.fromChunks . Prelude.reverse)
+          readStdout = LBS.fromChunks . Prelude.reverse
                     <$> logDrainHandle readStdoutBackend (getStdout p) (\bs -> pure . (bs :)) []
 
       withRunInIO \run -> withAsync (run readStdout) \stdoutAsync ->
@@ -279,10 +281,10 @@ readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProc
   where
     cfg' = setStdout createPipe
          $ setStderr createPipe
-         $ cfg
+         cfg
 
-lockRef :: EventBackend IO r LockSelector -> URI -> IO FlakeLock
-lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
+lockRef :: EventBackend IO r LockSelector -> Maybe GitHubAccessToken -> URI -> IO FlakeLock
+lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> do
     addField ev $ LockingRef flakeref
     meta <- withSubEvent ev GettingMetadata \metaEv -> do
       let backend' = narrowEventBackend ReadNixFlakeMetadata
@@ -299,8 +301,24 @@ lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
                      , "metadata"
                      , "--no-update-lock-file"
                      , "--json"
-                     , (uriToString id flakeref "")
-                     ]
+                     , uriToString id flakeref ""
+                     ] & setGitHubAccessToken ghAccessTokenM
+
+setGitHubAccessToken :: Maybe GitHubAccessToken
+                     -> ProcessConfig stdin stdout stderr
+                     -> ProcessConfig stdin stdout stderr
+setGitHubAccessToken Nothing = id
+setGitHubAccessToken (Just (GitHubAccessToken token)) =
+  let var = "access-tokens = github.com=" <> T.unpack token
+  in setEnv [("NIX_CONFIG", var)]
+
+gitHubAccessTokenParser :: Optparse.Parser GitHubAccessToken
+gitHubAccessTokenParser = GitHubAccessToken
+  <$>  option str
+        ( long "gh-access-token"
+       <> metavar "GH_ACCESS_TOKEN"
+       <> help "GitHub access token to be used for authentication in case of private repos or restricted access is needed"
+        )
 
 data BuildResult = BuildResult
   { drvPath :: !FilePath
@@ -314,7 +332,7 @@ decodeBuild = iparse $ withArray "build-results" \builds -> do
     decoded <- V.mapM decodeResult builds
     pure $ V.unsafeHead decoded :| V.toList (V.unsafeTail decoded)
   where
-    decodeResult :: Value -> Parser BuildResult
+    decodeResult :: Value -> Aeson.Parser BuildResult
     decodeResult = withObject "build-result" \o -> BuildResult
       <$> o .: "drvPath"
       <*> o .: "outputs"

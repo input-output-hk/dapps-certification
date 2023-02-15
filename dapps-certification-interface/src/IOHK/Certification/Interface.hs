@@ -2,9 +2,6 @@
 {-# LANGUAGE MultiWayIf                #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE TypeApplications          #-}
-{-# LANGUAGE LambdaCase                #-}
-{-# LANGUAGE EmptyCase                 #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE DeriveGeneric #-}
 module IOHK.Certification.Interface where
@@ -128,6 +125,8 @@ data TaskResult = TaskResult
   , succeeded :: !Bool
   } deriving Generic
 
+newtype GitHubAccessToken = GitHubAccessToken { unGitHubAccessToken :: Text }
+                          deriving (Eq, Generic)
 instance ToSchema TaskResult
 
 instance ToJSON TaskResult where
