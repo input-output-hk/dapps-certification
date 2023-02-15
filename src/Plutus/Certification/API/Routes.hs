@@ -37,6 +37,7 @@ import Plutus.Certification.WalletClient
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import qualified Control.Lens as L
+import Plutus.Certification.GitHubClient (RepositoryInfo)
 
 type API = NamedRoutes NamedAPI
 
@@ -124,6 +125,17 @@ type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
   :> Get '[JSON] WalletAddress
 
+type GitHubRoute = "repo"
+  :> Description "Get the github repo information"
+  :> Capture "owner" Text
+  :> Capture "repo" Text
+  :> Servant.Header "Authorization" ApiGitHubAccessToken
+  :> Get '[JSON] RepositoryInfo
+
+newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: Text }
+  deriving (Generic)
+  deriving newtype (ToHttpApiData, FromHttpApiData  )
+
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
@@ -143,6 +155,7 @@ data NamedAPI mode = NamedAPI
   , walletAddress :: mode :- WalletAddressRoute
   , getProfileBalance :: mode :- GetBalanceRoute
   , getRunDetails :: mode :- GetRunDetailsRoute
+  , getRepositoryInfo :: mode :- GitHubRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -382,6 +395,7 @@ instance ToSchema CertifyingStatus
 instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
+instance ToParamSchema ApiGitHubAccessToken
 
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
