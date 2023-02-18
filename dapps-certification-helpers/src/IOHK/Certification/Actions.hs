@@ -308,13 +308,20 @@ setGitHubAccessToken :: Maybe GitHubAccessToken
                      -> ProcessConfig stdin stdout stderr
                      -> ProcessConfig stdin stdout stderr
 setGitHubAccessToken Nothing = id
-setGitHubAccessToken (Just (GitHubAccessToken token)) =
-  let var = "access-tokens = github.com=" <> T.unpack token
+setGitHubAccessToken (Just ghAccessToken) =
+  let token = ghAccessTokenToText ghAccessToken
+      var = "access-tokens = github.com=" <> T.unpack token
   in setEnv [("NIX_CONFIG", var)]
 
+gitHubAccessTokenReader :: ReadM GitHubAccessToken
+gitHubAccessTokenReader = do
+  text <- str
+  case ghAccessTokenFromText text of
+    Left err -> readerError $ "couldn't parse '" ++ T.unpack text ++ "' as a GitHub access token: " ++ err
+    Right ghAccessToken -> pure ghAccessToken
+
 gitHubAccessTokenParser :: Optparse.Parser GitHubAccessToken
-gitHubAccessTokenParser = GitHubAccessToken
-  <$>  option str
+gitHubAccessTokenParser = option gitHubAccessTokenReader
         ( long "gh-access-token"
        <> metavar "GH_ACCESS_TOKEN"
        <> help "GitHub access token to be used for authentication in case of private repos or restricted access is needed"

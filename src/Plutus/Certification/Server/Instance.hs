@@ -45,7 +45,7 @@ import qualified Plutus.Certification.Web3StorageClient  as IPFS
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
-  { submitJob = \mods -> nt . submitJob mods
+  { submitJob = \mods ghAccessTokenM -> nt . submitJob mods ghAccessTokenM
   , getRuns = \mods -> transPipe nt . getRuns mods
   , abortRuns = \mods -> nt . abortRuns mods
   , getLogs = \mods act -> transPipe nt . getLogs mods act
@@ -70,11 +70,12 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
   , versionHead = withEvent eb Version . const $ pure NoContent
   , walletAddress = withEvent eb WalletAddress . const $ pure walletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
-      fref <- getFlakeRef profileId commitOrBranch
+      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
+      let githubToken' =  profileAccessToken <|> githubToken
       -- ensure the ref is in the right format before start the job
       (commitDate,commitHash) <- getCommitDateAndHash fref
       addField ev $ CreateRunRef fref
-      res <- submitJob (setAncestor $ reference ev) fref
+      res <- submitJob (setAncestor $ reference ev) githubToken' fref
       addField ev $ CreateRunID res
       createDbRun fref profileId res commitDate commitHash
       pure res
@@ -119,7 +120,10 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
-      let dappM = fmap (\DAppBody{..} -> DB.DApp{..}) dapp
+      let dappM = fmap (\DAppBody{..} -> DB.DApp{
+            dappId, dappName,dappOwner,dappVersion,dappRepo,
+            dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
+          }) dapp
       DB.withDb $ do
         _ <- DB.upsertProfile (DB.Profile{..}) dappM
         -- it's safe to call partial function fromJust
@@ -170,8 +174,7 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
     addField ev (GetRepoInfoOwner owner)
     addField ev (GetRepoInfoRepo repo)
-    let ghAccessTokenM = GitHubAccessToken . unApiGitHubAccessToken
-                      <$> apiGhAccessTokenM
+    let ghAccessTokenM = unApiGitHubAccessToken <$> apiGhAccessTokenM
         -- if there is no github access token, we use the default one
         -- provided from arguments
         ghAccessTokenM' =  ghAccessTokenM <|> githubToken
@@ -213,7 +216,7 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       _ <- dbSync uuid status
       pure run
 
-    getFlakeRef profileId commitOrBranch =
+    getFlakeRefAndAccessToken profileId commitOrBranch =
       getProfileDApp profileId >>= flip createFlakeRef commitOrBranch
 
     eitherToServerError baseHttpError f = either
@@ -229,9 +232,10 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
         $ forbidden "DApp owner or repo are empty"
 
       let uri = "github:" <> encodeUtf8 dappOwner <> "/" <> encodeUtf8 dappRepo <> "/" <> encodeUtf8 commitOrBranch
-      eitherToServerError
+      fref <- eitherToServerError
         err400 LSB.pack
         (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
+      pure (fref,knownGhAccessTokenFromText <$> dappGitHubToken)
 
     forbidden str = throwError $ err403 { errBody = str}
 

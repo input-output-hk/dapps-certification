@@ -56,7 +56,7 @@ import Plutus.Certification.WalletClient
 import Plutus.Certification.Synchronizer
 import Plutus.Certification.GitHubClient
 import Control.Concurrent (forkIO)
-import IOHK.Certification.Actions 
+import IOHK.Certification.Actions
 data Backend
   = Local
   | Cicero !BaseUrl
@@ -263,7 +263,7 @@ main = do
                                   . narrowEventBackend InjectRunClient
                                   $ eb
                                   ) $ CiceroCaps {..}
-        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal eb ) args.githubToken
+        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
