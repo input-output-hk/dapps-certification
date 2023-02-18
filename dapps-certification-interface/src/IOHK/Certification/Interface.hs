@@ -10,8 +10,9 @@ import GHC.Generics
 import Control.Applicative
 import Data.Aeson hiding (Success, Error)
 import Data.Aeson.Encoding
-import Data.Text hiding (index)
+import Data.Text as Text hiding (index)
 import Data.Swagger
+import Data.Char (isAlphaNum)
 
 -- | Renderable certification task names.
 data CertificationTaskName
@@ -125,8 +126,59 @@ data TaskResult = TaskResult
   , succeeded :: !Bool
   } deriving Generic
 
-newtype GitHubAccessToken = GitHubAccessToken { unGitHubAccessToken :: Text }
-                          deriving (Eq, Generic)
+data GitHubAccessTokenType
+  = PersonalToken
+  | OAuthToken
+  | UserToServerToken
+  | ServerToServerToken
+  | RefreshToken
+  deriving (Eq, Generic)
+data GitHubAccessToken = GitHubAccessToken
+  { ghAccessTokenPrefix :: GitHubAccessTokenType
+  , ghAccessTokenSuffix :: Text
+  } deriving (Eq, Generic)
+
+-- | Parse a GitHub access token.
+-- The token must be of the form "ghA_XXXXX" where
+-- is A is a letter of p,o,u,s or r and XXXXX is a sequence of 36 alphanumeric
+ghAccessTokenFromText :: Text -> Either String GitHubAccessToken
+ghAccessTokenFromText t = case Text.splitOn "_" t of
+  [pfx, sfx] -> do
+    pfx' <- case pfx of
+      "ghp" -> Right PersonalToken
+      "gho" -> Right OAuthToken
+      "ghu" -> Right UserToServerToken
+      "ghs" -> Right ServerToServerToken
+      "ghr" -> Right RefreshToken
+      _ -> Left "invalid prefix"
+    sfx' <- if Text.length sfx == 36 && Text.all isAlphaNum sfx
+      then Right sfx
+      else Left "invalid suffix"
+    Right $ GitHubAccessToken pfx' sfx'
+  _ -> Left "invalid token"
+
+-- | Parse a GitHub access token without error handling.
+-- see 'ghAccessTokenFromText' for details.
+-- This function is unsafe because it can throw an error
+-- if the token is not known to be valid.
+-- To be used only when the token is known to be valid (eg. from the database or a config file)
+knownGhAccessTokenFromText :: Text -> GitHubAccessToken
+knownGhAccessTokenFromText t = case ghAccessTokenFromText t of
+  Left err -> error err
+  Right t' -> t'
+
+-- | Render a GitHub access token.
+ghAccessTokenToText :: GitHubAccessToken -> Text
+ghAccessTokenToText (GitHubAccessToken t s) =
+  let prefix' = case t of
+        PersonalToken       -> "ghp"
+        OAuthToken          -> "gho"
+        UserToServerToken   -> "ghu"
+        ServerToServerToken -> "ghs"
+        RefreshToken        -> "ghr"
+  in prefix' <> "_" <> s
+
+
 instance ToSchema TaskResult
 
 instance ToJSON TaskResult where

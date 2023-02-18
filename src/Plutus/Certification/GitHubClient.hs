@@ -156,7 +156,7 @@ mkClient :: Maybe GitHubAccessToken
 mkClient = client api (Just "")
 
 instance ToHttpApiData GitHubAccessToken where
-  toUrlPiece = ("Bearer " <>) . unGitHubAccessToken
+  toUrlPiece = ("Bearer " <>) . ghAccessTokenToText
 
 -- | Binds the client to a specific owner , repo and github access token
 -- also applies same settings and https github domain

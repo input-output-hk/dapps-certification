@@ -10,6 +10,8 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists            #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,11 +35,12 @@ import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
 import Plutus.Certification.WalletClient
-
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
-import qualified Control.Lens as L
+import Control.Lens hiding ((.=))
+import qualified Data.Swagger.Lens as SL
 import Plutus.Certification.GitHubClient (RepositoryInfo)
+import Control.Arrow (ArrowChoice(left))
 
 type API = NamedRoutes NamedAPI
 
@@ -132,9 +135,26 @@ type GitHubRoute = "repo"
   :> Servant.Header "Authorization" ApiGitHubAccessToken
   :> Get '[JSON] RepositoryInfo
 
-newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: Text }
+newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
-  deriving newtype (ToHttpApiData, FromHttpApiData  )
+
+instance ToJSON ApiGitHubAccessToken where
+  toJSON = toJSON . ghAccessTokenToText . unApiGitHubAccessToken
+
+instance FromJSON ApiGitHubAccessToken where
+  parseJSON = withObject "ApiGitHubAccessToken" $ \o -> do
+    token <- o .: "token"
+    case ghAccessTokenFromText token of
+      Left err -> fail err
+      Right t -> pure $ ApiGitHubAccessToken t
+
+instance ToHttpApiData ApiGitHubAccessToken where
+  -- | Convert a 'GitHubAccessToken' to a 'Text' value.
+  toUrlPiece  = ghAccessTokenToText . unApiGitHubAccessToken
+
+instance FromHttpApiData ApiGitHubAccessToken where
+  -- | Parse a 'GitHubAccessToken' from a 'Text' value.
+  parseUrlPiece  = left Text.pack . fmap ApiGitHubAccessToken . ghAccessTokenFromText
 
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
@@ -163,6 +183,7 @@ data DAppBody = DAppBody
   , dappOwner :: Text
   , dappRepo :: Text
   , dappVersion :: Text
+  , dappGitHubToken :: Maybe ApiGitHubAccessToken
   } deriving stock Generic
 
 instance FromJSON DAppBody where
@@ -171,6 +192,7 @@ instance FromJSON DAppBody where
       <*> v .: "owner"
       <*> v .: "repo"
       <*> v .: "version"
+      <*> v .: "githubToken"
 
 instance ToJSON DAppBody where
   toJSON DAppBody{..} = object
@@ -178,6 +200,7 @@ instance ToJSON DAppBody where
     , "owner"  .= dappOwner
     , "repo"  .= dappRepo
     , "version"  .= dappVersion
+    , "githubToken"  .= dappGitHubToken
     ]
 
 data ProfileBody = ProfileBody
@@ -395,24 +418,46 @@ instance ToSchema CertifyingStatus
 instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
-instance ToParamSchema ApiGitHubAccessToken
+
+
+instance ToParamSchema ApiGitHubAccessToken where
+  toParamSchema _ = mempty
+    & type_ ?~ SwaggerString
+    & maxLength ?~ 40
+    -- we use SL qualified because of an issue
+    -- of parsing for the hlint. it seems to be
+    -- some kind of bug
+    & SL.pattern ?~ ghAccessTokenPattern
+
+ghAccessTokenPattern :: Pattern
+ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
+
+
+instance ToSchema ApiGitHubAccessToken where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
+      & type_ ?~ SwaggerString
+      & maxLength ?~ 40
+      & SL.pattern ?~ ghAccessTokenPattern
 
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
-    return $ NamedSchema (Just "DAppBody") profileSchema
+    apiGitHubAccessTokenSchema <- declareSchemaRef (Proxy :: Proxy ApiGitHubAccessToken)
+    return $ NamedSchema (Just "DAppBody") $ profileSchema
+        & properties . at "githubToken" ?~ apiGitHubAccessTokenSchema
 
 instance ToSchema ProfileBody
 
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
-      L.& type_ L.?~ SwaggerString
+      & type_ ?~ SwaggerString
 
 instance ToSchema CommitOrBranch  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "CommitOrBranch") $ mempty
-      L.& type_ L.?~ SwaggerString
+      & type_ ?~ SwaggerString
 
 instance ToSchema Cicero.Run.RunLog where
   --TODO: find a way to embed aeson Value to the definition

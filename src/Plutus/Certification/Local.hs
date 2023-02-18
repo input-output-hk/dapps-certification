@@ -71,15 +71,14 @@ addLocalLog actionType val js@JobState{..} = js { logs = newLogs}
     Certify -> logs { certify = val:(logs.certify)}
 
 localServerCaps :: EventBackend IO r LocalSelector
-                -> Maybe GitHubAccessToken
                 -> IO (ServerCaps IO r)
-localServerCaps backend ghAccessTokenM = do
+localServerCaps backend = do
   jobs <- newIORef Map.empty
   cancellations <- newIORef Map.empty
   let
     freeCancellation jobId = atomicModifyIORef' cancellations (\rs -> (Map.delete jobId rs, ()))
     addCancellation jobId run= atomicModifyIORef' cancellations (\rs -> (Map.insert jobId (cancel run) rs, ()))
-    submitJob mods (FlakeRef uri) = withEvent (modifyEventBackend mods backend) SubmitJob \ev -> do
+    submitJob mods ghAccessTokenM  (FlakeRef uri) = withEvent (modifyEventBackend mods backend) SubmitJob \ev -> do
       addField ev $ SubmittedRef uri
 
       jobId <- nextRandom
