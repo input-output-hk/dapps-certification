@@ -30,6 +30,7 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
+import { clearStates } from "./slices/logRunTime.slice";
 
 const TIMEOFFSET = 1000;
 
@@ -201,6 +202,7 @@ const Certification = () => {
   useEffect(() => {
     return () => {
       resetStates();
+      dispatch(clearStates())
     };
   }, []);
 

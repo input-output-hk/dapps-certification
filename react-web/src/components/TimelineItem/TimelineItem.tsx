@@ -6,6 +6,7 @@ export interface ITimelineItem {
     text: string;
     state?: string;
     progress?: any;
+    runTimeTaken?: string;
   }
   unitTestSuccess?: boolean,
   hasFailedTasks?: boolean
@@ -13,7 +14,7 @@ export interface ITimelineItem {
 
 const TimelineItem: FC<ITimelineItem> = ({
   unitTestSuccess,
-  config: { status, text, state, progress },
+  config: { status, text, state, progress, runTimeTaken },
   hasFailedTasks
 }) => {
 
@@ -49,6 +50,7 @@ const TimelineItem: FC<ITimelineItem> = ({
       <span className="text" data-testid={text}>
         {text}
       </span>
+      {runTimeTaken ? <span className="small-text">{runTimeTaken}</span> : null}
     </li>
   );
 };
