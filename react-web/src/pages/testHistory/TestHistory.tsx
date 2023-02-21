@@ -287,16 +287,18 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "delete",
       Cell: (props: any) => {
-        return (<>
-          <button
-            className="trash-icon-btn"
-            onClick={() => {
-              onDelete(props.row.original.runId);
-            }}
-          >
-            <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
-          </button>
-        </>);
+        if (props.row.original.runStatus !== "certified") {
+          return (<>
+            <button
+              className="trash-icon-btn"
+              onClick={() => {
+                onDelete(props.row.original.runId);
+              }}
+            >
+              <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
+            </button>
+          </>);
+        }
       },
     }
     ],
