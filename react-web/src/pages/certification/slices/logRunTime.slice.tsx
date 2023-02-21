@@ -1,4 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
+import dayjs from "dayjs";
+import { formatTimeToReadable } from "utils/utils";
 
 interface RunTimeState {
   startTime: string;
@@ -41,8 +43,13 @@ export const runTimeSlice = createSlice({
     setEnded: (state, {payload}) => {
         state.ended = payload
     },
-    setBuildInfo: (state, {payload}) => {
-        state.buildInfo = payload
+    setBuildInfo: (state) => {
+      const msDiff: number = dayjs(state.endTime).diff(dayjs(state.startTime))
+      const timeStr: any = formatTimeToReadable(msDiff)
+      state.buildInfo = {
+        'runTime': timeStr,
+        'runState': state.runState
+      }
     },
     clearStates: () => initialState,
   },

@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import dayjs from "dayjs";
 
 import { fetchData } from "api/api";
 import { useDelayedApi } from "hooks/useDelayedApi";
 import { Log } from '../pages/certification/Certification.helper'
-import { formatTimeToReadable } from "utils/utils";
 import { setStates, setEnded, setBuildInfo } from "pages/certification/slices/logRunTime.slice";
 import { useAppSelector } from "store/store";
 import { useDispatch } from "react-redux";
@@ -33,7 +31,6 @@ export const useLogs = (
 
 
     useEffect(() => {
-        // console.log('ended --', ended)
         setEnabled(!fetchingLogs && !(ended > 1) && !!uuid)
     }, [fetchingLogs, ended, uuid])
 
@@ -46,17 +43,12 @@ export const useLogs = (
     const captureRunTime = (sTime: string, eTime: string, state: string) => {
         if (sTime && eTime && state) { 
             dispatch(setStates({startTime: sTime, endTime: eTime, runState: state}))
-            const msDiff: number = dayjs(eTime).diff(dayjs(sTime))
-            const timeStr: any = formatTimeToReadable(msDiff)
-            dispatch(setBuildInfo({
-                runTime: timeStr,
-                runState: state
-            }))
+            dispatch(setBuildInfo())
         }
     }
 
     const computeRunState = (state: string) => {
-        if (state.indexOf('build-flake') !== -1) {
+        if (state.indexOf('build-flake') !== -1) { 
             return 'building'
         } else if (state.indexOf('generate-flake') !== -1) {
             return 'preparing'
@@ -80,7 +72,6 @@ export const useLogs = (
                 eTime = log.Time
                 state = currentRunState
             } else {
-                // console.log(ended, lastLogItem)
                 const lastLogEntry = ended === 1 && lastLogItem
                 if (state === currentRunState && !lastLogEntry) {
                     eTime = log.Time
@@ -96,7 +87,7 @@ export const useLogs = (
                 }
             }
         })
-        if (!triggeredStateChange) { console.log(state, ' --- !triggeredStateChange')
+        if (!triggeredStateChange) {
             // save to useState to use in next logs
             dispatch(setStates({startTime: sTime, endTime: eTime, runState: state}))
         }
@@ -122,7 +113,7 @@ export const useLogs = (
                 setLogInfo((prev)=> prev.concat(res.data))
             } else if (fetchApi) {
                 // capture whatever is the last stored state
-                dispatch(setBuildInfo({startTime: startTime, endTime: endTime, runState: runState}))
+                dispatch(setBuildInfo())
             }
         } catch(e) {
             handleErrorScenario();

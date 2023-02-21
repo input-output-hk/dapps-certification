@@ -14,7 +14,7 @@ const Timeline = (props: any) => {
       <ul>
         {statusConfig.map(
           (config: any, index: React.Key | null | undefined) => {
-            if (buildInfo.runState === config.status) { console.log(buildInfo.runState, buildInfo.runTime)
+            if (buildInfo.runState === config.status) {
               config.runTimeTaken = buildInfo.runTime
             }
             return (

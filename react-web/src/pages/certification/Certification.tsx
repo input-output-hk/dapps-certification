@@ -83,6 +83,7 @@ const Certification = () => {
     form.reset({
       commit: "",
     });
+    dispatch(clearStates())
   }
 
   const formHandler = (formData: ISearchForm) => {
@@ -202,7 +203,6 @@ const Certification = () => {
   useEffect(() => {
     return () => {
       resetStates();
-      dispatch(clearStates())
     };
   }, []);
 
@@ -317,11 +317,10 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {runState ? (
-            <>
-              <InformationTable logs={logInfo} />
-            </>
-          ) : null}
+          
+          {/* {runState ? (<><InformationTable logs={logInfo} /></>) : null} */}
+          <InformationTable logs={logInfo} />
+          
           {unitTestSuccess === false && Object.keys(resultData).length ? (
             <>
               <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />
