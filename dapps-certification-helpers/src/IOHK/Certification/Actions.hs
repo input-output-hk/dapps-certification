@@ -18,7 +18,6 @@ import Control.Monad.IO.Unlift
 import Data.Aeson.Internal as Aeson
 import Data.Aeson.Types as Aeson
 import Data.Aeson.Text as Aeson
-import Data.Function
 import Data.Time.Clock.POSIX
 import Data.Text as T
 import Data.Text.IO hiding (putStrLn)
@@ -104,13 +103,13 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
         Nothing -> throw $ MissingOut drvPath
       Right (_ :| tl) -> throw . ExtraBuilds $ L.length tl
   where
-    cmd = proc "nix" [ "build"
-                     , "--refresh"
-                     , "path:" ++ dir
-                     , "--no-link"
-                     , "--json"
-                     , "--print-build-logs"
-                     ] &  setGitHubAccessToken ghAccessTokenM
+    cmd = proc "nix" $ [ "build"
+                       , "--refresh"
+                       , "path:" ++ dir
+                       , "--no-link"
+                       , "--json"
+                       , "--print-build-logs"
+                       ] ++ accessTokenToArg ghAccessTokenM
 
 runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
 runCertify addLogEntry certify = do
@@ -181,14 +180,14 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
     flip (withObject "flake-lock") lock \o' -> do
       ty <- o' .: "type"
       when (ty /= ghTy) $
-        parserThrowError [ (Key "locked"), (Key "type") ] ("invalid flake type " ++ show ty)
+        parserThrowError [ Key "locked", Key "type" ] ("invalid flake type " ++ show ty)
 
       lastModified <- o' .: "lastModified"
       narHash <- o' .: "narHash"
 
       owner <- o' .: "owner"
       repo <- o' .: "repo"
-      rev <- o' .: "rev" >>= decodeRev [ (Key "locked"), (Key "rev") ]
+      rev <- o' .: "rev" >>= decodeRev [ Key "locked", Key "rev" ]
       pure $ FlakeLock
         { gitHubFlake = GitHubFlakeLock {..}
         , ..
@@ -200,9 +199,9 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
     decodeRev :: JSONPath -> Text -> Aeson.Parser SHA1Hash
     decodeRev path r = case parseSHA1Hash r of
       Left (NotBase16 msg) ->
-        parserThrowError path $ "rev " ++ (show r) ++ " is not valid base16: " ++ (show msg)
+        parserThrowError path $ "rev " ++ show r ++ " is not valid base16: " ++ show msg
       Left (BadLength len) ->
-        parserThrowError path $ "rev " ++ (show r) ++ " is a base16 string representing " ++ (show len) ++ " bytes, expecting 20"
+        parserThrowError path $ "rev " ++ show r ++ " is a base16 string representing " ++ show len ++ " bytes, expecting 20"
       Right h -> pure h
 
 logHandleText :: (MonadUnliftIO m)
@@ -296,22 +295,16 @@ lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> 
         addField ev $ LockingLock lock
         pure lock
   where
-    cmd = proc "nix" [ "flake"
-                     , "--refresh"
-                     , "metadata"
-                     , "--no-update-lock-file"
-                     , "--json"
-                     , uriToString id flakeref ""
-                     ] & setGitHubAccessToken ghAccessTokenM
+    cmd = proc "nix" $ [ "flake"
+                       , "--refresh"
+                       , "metadata"
+                       , "--no-update-lock-file"
+                       , "--json"
+                       , uriToString id flakeref ""
+                       ] ++ accessTokenToArg ghAccessTokenM
 
-setGitHubAccessToken :: Maybe GitHubAccessToken
-                     -> ProcessConfig stdin stdout stderr
-                     -> ProcessConfig stdin stdout stderr
-setGitHubAccessToken Nothing = id
-setGitHubAccessToken (Just ghAccessToken) =
-  let token = ghAccessTokenToText ghAccessToken
-      var = "access-tokens = github.com=" <> T.unpack token
-  in setEnv [("NIX_CONFIG", var)]
+accessTokenToArg :: Maybe GitHubAccessToken -> [[Char]]
+accessTokenToArg = maybe [] \token -> ["--access-tokens", "github.com="++ T.unpack (ghAccessTokenToText token)]
 
 gitHubAccessTokenReader :: ReadM GitHubAccessToken
 gitHubAccessTokenReader = do
