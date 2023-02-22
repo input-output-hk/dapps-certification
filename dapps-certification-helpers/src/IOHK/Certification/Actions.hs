@@ -1,53 +1,55 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE ApplicativeDo     #-}
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeApplications  #-}
 module IOHK.Certification.Actions where
 
-import Data.Coerce
-import Paths_dapps_certification_helpers
-import System.Directory
-import Network.URI hiding (path)
-import Control.Exception
-import Control.Concurrent.Async
-import Control.Monad.IO.Unlift
-import Data.Aeson.Internal as Aeson
-import Data.Aeson.Types as Aeson
-import Data.Aeson.Text as Aeson
-import Data.Time.Clock.POSIX
-import Data.Text as T
-import Data.Text.IO hiding (putStrLn)
-import Data.Text.Encoding
-import Data.ByteString as BS hiding (hPutStr)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Lazy.Internal as LBS
-import qualified Data.Text.Lazy as LT
-import Data.ByteString.Base16
-import System.Process.Typed
-import System.Process (Pid, getPid)
-import Data.Aeson.Parser
-import Data.Aeson.Parser.Internal
-import Observe.Event
-import Observe.Event.Render.JSON
-import Data.Void
-import System.IO hiding (hPutStrLn, hPutStr)
-import System.FilePath
-import Control.Monad
-import Control.Monad.Catch hiding (finally)
-import Data.List.NonEmpty
-import Data.Map as Map
-import qualified Data.Vector as V
-import Data.List as L
-import Data.Acquire
-import Control.Monad.Trans.Resource
-import IOHK.Certification.Interface hiding (Success)
-import Conduit
-import Data.Conduit.Aeson
-import Options.Applicative as Optparse
+import           Conduit
+import           Control.Concurrent.Async
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.Catch               hiding (finally)
+import           Control.Monad.Trans.Resource
+import           Data.Acquire
+import           Data.Aeson.Internal               as Aeson
+import           Data.Aeson.Parser
+import           Data.Aeson.Parser.Internal
+import           Data.Aeson.Text                   as Aeson
+import           Data.Aeson.Types                  as Aeson
+import           Data.ByteString                   as BS hiding (hPutStr)
+import           Data.ByteString.Base16
+import           Data.Coerce
+import           Data.Conduit.Aeson
+import           Data.List                         as L
+import           Data.List.NonEmpty
+import           Data.Map                          as Map
+import           Data.Text                         as T
+import           Data.Text.Encoding
+import           Data.Text.IO                      hiding (putStrLn)
+import           Data.Time.Clock.POSIX
+import           Data.Void
+import           IOHK.Certification.Interface      hiding (Success)
+import           Network.URI                       hiding (path)
+import           Observe.Event
+import           Observe.Event.Render.JSON
+import           Options.Applicative               as Optparse
+import           Paths_dapps_certification_helpers
+import           System.Directory
+import           System.FilePath
+import           System.IO                         hiding (hPutStr, hPutStrLn)
+import           System.Process                    (Pid, getPid)
+import           System.Process.Typed
+import           Text.Regex
+
+import qualified Data.ByteString.Lazy              as LBS
+import qualified Data.ByteString.Lazy.Internal     as LBS
+import qualified Data.Text.Lazy                    as LT
+import qualified Data.Vector                       as V
+
 
 generateFlake :: EventBackend IO r GenerateFlakeSelector -> (Text -> IO ()) -> Maybe GitHubAccessToken -> URI -> FilePath -> IO ()
 generateFlake backend addLogEntry ghAccessTokenM flakeref output = withEvent backend GenerateFlake \ev -> do
@@ -99,7 +101,7 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
     case eitherDecodeWith jsonEOF decodeBuild buildJson of
       Left (path, err) -> throw $ DecodeBuild path err
       Right (BuildResult {..} :| []) -> case Map.lookup "out" outputs of
-        Just p -> pure p
+        Just p  -> pure p
         Nothing -> throw $ MissingOut drvPath
       Right (_ :| tl) -> throw . ExtraBuilds $ L.length tl
   where
@@ -134,7 +136,7 @@ acquireProcessWait :: ProcessConfig i o e -> Acquire (Process i o e)
 acquireProcessWait cfg = mkAcquireType (startProcess cfg) cleanup
   where
     cleanup p ReleaseException = stopProcess p
-    cleanup p _ = finally (checkExitCode p) (stopProcess p)
+    cleanup p _                = finally (checkExitCode p) (stopProcess p)
 
 newtype SHA1Hash = SHA1Hash ByteString
 
@@ -151,14 +153,14 @@ renderSHA1Hash = encodeBase16 . coerce
 
 data GitHubFlakeLock = GitHubFlakeLock
   { owner :: !Text
-  , repo :: !Text
-  , rev :: !SHA1Hash
+  , repo  :: !Text
+  , rev   :: !SHA1Hash
   }
 
 data FlakeLock = FlakeLock
   { lastModified :: !POSIXTime
-  , narHash :: !Text -- Sigh https://github.com/haskell-crypto/cryptonite/issues/337
-  , gitHubFlake :: !GitHubFlakeLock -- Assuming GH only for now...
+  , narHash      :: !Text -- Sigh https://github.com/haskell-crypto/cryptonite/issues/337
+  , gitHubFlake  :: !GitHubFlakeLock -- Assuming GH only for now...
   }
 
 writeNix :: Handle -> FlakeLock -> IO ()
@@ -361,8 +363,13 @@ data LaunchField
   = forall stdin stdoutIgnored stderrIgnored . LaunchConfig !(ProcessConfig stdin stdoutIgnored stderrIgnored)
   | LaunchingPid !Pid
 
+ghAccessFlexibleTokenPattern = "gh[oprst]_[A-Za-z0-9]+"
+
 renderLaunchField :: RenderFieldJSON LaunchField
-renderLaunchField (LaunchConfig cfg) = ("launch-config", toJSON $ show cfg)
+renderLaunchField (LaunchConfig cfg) = ("launch-config", toJSON redactedCfgString)
+  where
+  redactGitHubAccess = subRegex (mkRegex ghAccessFlexibleTokenPattern)
+  redactedCfgString = redactGitHubAccess (show cfg) "<<REDACTED>>"
 renderLaunchField (LaunchingPid pid) = ("launched-pid", toJSON $ toInteger pid)
 
 data LogHandleSelector f where
@@ -473,7 +480,7 @@ instance ToJSON LockException where
     )
 
 renderElement :: JSONPathElement -> Value
-renderElement (Key k) = object [ "key" .= k ]
+renderElement (Key k)   = object [ "key" .= k ]
 renderElement (Index i) = object [ "index" .= i ]
 
 instance Exception LockException where

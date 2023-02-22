@@ -161,7 +161,7 @@ instance ToJSON DApp where
       , "owner" .= dappOwner
       , "repo" .= dappRepo
       , "version" .= dappVersion
-      , "githubToken" .= dappGitHubToken
+      , "githubToken" .= fmap (const ("<<REDACTED>>" :: Text)) dappGitHubToken
       ]
 
 instance SqlRow DApp
