@@ -50,6 +50,7 @@ import Plutus.Certification.API
 import Plutus.Certification.Cache
 import Plutus.Certification.Client
 import Plutus.Certification.Server
+import IOHK.Certification.Interface (ghAccessTokenToText)
 
 ciceroClient :: forall m . HasClient m Cicero.API => Client m Cicero.API
 ciceroClient = cicero `clientIn` m
@@ -83,12 +84,16 @@ data CiceroCaps c m r = CiceroCaps
 ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API) => EventBackend m r RunClientSelector -> CiceroCaps c m r -> ServerCaps m r
 ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
   where
-    submitJob mods _ ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req
+    submitJob mods ghAccessTokenM ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req
       where
         backend' = modifyEventBackend mods backend
         uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet
+        textGhAccessTokenM =  fmap ghAccessTokenToText ghAccessTokenM
         req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
-          { fact = [aesonQQ| { "plutus-certification/generate-flake": { "ref": #{uriToString id uri ""} } } |]
+          { fact = [aesonQQ| { "plutus-certification/generate-flake":
+            { "ref": #{uriToString id uri ""}
+            , "ghAccessToken": #{textGhAccessTokenM}
+            } } |]
           , artifact = Nothing
           }
 
