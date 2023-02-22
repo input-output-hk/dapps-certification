@@ -29,6 +29,7 @@ library
       conduit,
       conduit-aeson,
       optparse-applicative,
+      regex-compat,
       dapps-certification-interface
     hs-source-dirs:   src
     other-modules: Paths_dapps_certification_helpers

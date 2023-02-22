@@ -142,11 +142,10 @@ instance ToJSON ApiGitHubAccessToken where
   toJSON = toJSON . ghAccessTokenToText . unApiGitHubAccessToken
 
 instance FromJSON ApiGitHubAccessToken where
-  parseJSON = withObject "ApiGitHubAccessToken" $ \o -> do
-    token <- o .: "token"
+  parseJSON = withText "ApiGitHubAccessToken" $ \token ->
     case ghAccessTokenFromText token of
       Left err -> fail err
-      Right t -> pure $ ApiGitHubAccessToken t
+      Right t  -> pure $ ApiGitHubAccessToken t
 
 instance ToHttpApiData ApiGitHubAccessToken where
   -- | Convert a 'GitHubAccessToken' to a 'Text' value.

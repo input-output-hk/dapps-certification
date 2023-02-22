@@ -14,6 +14,8 @@
         "pretty".revision = (((hackage."pretty")."1.1.3.6").revisions).default;
         "haskell-src-exts".revision = (((hackage."haskell-src-exts")."1.23.1").revisions).default;
         "data-textual".revision = (((hackage."data-textual")."0.3.0.3").revisions).default;
+        "regex-posix".revision = (((hackage."regex-posix")."0.96.0.1").revisions).default;
+        "regex-posix".flags._regex-posix-clib = false;
         "servant-swagger-ui-core".revision = (((hackage."servant-swagger-ui-core")."0.3.5").revisions).default;
         "network-uri".revision = (((hackage."network-uri")."2.6.4.2").revisions).default;
         "parsers".revision = (((hackage."parsers")."0.12.11").revisions).default;
@@ -163,6 +165,7 @@
         "stm".revision = (((hackage."stm")."2.5.0.2").revisions).default;
         "void".revision = (((hackage."void")."0.7.3").revisions).default;
         "void".flags.safe = false;
+        "regex-compat".revision = (((hackage."regex-compat")."0.95.2.1").revisions).default;
         "semigroups".revision = (((hackage."semigroups")."0.20").revisions).default;
         "semigroups".flags.bytestring = true;
         "semigroups".flags.bytestring-builder = false;
@@ -247,6 +250,7 @@
         "transformers-base".flags.orphaninstances = true;
         "aeson-qq".revision = (((hackage."aeson-qq")."0.8.4").revisions).default;
         "data-default-class".revision = (((hackage."data-default-class")."0.1.2.0").revisions).default;
+        "regex-base".revision = (((hackage."regex-base")."0.94.0.2").revisions).default;
         "vector-algorithms".revision = (((hackage."vector-algorithms")."0.9.0.1").revisions).default;
         "vector-algorithms".flags.internalchecks = false;
         "vector-algorithms".flags.llvm = false;
@@ -523,6 +527,7 @@
           "servant-server".components.library.planned = lib.mkOverride 900 true;
           "data-default-class".components.library.planned = lib.mkOverride 900 true;
           "type-hint".components.library.planned = lib.mkOverride 900 true;
+          "regex-base".components.library.planned = lib.mkOverride 900 true;
           "adjunctions".components.library.planned = lib.mkOverride 900 true;
           "parallel".components.library.planned = lib.mkOverride 900 true;
           "cryptonite".components.library.planned = lib.mkOverride 900 true;
@@ -573,6 +578,7 @@
           "network-uri".components.library.planned = lib.mkOverride 900 true;
           "lzma".components.library.planned = lib.mkOverride 900 true;
           "wai-logger".components.setup.planned = lib.mkOverride 900 true;
+          "regex-posix".components.library.planned = lib.mkOverride 900 true;
           "data-serializer".components.library.planned = lib.mkOverride 900 true;
           "memory".components.library.planned = lib.mkOverride 900 true;
           "pem".components.library.planned = lib.mkOverride 900 true;
@@ -693,6 +699,7 @@
           "warp".components.library.planned = lib.mkOverride 900 true;
           "easy-file".components.library.planned = lib.mkOverride 900 true;
           "base16".components.library.planned = lib.mkOverride 900 true;
+          "regex-compat".components.library.planned = lib.mkOverride 900 true;
           "swagger2".components.library.planned = lib.mkOverride 900 true;
           "conduit-extra".components.library.planned = lib.mkOverride 900 true;
           "terminfo".components.library.planned = lib.mkOverride 900 true;
