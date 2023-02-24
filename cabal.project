@@ -1,4 +1,4 @@
-index-state: 2022-10-13T00:00:00Z
+index-state: 2023-01-25T00:00:00Z
 packages: . dapps-certification-interface dapps-certification-helpers dapps-certification-persistence
 package plutus-certification
   ghc-options: -Wall

@@ -69,7 +69,6 @@ addLocalLog actionType val js@JobState{..} = js { logs = newLogs}
     Build -> logs { build = val:(logs.build)}
     Certify -> logs { certify = val:(logs.certify)}
 
-
 localServerCaps :: EventBackend IO r LocalSelector -> IO (ServerCaps IO r)
 localServerCaps backend = do
   jobs <- newIORef Map.empty
