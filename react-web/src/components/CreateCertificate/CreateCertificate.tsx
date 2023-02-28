@@ -21,8 +21,8 @@ import { Address,
 import Toast from "components/Toast/Toast";
 import { fetchData } from "api/api";
 
-interface Run {
-    "certificationPrice": BigNum | any,
+interface run {
+    "certificationPrice": number,
     "commitDate": string;
     "commitHash": string;
     "created": string;
@@ -32,6 +32,12 @@ interface Run {
     "runId": string;
     "runStatus": string;
     "syncedAt": string;
+}
+
+interface certificate {
+    "createdAt": string;
+    "runId": string;
+    "transactionId": string;
 }
 
 const CreateCertificate = () => {
@@ -69,24 +75,46 @@ const CreateCertificate = () => {
         }
     }
 
+    const certificationBroadcasted = (data: certificate) => {
+        console.log('broadcasted tnx data ', data);
+        setTransactionId(data.transactionId)
+        setOpenModal(true)
+        setCertifying(false)
+        setCertified(true)
+    }
+
+    const fetchRunDetails = async (txnId?: string) => {
+        let details: run = await fetchData.get('/run/' + uuid + '/details')
+        if (details.runStatus !== 'certified') {
+            const timeout = setTimeout(async ()=> {
+                clearTimeout(timeout)
+                fetchRunDetails()
+            }, 1000)
+        } else if (details.runStatus === 'certified') {
+            fetchData.get('/run/' + uuid + '/certificate' + (txnId ? '?transactionid=' + txnId : ''))
+                .catch(handleError)
+                .then((response: any) => {
+                    certificationBroadcasted(response.data)
+                })
+            
+        }
+    }
+
     const triggerSubmitCertificate = async (txnId?: string) => {
-        const response: any = await fetchData.post('/run/' + uuid + '/certificate' + (txnId ? '?transactionid=' + txnId : '')).catch(handleError)
-        try {
-            console.log('broadcasted tnx data ', response.data);
-            setTransactionId(response.data.transactionId)
-            setOpenModal(true)
-            setCertifying(false)
-            setCertified(true)
-        } catch(e) { }
+        fetchData.post('/run/' + uuid + '/certificate' + (txnId ? '?transactionid=' + txnId : ''))
+            .catch(handleError)
+            .then((response: any) => {
+                fetchRunDetails(txnId)
+            })
     }
 
     const triggerGetCertificate = async () => {
         setCertifying(true);
         setShowError("")
         fetchData.get('/profile/current/balance').then(response => {
-            const availableProfileBalance: any = response.data
+            const availableProfileBalance: number = response.data
             fetchData.get('/run/' + uuid + '/details').then(res => {
-                const runDetails: Run = res.data
+                const runDetails: run = res.data
                 if ((availableProfileBalance - runDetails.certificationPrice) < 0) {
                     triggerTransactionFromWallet(runDetails.certificationPrice)
                 } else {
@@ -96,10 +124,11 @@ const CreateCertificate = () => {
         })
     }
     
-    const triggerTransactionFromWallet = async (cert_fee_lovelace: BigNum) => {
+    const triggerTransactionFromWallet = async (cert_fee_in_lovelaces: number) => {
         try {
             const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
             const applicationWallet_receiveAddr = walletAddressRes.data;
+            const cert_fee_lovelace: BigNum = BigNum.from_str(cert_fee_in_lovelaces.toString())
             /** For mock */
             // const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
             // const cert_fee_ada = 3
