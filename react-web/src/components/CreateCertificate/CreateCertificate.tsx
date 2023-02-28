@@ -84,20 +84,21 @@ const CreateCertificate = () => {
     }
 
     const fetchRunDetails = async (txnId?: string) => {
-        let details: run = await fetchData.get('/run/' + uuid + '/details')
-        if (details.runStatus !== 'certified') {
-            const timeout = setTimeout(async ()=> {
-                clearTimeout(timeout)
-                fetchRunDetails()
-            }, 1000)
-        } else if (details.runStatus === 'certified') {
-            fetchData.get('/run/' + uuid + '/certificate' + (txnId ? '?transactionid=' + txnId : ''))
-                .catch(handleError)
-                .then((response: any) => {
-                    certificationBroadcasted(response.data)
-                })
-            
-        }
+        fetchData.get('/run/' + uuid + '/details').then(response => {
+            const details: run = response.data
+            if (details?.runStatus === 'ready-for-certification') {
+                const timeout = setTimeout(async ()=> {
+                    clearTimeout(timeout)
+                    fetchRunDetails()
+                }, 1000)
+            } else if (details?.runStatus === 'certified') {
+                fetchData.get('/run/' + uuid + '/certificate' + (txnId ? '?transactionid=' + txnId : ''))
+                    .catch(handleError)
+                    .then((response: any) => {
+                        certificationBroadcasted(response.data)
+                    })
+            }
+        })
     }
 
     const triggerSubmitCertificate = async (txnId?: string) => {
