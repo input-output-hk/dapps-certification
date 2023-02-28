@@ -11,6 +11,8 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Plutus.Certification.API.Routes where
 
 import Control.Applicative
@@ -30,6 +32,7 @@ import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
+import Plutus.Certification.WalletClient
 
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
@@ -78,6 +81,12 @@ type GetRunsRoute = "run"
   :> QueryParam "count" Int
   :> Get '[JSON] [DB.Run]
 
+type GetRunDetailsRoute = "run"
+  :> Description "Get the details of a run"
+  :> Capture "id" RunIDV1
+  :> "details"
+  :> Get '[JSON] DB.Run
+
 type GetCurrentProfileRoute = "profile"
   :> Description "Get the current profile information"
   :> "current"
@@ -96,16 +105,26 @@ type CreateCertificationRoute = "run"
   :> AuthProtect "public-key"
   :> Capture "id" RunIDV1
   :> "certificate"
-  :> Post '[JSON] DB.Certification
+  :> PostNoContent
 
--- TODO: the certification object remains to be added in a future commit
 type GetCertificateRoute = "run"
   :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
   :> Capture "id" RunIDV1
   :> "certificate"
   :> Get '[JSON] DB.Certification
 
-data CertificateCreationResponse = CertificateCreationResponse
+type GetBalanceRoute = "profile"
+  :> Description "Get the current balance of the profile"
+  :> "current"
+  :> "balance"
+  :> AuthProtect "public-key"
+  :> Get '[JSON] Int
+
+type WalletAddressRoute = "wallet-address"
+  :> Description "Get the wallet address the backend operates with"
+  :> Get '[JSON] WalletAddress
+
+newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
 
@@ -121,6 +140,9 @@ data NamedAPI mode = NamedAPI
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute
   , createCertification :: mode :- CreateCertificationRoute
   , getCertification :: mode :- GetCertificateRoute
+  , walletAddress :: mode :- WalletAddressRoute
+  , getProfileBalance :: mode :- GetBalanceRoute
+  , getRunDetails :: mode :- GetRunDetailsRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -216,7 +238,7 @@ instance MimeRender OctetStream RunIDV1 where
 instance MimeUnrender OctetStream RunIDV1 where
   mimeUnrender _ ridbs = case fromByteString ridbs of
     Just rid -> pure $ RunID rid
-    Nothing -> Left $ "couldn't parse '" ++ (BSL8.unpack ridbs) ++ "' as a run ID"
+    Nothing -> Left $ "couldn't parse '" ++ BSL8.unpack ridbs ++ "' as a run ID"
 
 data StepState
   = Running
@@ -289,8 +311,8 @@ instance ToJSON IncompleteRunStatus where
   toEncoding (Certifying (CertifyingStatus {..})) = pairs
     ( "status" .= ("certifying" :: Text)
    <> "state"  .= certifyingState
-   <> (maybe mempty ("progress" .=) certifyingProgress)
-   <> (maybe mempty ("plan" .=) certifyingPlan)
+   <> maybe mempty ("progress" .=) certifyingProgress
+   <> maybe mempty ("plan" .=) certifyingPlan
     )
 
 instance FromJSON IncompleteRunStatus where
@@ -364,7 +386,7 @@ instance ToParamSchema KnownActionType
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
-    return $ NamedSchema (Just "DAppBody") $ profileSchema
+    return $ NamedSchema (Just "DAppBody") profileSchema
 
 instance ToSchema ProfileBody
 
@@ -380,7 +402,7 @@ instance ToSchema CommitOrBranch  where
 
 instance ToSchema Cicero.Run.RunLog where
   --TODO: find a way to embed aeson Value to the definition
-  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") $ mempty
+  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") mempty
 instance ToSchema IncompleteRunStatus where
   declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 
