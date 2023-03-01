@@ -36,7 +36,7 @@ export const formatToTitleCase = (value: string) => {
 }
 
 export const formatTimeToReadable = (duration: number) => {
-    var milliseconds = Math.floor(duration % 1000), //Math.floor((duration % 1000) / 100),
+    const milliseconds = Math.floor(duration % 1000),
       seconds = Math.floor((duration / 1000) % 60),
       minutes = Math.floor((duration / (1000 * 60)) % 60),
       hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
