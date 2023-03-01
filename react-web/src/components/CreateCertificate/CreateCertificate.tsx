@@ -21,7 +21,7 @@ import { Address,
 import Toast from "components/Toast/Toast";
 import { fetchData } from "api/api";
 
-interface run {
+export interface run {
     "certificationPrice": number,
     "commitDate": string;
     "commitHash": string;
@@ -30,7 +30,7 @@ interface run {
     "repoUrl": string;
     "reportContentId": string;
     "runId": string;
-    "runStatus": string;
+    "runStatus": "queued" | "failed" | "succeeded" | "certified" | "ready-for-certification" | "aborted";
     "syncedAt": string;
 }
 
