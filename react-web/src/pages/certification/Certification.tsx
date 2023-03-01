@@ -318,7 +318,7 @@ const Certification = () => {
             />
           </div>
           
-          {/* {runState ? (<><InformationTable logs={logInfo} /></>) : null} */}
+          {/* To show 'View Logs' always  */}
           <InformationTable logs={logInfo} />
           
           {unitTestSuccess === false && Object.keys(resultData).length ? (

@@ -55,7 +55,7 @@ export const useLogs = (
         } else if (state.indexOf('run-certify') !== -1) {
             return 'certifying'
         } else {
-            return '' ;
+            return ''
         }
     }
 
