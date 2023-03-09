@@ -11,3 +11,6 @@ docker-compose.yml
 Dockerfile.web
 Dockerfile.ws
 docker-files/wallet-container-instructions.md
+react-web/coverage
+react-web/node_modules
+react-web/build
