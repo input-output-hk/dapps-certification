@@ -23,10 +23,13 @@
       margin-bottom: 20px;
       color: $body-text-gray;
     }
-    .btn {
+    .footer {
       display: flex;
-      margin: 0 auto;
-      min-width: 160px;
+      justify-content: center;
+      column-gap: 10px;
+      .btn {
+        display: flex;
+      }
     }
   }
 
