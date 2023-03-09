@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
-
-import { fetchData } from "api/api";
-import { useDelayedApi } from "hooks/useDelayedApi";
-import { Log } from '../pages/certification/Certification.helper'
-import { setStates, setEnded, setBuildInfo } from "pages/certification/slices/logRunTime.slice";
+import { useEffect, useState } from "react";
 import { useAppSelector } from "store/store";
 import { useDispatch } from "react-redux";
+import { useDelayedApi } from "hooks/useDelayedApi";
+
+import { fetchData } from "api/api";
+import { Log } from '../pages/certification/Certification.helper'
+import { setStates, setEnded, setBuildInfo } from "pages/certification/slices/logRunTime.slice";
 
 const TIMEOFFSET = 1000;
 
@@ -18,9 +18,10 @@ export const useLogs = (
     const [logInfo, setLogInfo] = useState<Log[]>([])
     const [fetchingLogs, setFetchingLogs] = useState(false);
     const [refetchLogsOffset] = useState(1);
-    const [enabled, setEnabled] = useState(false)
 
-    const { startTime, endTime, runState, ended } = useAppSelector((state) => state.runTime);
+    const { startTime, endTime, runState, ended } = useAppSelector((state) => state.runTime)
+
+    const enabled = !fetchingLogs && !(ended > 1) && !!uuid
 
     useEffect(() => {
         if (testEnded) { 
@@ -28,11 +29,6 @@ export const useLogs = (
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [testEnded])
-
-
-    useEffect(() => {
-        setEnabled(!fetchingLogs && !(ended > 1) && !!uuid)
-    }, [fetchingLogs, ended, uuid])
 
     //reset log if uuid changed
     useEffect(()=>{
