@@ -30,6 +30,8 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
+import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
+import { useConfirm } from "material-ui-confirm";
 
 const TIMEOFFSET = 1000;
 
@@ -42,6 +44,7 @@ const Certification = () => {
   const { uuid } = useAppSelector((state) => state.certification);
   const { userDetails } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
+  const confirm = useConfirm();
   const [submitting, setSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [timelineConfig, setTimelineConfig] = useState(TIMELINE_CONFIG);
@@ -188,6 +191,14 @@ const Certification = () => {
     exportObjectToJsonFile(resultData);
   };
 
+  const abortRun = () => {
+    confirm({ title: "", description: "Are sure you want to abort this run!" })
+      .then(async () => {
+        await dispatch(deleteTestHistoryData({ url: "/run/" + uuid + "?delete=true" }));
+        resetStates()
+      }).catch(() => { });
+  }
+
   useEffect(() => {
     if (uuid.length) {
       triggerFetchRunStatus();
@@ -252,17 +263,26 @@ const Certification = () => {
               disabled={submitting}
               {...form.register("commit")}
             />
+            <div className="footer">
               <Button
                 type="submit"
-                className="btn btn-primary"
-              buttonLabel={"Start Testing"}
-              showLoader={
-                submitting &&
-                (runStatus !== "finished" && runState !== "failed")
-              }
+                buttonLabel={"Start Testing"}
+                showLoader={
+                  submitting &&
+                  (runStatus !== "finished" && runState !== "failed")
+                }
                 disabled={!form.formState.isValid || submitting}
                 onClick={(_) => setFormSubmitted(true)}
               />
+              {(apiFetching && submitting) && (
+                <Button
+                  type="button"
+                  displayStyle="primary-outline"
+                  buttonLabel="Abort Run"
+                  onClick={(_) => abortRun()}
+                />
+              )}
+            </div>
           </Form>
         </div>
       </div>

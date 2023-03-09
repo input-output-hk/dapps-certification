@@ -172,6 +172,10 @@ const TestHistory = () => {
           </button>
         </>
       );
+    } else if (value === "aborted") {
+      return <span 
+        style={{ color: "red" }}
+        className={highlightLabelFor === runId ? "cell-highlight" : ""}>Aborted</span>;
     } else if (value === "ready-for-certification") {
       return <span 
         className={highlightLabelFor === runId ? "cell-highlight" : ""}>Ready for Certification</span>;
@@ -326,16 +330,18 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "delete",
       Cell: (props: any) => {
-        return (<>
-          <button
-            className="trash-icon-btn"
-            onClick={() => {
-              onDelete(props.row.original.runId);
-            }}
-          >
-            <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
-          </button>
-        </>);
+        if (props.row.original.runStatus !== "certified" && props.row.original.runStatus !== "ready-for-certification") {
+          return (<>
+            <button
+              className="trash-icon-btn"
+              onClick={() => {
+                onDelete(props.row.original.runId);
+              }}
+            >
+              <img className="icon-trash" src="images/trash.svg" alt="delete" title="Delete Campaign" />
+            </button>
+          </>);
+        }
       },
     }
     ],
