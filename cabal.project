@@ -4,7 +4,7 @@ packages:
     dapps-certification-interface
     dapps-certification-helpers
     dapps-certification-persistence
-    dapps-certification-signing-verification
+    dapps-certification-signature-verification
 
 package plutus-certification
   ghc-options: -Wall
@@ -18,7 +18,7 @@ package dapps-certification-helpers
 package dapps-certification-persistence
   ghc-options: -Wall
 
-package dapps-certification-signing-verification
+package dapps-certification-signature-verification
   ghc-options: -Wall
 
 -- TODO: after cleaning this should be removed

@@ -1,12 +1,12 @@
 cabal-version:      2.4
-name:               dapps-certification-signing-verification
+name:               dapps-certification-signature-verification
 version:            0.1.0.0
 author:             Bogdan Manole
 maintainer:         bogdan.manole@iohk.io
 
 library
-    exposed-modules:  IOHK.Certification.SigningVerification
-    other-modules:    IOHK.Certification.SigningVerification.CBOR
+    exposed-modules:  IOHK.Certification.SignatureVerification
+    other-modules:    IOHK.Certification.SignatureVerification.CBOR
     build-depends:
           base
         , text

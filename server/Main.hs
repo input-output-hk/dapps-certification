@@ -20,13 +20,11 @@ import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
 import Data.Aeson
 import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
-import Data.Bits
 import Data.Function
 import Data.Singletons
 import Data.Time
 import Data.Version
 import Network.Wai.Handler.Warp
-import Data.Foldable
 import Network.Wai.Middleware.Cors
 import Options.Applicative as Opts
 import Servant
@@ -238,10 +236,6 @@ renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
 renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 
---TODO: remove after proper DB is implemented
-dummyHash :: ByteString -> Int
-dummyHash = foldl' (\h c -> 33*h `xor` fromEnum c) 5381 . unpack
-
 -- | plain address authentication
 -- NOTE: this is for testing only, and should not be used in production
 plainAddressAuthHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
@@ -342,8 +336,6 @@ main = do
                      { corsRequestHeaders = ["Content-Type", "Authorization"]
                      , corsMethods = [methodGet,methodPost,methodPut,methodDelete,methodHead]
                      }
-
-
       _ <- initDb
       _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
       -- TODO: this has to be refactored

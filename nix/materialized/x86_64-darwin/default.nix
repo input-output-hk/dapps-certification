@@ -478,8 +478,8 @@
       packages = {
         dapps-certification-interface = ./.plan.nix/dapps-certification-interface.nix;
         cardano-addresses = ./.plan.nix/cardano-addresses.nix;
-        dapps-certification-signing-verification = ./.plan.nix/dapps-certification-signing-verification.nix;
         dapps-certification-helpers = ./.plan.nix/dapps-certification-helpers.nix;
+        dapps-certification-signature-verification = ./.plan.nix/dapps-certification-signature-verification.nix;
         dapps-certification-persistence = ./.plan.nix/dapps-certification-persistence.nix;
         plutus-certification = ./.plan.nix/plutus-certification.nix;
         cardano-crypto = ./.plan.nix/cardano-crypto.nix;
@@ -493,8 +493,8 @@
           "cardano-addresses" = {
             flags = { "release" = lib.mkOverride 900 false; };
             };
-          "dapps-certification-signing-verification" = { flags = {}; };
           "dapps-certification-helpers" = { flags = {}; };
+          "dapps-certification-signature-verification" = { flags = {}; };
           "dapps-certification-persistence" = { flags = {}; };
           "plutus-certification" = { flags = {}; };
           "cardano-crypto" = {
@@ -578,6 +578,7 @@
           "postgresql-libpq".components.setup.planned = lib.mkOverride 900 true;
           "HUnit".components.library.planned = lib.mkOverride 900 true;
           "some".components.library.planned = lib.mkOverride 900 true;
+          "dapps-certification-signature-verification".components.library.planned = lib.mkOverride 900 true;
           "array".components.library.planned = lib.mkOverride 900 true;
           "x509".components.library.planned = lib.mkOverride 900 true;
           "quickcheck-instances".components.library.planned = lib.mkOverride 900 true;
@@ -758,7 +759,6 @@
           "unordered-containers".components.library.planned = lib.mkOverride 900 true;
           "random".components.library.planned = lib.mkOverride 900 true;
           "servant-swagger-ui".components.library.planned = lib.mkOverride 900 true;
-          "dapps-certification-signing-verification".components.library.planned = lib.mkOverride 900 true;
           "base".components.library.planned = lib.mkOverride 900 true;
           "blake2".components.library.planned = lib.mkOverride 900 true;
           "vector-stream".components.library.planned = lib.mkOverride 900 true;

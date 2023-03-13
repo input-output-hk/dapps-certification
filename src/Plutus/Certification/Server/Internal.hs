@@ -114,7 +114,7 @@ renderProfileId pid = ("profile-id",toJSON (show pid))
 newtype UserAddress = UserAddress { unUserAddress :: Text}
 
 type instance AuthServerData (AuthProtect "public-key") = (DB.ProfileId,UserAddress)
-type instance AuthServerData (AuthProtect "jwt-public-key") = (DB.ProfileId,UserAddress)
+type instance AuthServerData (AuthProtect "jwt-token") = (DB.ProfileId,UserAddress)
 
 toDbStatus :: RunStatusV1 -> DB.Status
 toDbStatus (Finished _)= DB.Succeeded
