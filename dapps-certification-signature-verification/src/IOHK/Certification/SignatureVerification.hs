@@ -38,18 +38,20 @@ import qualified Cardano.Address.Style.Shelley as Shelley
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Crypto.Hash.BLAKE2.BLAKE2b as Blake
 
-verifySignature :: PublicKey -> SignedMessage -> Signature -> Either String Bool
-verifySignature (PublicKey pubKey) (SignedMessage msg) (Signature sig) = do
+verifyEd25519Signature :: PublicKey -> SignedMessage -> Signature -> Either String Bool
+verifyEd25519Signature (PublicKey pubKey) (SignedMessage msg) (Signature sig) = do
     key <- case Ed25519.publicKey pubKey of
       CryptoFailed err -> Left $ "Failed to create Ed25519 public key: " <> show err
       CryptoPassed res -> pure res
-    sig <- case Ed25519.signature sig of
+    sig' <- case Ed25519.signature sig of
       CryptoFailed err -> Left $ "Failed to create Ed25519 signature: " <> show err
       CryptoPassed res -> pure res
-    Right $ Ed25519.verify key msg sig
+    Right $ Ed25519.verify key msg sig'
 
 type COSEKey = ByteString
 type COSESign1 = ByteString
+
+-- | Address and public key verification
 
 verifyCIP30Signature :: COSEKey -> COSESign1 -> Maybe Message -> Maybe Bech32Address -> Either String Bool
 verifyCIP30Signature coseKey coseSign1 mMsg mBech32Address = do
@@ -61,7 +63,7 @@ verifyCIP30Signature coseKey coseSign1 mMsg mBech32Address = do
   hashVerificationResp <- verifyHashes pubKey address mBech32Address
   unless hashVerificationResp $ Left "Hash address verification failed"
   -- verify the signature
-  verificationResp <- verifySignature pubKey signedMessage signature
+  verificationResp <- verifyEd25519Signature pubKey signedMessage signature
   Right $ verificationResp
     -- if a message was provided, verify that it matches the message in the signed payload
     && maybe True (== message) mMsg
@@ -79,11 +81,8 @@ verifyHashes pubKey address mBech32Address = do
     (Just (Right bech32AddressHash'),Right addressHash') ->
       Right $ Hexa.encode pubKeyHash == addressHash' && bech32AddressHash' == addressHash'
 
--- | Address and public key verification
-
 newtype Bech32Address = Bech32Address { unBech32Address :: Text }
                       deriving (Show,Eq)
-
 
 data HashError
   = AddressFailedToDecode

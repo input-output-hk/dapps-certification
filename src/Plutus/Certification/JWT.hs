@@ -1,7 +1,5 @@
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TypeApplications  #-}
 module Plutus.Certification.JWT
   ( jwtEncode
   ,jwtDecode
@@ -18,6 +16,8 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime,
                                         utcTimeToPOSIXSeconds)
 import           Web.JWT               as JWT
 
+import Prelude hiding (exp)
+
 data JWTArgs = JWTArgs
   { jwtSecret :: !String
   , jwtExpirationSeconds :: !Integer
@@ -28,11 +28,10 @@ defaultKey = "default"
 
 jwtEncode :: ToJSON p => String -> UTCTime -> p -> Text
 jwtEncode secret time a =
-  let
-      cs = mempty -- mempty returns a default JWTClaimsSet
+  let cs = mempty -- mempty returns a default JWTClaimsSet
          { unregisteredClaims = ClaimsMap $ Map.fromList [(defaultKey, toJSON a)]
          , JWT.exp =  numericDate (utcTimeToPOSIXSeconds time) -- 0 means no expiry
-      }
+         }
       key = hmacSecret . T.pack $ secret
   in encodeSigned key mempty cs
 

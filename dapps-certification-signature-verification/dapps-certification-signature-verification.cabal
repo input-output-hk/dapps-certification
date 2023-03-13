@@ -11,14 +11,9 @@ library
           base
         , text
         , bytestring
-        , bech32
-        , ed25519
         , cborg
-        , webauthn ^>=0.4.1.2
-        , serialise
         , cryptonite
         , base16-bytestring
-        , base58-bytestring
         , blake2
         , cardano-addresses
     hs-source-dirs:   src

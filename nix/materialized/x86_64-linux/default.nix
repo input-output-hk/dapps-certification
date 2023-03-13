@@ -3,8 +3,6 @@
     {
       packages = {
         "charset".revision = (((hackage."charset")."0.3.9").revisions).default;
-        "jose".revision = (((hackage."jose")."0.9").revisions).default;
-        "jose".flags.demos = false;
         "old-time".revision = (((hackage."old-time")."1.1.0.3").revisions).default;
         "tf-random".revision = (((hackage."tf-random")."0.5").revisions).default;
         "servant-client".revision = (((hackage."servant-client")."0.19").revisions).default;
@@ -41,16 +39,10 @@
         "text".revision = (((hackage."text")."1.2.5.0").revisions).default;
         "easy-file".revision = (((hackage."easy-file")."0.2.2").revisions).default;
         "data-array-byte".revision = (((hackage."data-array-byte")."0.1.0.1").revisions).default;
-        "webauthn".revision = (((hackage."webauthn")."0.4.1.2").revisions).default;
         "fmt".revision = (((hackage."fmt")."0.6.3.0").revisions).default;
         "entropy".revision = (((hackage."entropy")."0.4.1.10").revisions).default;
         "entropy".flags.donotgetentropy = false;
         "lzma".revision = (((hackage."lzma")."0.0.0.4").revisions).default;
-        "ed25519".revision = (((hackage."ed25519")."0.0.5.0").revisions).default;
-        "ed25519".flags.test-hlint = true;
-        "ed25519".flags.test-properties = true;
-        "ed25519".flags.no-donna = true;
-        "ed25519".flags.test-doctests = true;
         "array".revision = (((hackage."array")."0.5.4.0").revisions).default;
         "base64-bytestring".revision = (((hackage."base64-bytestring")."1.2.1.0").revisions).default;
         "network".revision = (((hackage."network")."3.1.2.7").revisions).default;
@@ -75,7 +67,7 @@
         "vector".flags.boundschecks = true;
         "vector".flags.unsafechecks = false;
         "socks".revision = (((hackage."socks")."0.6.1").revisions).default;
-        "lens".revision = (((hackage."lens")."5.1.1").revisions).default;
+        "lens".revision = (((hackage."lens")."5.2").revisions).default;
         "lens".flags.test-templates = true;
         "lens".flags.benchmark-uniplate = false;
         "lens".flags.test-properties = true;
@@ -128,7 +120,6 @@
         "quickcheck-io".revision = (((hackage."quickcheck-io")."0.2.0").revisions).default;
         "time-locale-compat".revision = (((hackage."time-locale-compat")."0.1.1.5").revisions).default;
         "time-locale-compat".flags.old-locale = false;
-        "monad-time".revision = (((hackage."monad-time")."0.4.0.0").revisions).default;
         "http-client-tls".revision = (((hackage."http-client-tls")."0.3.6.1").revisions).default;
         "data-bword".revision = (((hackage."data-bword")."0.1.0.2").revisions).default;
         "bech32-th".revision = (((hackage."bech32-th")."1.1.1").revisions).default;
@@ -140,8 +131,6 @@
         "selda-json".revision = (((hackage."selda-json")."0.1.1.1").revisions).default;
         "OneTuple".revision = (((hackage."OneTuple")."0.3.1").revisions).default;
         "mime-types".revision = (((hackage."mime-types")."0.1.1.0").revisions).default;
-        "serialise".revision = (((hackage."serialise")."0.2.6.0").revisions).default;
-        "serialise".flags.newtime15 = true;
         "parsec".revision = (((hackage."parsec")."3.1.15.0").revisions).default;
         "bytestring".revision = (((hackage."bytestring")."0.11.3.1").revisions).default;
         "attoparsec-iso8601".revision = (((hackage."attoparsec-iso8601")."1.1.0.0").revisions).default;
@@ -174,7 +163,7 @@
         "singleton-bool".revision = (((hackage."singleton-bool")."0.1.6").revisions).default;
         "th-compat".revision = (((hackage."th-compat")."0.1.4").revisions).default;
         "data-checked".revision = (((hackage."data-checked")."0.3").revisions).default;
-        "memory".revision = (((hackage."memory")."0.17.0").revisions).default;
+        "memory".revision = (((hackage."memory")."0.18.0").revisions).default;
         "memory".flags.support_deepseq = true;
         "memory".flags.support_bytestring = true;
         "filepath".revision = (((hackage."filepath")."1.4.2.2").revisions).default;
@@ -303,8 +292,6 @@
         "base-unicode-symbols".flags.base-4-8 = true;
         "base-unicode-symbols".flags.old-base = false;
         "wai-logger".revision = (((hackage."wai-logger")."2.4.0").revisions).default;
-        "quickcheck-instances".revision = (((hackage."quickcheck-instances")."0.3.28").revisions).default;
-        "quickcheck-instances".flags.bytestring-builder = false;
         "selda-sqlite".revision = (((hackage."selda-sqlite")."0.1.7.2").revisions).default;
         "selda-sqlite".flags.haste = false;
         "these".revision = (((hackage."these")."1.1.1.1").revisions).default;
@@ -385,7 +372,6 @@
         "wai-extra".flags.build-example = false;
         "haskell-src-meta".revision = (((hackage."haskell-src-meta")."0.8.11").revisions).default;
         "blaze-builder".revision = (((hackage."blaze-builder")."0.4.2.2").revisions).default;
-        "concise".revision = (((hackage."concise")."0.1.0.1").revisions).default;
         "double-conversion".revision = (((hackage."double-conversion")."2.0.4.2").revisions).default;
         "double-conversion".flags.developer = false;
         "double-conversion".flags.embedded_double_conversion = true;
@@ -425,7 +411,6 @@
         "ansi-wl-pprint".flags.example = false;
         "boring".revision = (((hackage."boring")."0.2").revisions).default;
         "boring".flags.tagged = true;
-        "validation".revision = (((hackage."validation")."1.1.2").revisions).default;
         "QuickCheck".revision = (((hackage."QuickCheck")."2.14.2").revisions).default;
         "QuickCheck".flags.old-random = false;
         "QuickCheck".flags.templatehaskell = true;
@@ -518,7 +503,6 @@
           "invariant".components.library.planned = lib.mkOverride 900 true;
           "transformers-base".components.library.planned = lib.mkOverride 900 true;
           "base-orphans".components.library.planned = lib.mkOverride 900 true;
-          "webauthn".components.library.planned = lib.mkOverride 900 true;
           "servant".components.library.planned = lib.mkOverride 900 true;
           "th-orphans".components.library.planned = lib.mkOverride 900 true;
           "socks".components.library.planned = lib.mkOverride 900 true;
@@ -536,7 +520,6 @@
           "wai".components.library.planned = lib.mkOverride 900 true;
           "data-textual".components.library.planned = lib.mkOverride 900 true;
           "fmt".components.library.planned = lib.mkOverride 900 true;
-          "ed25519".components.library.planned = lib.mkOverride 900 true;
           "hw-aeson".components.library.planned = lib.mkOverride 900 true;
           "distributive".components.library.planned = lib.mkOverride 900 true;
           "pretty".components.library.planned = lib.mkOverride 900 true;
@@ -549,7 +532,6 @@
           "bytestring".components.library.planned = lib.mkOverride 900 true;
           "servant-swagger".components.library.planned = lib.mkOverride 900 true;
           "mono-traversable".components.library.planned = lib.mkOverride 900 true;
-          "concise".components.library.planned = lib.mkOverride 900 true;
           "zlib".components.library.planned = lib.mkOverride 900 true;
           "servant-server".components.exes."greet".planned = lib.mkOverride 900 true;
           "data-dword".components.library.planned = lib.mkOverride 900 true;
@@ -562,7 +544,6 @@
           "unliftio".components.library.planned = lib.mkOverride 900 true;
           "cborg".components.library.planned = lib.mkOverride 900 true;
           "sop-core".components.library.planned = lib.mkOverride 900 true;
-          "serialise".components.library.planned = lib.mkOverride 900 true;
           "plutus-certification".components.exes."plutus-certification".planned = lib.mkOverride 900 true;
           "profunctors".components.library.planned = lib.mkOverride 900 true;
           "cicero-api".components.library.planned = lib.mkOverride 900 true;
@@ -581,14 +562,12 @@
           "dapps-certification-signature-verification".components.library.planned = lib.mkOverride 900 true;
           "array".components.library.planned = lib.mkOverride 900 true;
           "x509".components.library.planned = lib.mkOverride 900 true;
-          "quickcheck-instances".components.library.planned = lib.mkOverride 900 true;
           "servant-client-core".components.library.planned = lib.mkOverride 900 true;
           "cicero-api".components.exes."cicero-cli".planned = lib.mkOverride 900 true;
           "dapps-certification-helpers".components.library.planned = lib.mkOverride 900 true;
           "binary".components.library.planned = lib.mkOverride 900 true;
           "charset".components.library.planned = lib.mkOverride 900 true;
           "wai-extra".components.library.planned = lib.mkOverride 900 true;
-          "validation".components.library.planned = lib.mkOverride 900 true;
           "ghc-boot-th".components.library.planned = lib.mkOverride 900 true;
           "scientific".components.library.planned = lib.mkOverride 900 true;
           "boring".components.library.planned = lib.mkOverride 900 true;
@@ -706,7 +685,6 @@
           "async".components.library.planned = lib.mkOverride 900 true;
           "http-media".components.library.planned = lib.mkOverride 900 true;
           "word8".components.library.planned = lib.mkOverride 900 true;
-          "jose".components.library.planned = lib.mkOverride 900 true;
           "cabal-doctest".components.library.planned = lib.mkOverride 900 true;
           "iproute".components.library.planned = lib.mkOverride 900 true;
           "servant-client".components.library.planned = lib.mkOverride 900 true;
@@ -789,7 +767,6 @@
           "hourglass".components.library.planned = lib.mkOverride 900 true;
           "base-compat".components.library.planned = lib.mkOverride 900 true;
           "data-bword".components.library.planned = lib.mkOverride 900 true;
-          "monad-time".components.library.planned = lib.mkOverride 900 true;
           "base64-bytestring".components.library.planned = lib.mkOverride 900 true;
           "hashable".components.library.planned = lib.mkOverride 900 true;
           "semigroups".components.library.planned = lib.mkOverride 900 true;

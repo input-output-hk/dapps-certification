@@ -15,7 +15,6 @@ module Main where
 
 import Control.Monad.Except
 import Control.Monad.Catch hiding (try)
-
 import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
 import Data.Aeson
@@ -58,10 +57,10 @@ import Control.Concurrent (forkIO)
 import IOHK.Certification.Actions
 import Plutus.Certification.JWT
 import Data.Int
+import IOHK.Certification.Persistence (toId)
 
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
-import IOHK.Certification.Persistence (toId)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
