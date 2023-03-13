@@ -12,7 +12,7 @@
     package = {
       specVersion = "2.4";
       identifier = {
-        name = "dapps-certification-signing-verification";
+        name = "dapps-certification-signature-verification";
         version = "0.1.0.0";
         };
       license = "NONE";
@@ -52,12 +52,12 @@
           ];
         buildable = true;
         modules = [
-          "IOHK/Certification/SigningVerification/CBOR"
-          "IOHK/Certification/SigningVerification"
+          "IOHK/Certification/SignatureVerification/CBOR"
+          "IOHK/Certification/SignatureVerification"
           ];
         hsSourceDirs = [ "src" ];
         };
       };
     } // rec {
-    src = (pkgs.lib).mkDefault ../dapps-certification-signing-verification;
+    src = (pkgs.lib).mkDefault ../dapps-certification-signature-verification;
     }

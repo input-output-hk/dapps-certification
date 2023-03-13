@@ -64,7 +64,7 @@ library
 
     jwt ^>=0.11.0,
 
-    dapps-certification-signing-verification,
+    dapps-certification-signature-verification,
     dapps-certification-persistence,
     dapps-certification-interface,
     dapps-certification-helpers
@@ -77,8 +77,6 @@ library
     Plutus.Certification.Server
     Plutus.Certification.Local
     Plutus.Certification.GitHubClient
-    Plutus.Certification.Crypto
-    Plutus.Certification.Crypto2
     Plutus.Certification.JWT
     Plutus.Certification.WalletClient
     Plutus.Certification.Synchronizer
@@ -147,6 +145,7 @@ executable plutus-certification-client
     text ^>= 1.2.5.0,
     http-types ^>= 0.12.3,
     dapps-certification-helpers,
+    base16-bytestring,
     plutus-certification
   main-is: Main.hs
   hs-source-dirs: client

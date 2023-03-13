@@ -74,7 +74,7 @@
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
           (hsPkgs."cardano-addresses" or (errorHandler.buildDepError "cardano-addresses"))
           (hsPkgs."jwt" or (errorHandler.buildDepError "jwt"))
-          (hsPkgs."dapps-certification-signing-verification" or (errorHandler.buildDepError "dapps-certification-signing-verification"))
+          (hsPkgs."dapps-certification-signature-verification" or (errorHandler.buildDepError "dapps-certification-signature-verification"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
@@ -97,8 +97,6 @@
           "Plutus/Certification/Server"
           "Plutus/Certification/Local"
           "Plutus/Certification/GitHubClient"
-          "Plutus/Certification/Crypto"
-          "Plutus/Certification/Crypto2"
           "Plutus/Certification/JWT"
           "Plutus/Certification/WalletClient"
           "Plutus/Certification/Synchronizer"
@@ -158,6 +156,7 @@
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
             (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
+            (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
           buildable = true;

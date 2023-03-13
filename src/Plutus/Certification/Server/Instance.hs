@@ -45,7 +45,7 @@ import qualified Plutus.Certification.Web3StorageClient  as IPFS
 import Servant.Server.Experimental.Auth (AuthServerData)
 import Data.Time (addUTCTime)
 import Plutus.Certification.JWT (jwtEncode, JWTArgs(..))
-import IOHK.Certification.SigningVerification as SV
+import IOHK.Certification.SignatureVerification as SV
 
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
@@ -205,7 +205,9 @@ server ServerArgs{..} = NamedAPI
       -- ensure the profile exists
       (pid,UserAddress userAddress) <- ensureProfile $  encodeUtf8 address
       let
-          expiresAt = addUTCTime (fromIntegral (jwtExpirationSeconds :: Integer )) now
+          -- minimum between the expiration time and the jwtExpirationSeconds
+          expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration
+          expiresAt = addUTCTime (fromIntegral expiration') now
           --TODO: verify the message
           --verify the wallet signature validation
       verifySignature key signature address

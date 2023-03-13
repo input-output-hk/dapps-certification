@@ -48,7 +48,7 @@ import Control.Lens hiding ((.=))
 
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
-import IOHK.Certification.SigningVerification 
+import IOHK.Certification.SignatureVerification 
   (COSEKey,COSESign1, decodeHex,encodeHex)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
@@ -178,17 +178,20 @@ data LoginBody = LoginBody
   { address :: !WalletAddress
   , key :: !COSEKey
   , signature :: !COSESign1
+  , expiration :: !(Maybe Integer)
   } deriving (Generic)
 
 instance ToSchema LoginBody where
   declareNamedSchema _ = do
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    expirationScheme <- declareSchemaRef (Proxy :: Proxy Integer)
     return $ NamedSchema (Just "LoginBody") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("address", textSchema)
           , ("key", textSchema)
           , ("signature", textSchema)
+          , ("expiration", expirationScheme)
           ]
       & required .~ ["address", "key", "signature"]
 
@@ -197,17 +200,20 @@ instance FromJSON LoginBody where
     key <- decodeHex . encodeUtf8 <$> (v .: "key")
     signature <- decodeHex. encodeUtf8 <$> v .: "signature"
     address <- v .: "address"
+    expiration <- v .:? "expiration" .!= Nothing
     case (key, signature) of
-      (Right key', Right signature') -> pure $ LoginBody address key' signature'
+      (Right key', Right signature') ->
+        pure $ LoginBody address key' signature' expiration
       (Left err, _) -> fail $ "key: " <> err
       (_, Left err) -> fail $ "signature: " <> err
 
 instance ToJSON LoginBody where
-  toJSON LoginBody{..} = object
-    [ "address" .= address
-    , "key" .= decodeUtf8 (encodeHex key)
-    , "signature" .= decodeUtf8 (encodeHex signature)
-    ]
+  toJSON LoginBody{..} = object (
+      [ "address" .= address
+      , "key" .= decodeUtf8 (encodeHex key)
+      , "signature" .= decodeUtf8 (encodeHex signature)
+      ] ++ maybe [] (\exp' -> ["expiration" .= exp']) expiration
+      )
 
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
