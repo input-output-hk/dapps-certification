@@ -28,14 +28,10 @@ import Data.Text as Text hiding (elem,replicate, last)
 import Data.Text.Encoding
 import Data.UUID
 import Control.Monad.Except
-
 import Control.Exception hiding (Handler)
+import Plutus.Certification.WalletClient (WalletAddress)
 
 import qualified IOHK.Certification.Persistence as DB
-import Plutus.Certification.WalletClient (WalletAddress)
-import Text.Read (readMaybe)
-
-
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -60,8 +56,6 @@ data StartCertificationField
 data GetRepoInfoField
   = GetRepoInfoOwner !Text
   | GetRepoInfoRepo !Text
-
-  -- | CreateCertificationTxResponse !Wallet.TxResponse
 
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
@@ -171,7 +165,7 @@ consumeRuns = await >>= \case
     consumeRuns
   Just s -> pure s
 
---NOTE: this will create a new profile if there isn't any with the given address
+-- | this will create a new profile if there isn't any with the given address
 ensureProfile :: (MonadIO m ,MonadError ServerError m,MonadMask m) => ByteString -> m (DB.ProfileId,UserAddress)
 ensureProfile bs = do
   let address' = decodeUtf8 bs
@@ -187,4 +181,3 @@ ensureProfile bs = do
         Just pid -> pure (pid,UserAddress address')
   where
   getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
-

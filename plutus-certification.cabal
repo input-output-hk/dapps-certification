@@ -48,20 +48,6 @@ library
     lens,
     filepath,
     temporary,
-
-    bech32,
-    ed25519,
-    cborg,
-    webauthn ^>=0.4.1.2,
-    serialise,
-    cryptonite,
-    base16-bytestring,
-    base58-bytestring,
-    blake2,
-
-    cardano-crypto,
-    cardano-addresses,
-
     jwt ^>=0.11.0,
 
     dapps-certification-signature-verification,

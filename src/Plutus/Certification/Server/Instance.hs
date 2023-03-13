@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -27,7 +26,7 @@ import Control.Monad.Except
 import Data.Time.LocalTime
 import Data.Maybe
 import Data.Aeson
-import Network.HTTP.Client      hiding (Proxy,parseUrl)
+import Network.HTTP.Client hiding (Proxy,parseUrl)
 
 import Network.HTTP.Types
 import Control.Applicative
@@ -37,18 +36,18 @@ import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
 import IOHK.Certification.Interface hiding (Status)
 import Plutus.Certification.Server.Internal
 
-import Data.ByteString.Lazy.Char8 qualified as LSB
-import Paths_plutus_certification qualified as Package
-import qualified Plutus.Certification.WalletClient as Wallet
-import qualified IOHK.Certification.Persistence as DB
-import qualified Plutus.Certification.Web3StorageClient  as IPFS
 import Servant.Server.Experimental.Auth (AuthServerData)
 import Data.Time (addUTCTime)
 import Plutus.Certification.JWT (jwtEncode, JWTArgs(..))
 import IOHK.Certification.SignatureVerification as SV
-
-import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
+
+import qualified Data.ByteString.Lazy.Char8 as LSB
+import qualified Paths_plutus_certification as Package
+import qualified Plutus.Certification.WalletClient as Wallet
+import qualified IOHK.Certification.Persistence as DB
+import qualified Plutus.Certification.Web3StorageClient  as IPFS
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -72,8 +71,6 @@ data ServerArgs m r = ServerArgs
 
 
 type Seconds = Integer
-
--- >>> extractTimestamp "hello<<123>>world"
 
 -- | An implementation of 'API'
 server :: ( MonadMask m
@@ -204,16 +201,16 @@ server ServerArgs{..} = NamedAPI
       now <- getNow
       -- ensure the profile exists
       (pid,UserAddress userAddress) <- ensureProfile $  encodeUtf8 address
-      let
-          -- minimum between the expiration time and the jwtExpirationSeconds
-          expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration
-          expiresAt = addUTCTime (fromIntegral expiration') now
-          --TODO: verify the message
-          --verify the wallet signature validation
+      --verify the wallet signature validation
       verifySignature key signature address
+      -- verify the message timestamp
       verifyMessageTimeStamp signature
 
-          -- encode body with `expiresAt` with expiration time
+      let -- minimum between the expiration time and the jwtExpirationSeconds
+          expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration
+          expiresAt = addUTCTime (fromIntegral expiration') now
+
+      -- encode jwt with with expiration time
       pure $ jwtEncode jwtSecret expiresAt (DB.fromId pid, userAddress)
   , serverTimestamp = withEvent eb Version (const $ round . utcTimeToPOSIXSeconds <$> getNow)
   }
@@ -237,15 +234,19 @@ server ServerArgs{..} = NamedAPI
       let (Status code msg) = responseStatusCode resp
           err = ServerError code "GitHub API error" (LSB.fromStrict msg) []
       in err
+    -- | unfolds the payload from the signed message
     unfoldMessage bs = case unfoldPayload bs of
       Left err -> throwError err403 { errBody = LSB.pack err }
       Right payload -> pure . decodeUtf8 . unMessage $ payload.message
 
+    -- | extracts the timestamp from the signed message
     extractTimeStampFromMsg bs = do
       msg <- unfoldMessage bs
       case extractTimestamp msg of
         Nothing -> throwError err403 { errBody = "Invalid message format"}
         Just ts -> pure ts
+
+    -- | extracts the timestamp from the signed message and verifies it
     verifyMessageTimeStamp = extractTimeStampFromMsg >=> verifyTimeStamp
 
     -- | verifies that the timestamp from the signed message is not older than `serverSigningTimeout`
