@@ -11,7 +11,8 @@
 module Plutus.Certification.Server.Internal where
 
 import Conduit
-import Control.Monad.Catch
+import Control.Monad.Catch hiding (Handler)
+import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
 import Data.Aeson
 import Data.Void
 import Servant
@@ -24,9 +25,17 @@ import Servant.Server.Experimental.Auth
 import Plutus.Certification.API as API
 import Data.Time
 import Data.Text as Text hiding (elem,replicate, last)
+import Data.Text.Encoding
 import Data.UUID
+import Control.Monad.Except
+
+import Control.Exception hiding (Handler)
 
 import qualified IOHK.Certification.Persistence as DB
+import Plutus.Certification.WalletClient (WalletAddress)
+import Text.Read (readMaybe)
+
+
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -66,6 +75,8 @@ data ServerEventSelector f where
   GetCertification :: ServerEventSelector RunIDV1
   GetRepoInfo :: ServerEventSelector GetRepoInfoField
   StartCertification :: ServerEventSelector StartCertificationField
+  Login :: ServerEventSelector WalletAddress
+  ServerTimestamp :: ServerEventSelector Void
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -76,6 +87,8 @@ renderServerEventSelector GetRunLogs = ("get-run-logs", renderRunIDV1)
 renderServerEventSelector GetRunDetails = ("get-run-details", renderRunIDV1)
 renderServerEventSelector GetProfileBalance = ("get-profile-balance", renderProfileId)
 renderServerEventSelector GetCertification = ("get-certification", renderRunIDV1)
+renderServerEventSelector Login = ("login", \address' -> ("user-address", toJSON address'))
+renderServerEventSelector ServerTimestamp = ("server-timestamp", absurd)
 
 renderServerEventSelector CreateRun = ("create-run", \case
     CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")
@@ -101,6 +114,7 @@ renderProfileId pid = ("profile-id",toJSON (show pid))
 newtype UserAddress = UserAddress { unUserAddress :: Text}
 
 type instance AuthServerData (AuthProtect "public-key") = (DB.ProfileId,UserAddress)
+type instance AuthServerData (AuthProtect "jwt-public-key") = (DB.ProfileId,UserAddress)
 
 toDbStatus :: RunStatusV1 -> DB.Status
 toDbStatus (Finished _)= DB.Succeeded
@@ -156,4 +170,21 @@ consumeRuns = await >>= \case
             _ -> s
     consumeRuns
   Just s -> pure s
+
+--NOTE: this will create a new profile if there isn't any with the given address
+ensureProfile :: (MonadIO m ,MonadError ServerError m,MonadMask m) => ByteString -> m (DB.ProfileId,UserAddress)
+ensureProfile bs = do
+  let address' = decodeUtf8 bs
+  profileIdM <- getProfileFromDb bs
+  case profileIdM of
+    Just pid -> pure (pid, UserAddress address')
+    Nothing -> do
+      pidM <- DB.withDb $ DB.upsertProfile
+        (DB.Profile undefined address' Nothing Nothing Nothing Nothing Nothing Nothing)
+        Nothing
+      case pidM of
+        Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
+        Just pid -> pure (pid,UserAddress address')
+  where
+  getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
 

@@ -8,7 +8,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, haskellNix }: let
-    supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"];
   in flake-utils.lib.eachSystem supportedSystems (system: let
     overlays = [ haskellNix.overlay ];
 

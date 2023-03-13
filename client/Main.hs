@@ -386,7 +386,7 @@ main :: IO ()
 main = do
   args <- execParser argsInfo
   manager <- newTlsManagerWith $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
-  let apiClient = client $ Proxy @API
+  let apiClient = client $ Proxy @(API "public-key")
       cEnv = mkClientEnv manager args.certificationURL
       handle :: (ToJSON a) => ClientM a -> IO ()
       handle c = runClientM c cEnv >>= either throwIO (LBS.putStrLn . encode)

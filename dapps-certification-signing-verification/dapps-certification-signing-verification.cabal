@@ -1,0 +1,25 @@
+cabal-version:      2.4
+name:               dapps-certification-signing-verification
+version:            0.1.0.0
+author:             Bogdan Manole
+maintainer:         bogdan.manole@iohk.io
+
+library
+    exposed-modules:  IOHK.Certification.SigningVerification
+    other-modules:    IOHK.Certification.SigningVerification.CBOR
+    build-depends:
+          base
+        , text
+        , bytestring
+        , bech32
+        , ed25519
+        , cborg
+        , webauthn ^>=0.4.1.2
+        , serialise
+        , cryptonite
+        , base16-bytestring
+        , base58-bytestring
+        , blake2
+        , cardano-addresses
+    hs-source-dirs:   src
+    default-language: Haskell2010

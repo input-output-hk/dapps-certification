@@ -20,8 +20,10 @@ import Plutus.Certification.API.Routes as X
   , ProfileBody(..)
   , DAppBody(..)
   , ApiGitHubAccessToken(..)
+  , LoginBody(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson
   , APIWithSwagger
+  , swaggerJsonWithLogin
   )

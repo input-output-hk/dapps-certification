@@ -7,4 +7,5 @@ import Plutus.Certification.Server.Internal as X
   , UserAddress(..)
   , ServerEventSelector(..)
   , renderServerEventSelector
+  , ensureProfile
   )
