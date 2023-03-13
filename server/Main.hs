@@ -14,6 +14,7 @@
 module Main where
 
 import Control.Monad.Except
+import Control.Monad.Catch hiding (try)
 
 import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
@@ -22,6 +23,7 @@ import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
 import Data.Bits
 import Data.Function
 import Data.Singletons
+import Data.Time
 import Data.Version
 import Network.Wai.Handler.Warp
 import Data.Foldable
@@ -48,15 +50,23 @@ import Plutus.Certification.Cicero
 import Plutus.Certification.Client
 import Plutus.Certification.Server as Server
 import Plutus.Certification.Local
+import Data.Text (Text)
 import Data.Text.Encoding
-import Paths_plutus_certification qualified as Package
-import IOHK.Certification.Persistence qualified as DB
 import Network.HTTP.Types.Method
 import Plutus.Certification.WalletClient
 import Plutus.Certification.Synchronizer
 import Plutus.Certification.GitHubClient
 import Control.Concurrent (forkIO)
 import IOHK.Certification.Actions
+import Plutus.Certification.JWT
+import Data.Int
+
+import Paths_plutus_certification qualified as Package
+import IOHK.Certification.Persistence qualified as DB
+import IOHK.Certification.Persistence (toId)
+
+import qualified Data.ByteString.Lazy.Char8 as LBS
+
 data Backend
   = Local
   | Cicero !BaseUrl
@@ -67,6 +77,8 @@ data Args = Args
   , backend :: !Backend
   , wallet :: !WalletArgs
   , githubToken :: !(Maybe GitHubAccessToken)
+  , auth :: !AuthMode
+  , signatureTimeout :: !Seconds
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -114,7 +126,39 @@ argsParser =  Args
   <*> (localParser <|> ciceroParser)
   <*> walletParser
   <*> optional gitHubAccessTokenParser
+  <*> (jwtArgsParser <|> plainAddressAuthParser)
+  <*> option auto
+      ( long "signature-timeout"
+     <> metavar "SIGNATURE_TIMEOUT"
+     <> help "specifies the maximum amount of time allowed for the signing the login message, expressed in seconds"
+     <> showDefault
+     <> Opts.value 60
+      )
 
+data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
+
+plainAddressAuthParser :: Parser AuthMode
+plainAddressAuthParser = flag' PlainAddressAuth
+  ( long "unsafe-plain-address-auth"
+ <> help "use plain address authentication - NOTE: this is for testing only, and should not be used in production"
+  )
+defaultJWTExpiration :: Integer
+defaultJWTExpiration = 60 * 60 * 24 * 30 -- 30 days
+
+jwtArgsParser :: Parser AuthMode
+jwtArgsParser =  JWTAuth <$> (JWTArgs
+  <$> option str
+      ( long "jwt-secret"
+     <> metavar "JWT_SECRET"
+     <> help "the jwt secret key"
+      )
+  <*> option auto
+      ( long "jwt-expiration-seconds"
+      <> metavar "JWT_EXPIRATION"
+      <> help "the jwt expiration time in seconds"
+      <> showDefault
+      <> Opts.value defaultJWTExpiration
+      ))
 walletParser :: Parser WalletArgs
 walletParser = WalletArgs
   <$> option str
@@ -198,34 +242,56 @@ renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 dummyHash :: ByteString -> Int
 dummyHash = foldl' (\h c -> 33*h `xor` fromEnum c) 5381 . unpack
 
-authHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
-authHandler = mkAuthHandler handler
+-- | plain address authentication
+-- NOTE: this is for testing only, and should not be used in production
+plainAddressAuthHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
+plainAddressAuthHandler = mkAuthHandler handler
   where
+  handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
+          => Request
+          -> m (DB.ProfileId, UserAddress)
   handler req = either throw401 ensureProfile $ do
     maybeToEither "Missing Authorization header" $ lookup "Authorization" $ requestHeaders req
-
   maybeToEither e = maybe (Left e) Right
-  throw401 msg = throwError $ err401 { errBody = msg }
-  getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
 
-  --NOTE: this will create a new profile if there isn't any with the given address
-  ensureProfile :: ByteString -> Handler (DB.ProfileId,UserAddress)
-  ensureProfile bs = do
-    let address = decodeUtf8 bs
-    profileIdM <- getProfileFromDb bs
-    case profileIdM of
-      Just pid -> pure (pid, UserAddress address)
-      Nothing -> do
-        pidM <- DB.withDb $ DB.upsertProfile
-          (DB.Profile undefined address Nothing Nothing Nothing Nothing Nothing Nothing)
-          Nothing
-        case pidM of
-          Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
-          Just pid -> pure (pid,UserAddress address)
+-- | JWT authentication
+jwtAuthHandler :: String -> AuthHandler Request (DB.ProfileId,UserAddress)
+jwtAuthHandler secret = mkAuthHandler handler
+  where
+  handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
+          => Request
+          -> m (DB.ProfileId, UserAddress)
+  handler req = case lookup "Authorization" $ requestHeaders req of
+    Just authHeader -> do
+      let jwtToken = extractToken authHeader
+      unless (jwtToken /= BS.empty ) $ throw401 "Missing JWT token"
+      -- decode the token
+      case jwtDecode @(Int64,Text) secret (decodeUtf8 jwtToken) of
+        Left err -> throw401 $ LBS.fromStrict $ BS.pack $  case err of
+            JWTDecodingFailure -> "JWT decoding failure"
+            JWTSigVerificationFailure -> "JWT signature verification failure"
+            JWTClaimsVerificationFailure -> "JWT claims verification failure"
+            JWTDefaultKeyDecodingFailure err' -> "JWT default key decoding failure " <> err'
+            JWTExpirationMissing -> "JWT expiration missing"
+        Right ((pid,addr),expiration) -> do
+          -- verify expiration
+          now <- liftIO getCurrentTime
+          -- compare the expiration time with the current time
+          when (now > expiration) $ throw401 "JWT token expired"
+          pure (toId pid, UserAddress addr)
+    Nothing -> throw401 "Missing Authorization header"
+  extractToken =
+    let isSpace = (== ' ')
+    in BS.dropWhileEnd isSpace . BS.dropWhile isSpace . snd . BS.break isSpace
 
+throw401 :: MonadError ServerError m => LBS.ByteString -> m a
+throw401 msg = throwError $ err401 { errBody = msg }
 
-genAuthServerContext :: Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
-genAuthServerContext = authHandler :. EmptyContext
+genAuthServerContext :: AuthMode
+                     -> Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
+genAuthServerContext mSecret = (case mSecret of
+  PlainAddressAuth -> plainAddressAuthHandler
+  JWTAuth JWTArgs{..} -> jwtAuthHandler jwtSecret ) :. EmptyContext
 
 initDb :: IO ()
 initDb = void $ try' $ DB.withDb DB.createTables
@@ -280,15 +346,18 @@ main = do
 
       _ <- initDb
       _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
+      -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
-        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (ServerArgs args.wallet args.githubToken) (be r eb))
+        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext args.auth) .
+        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb))
   exitFailure
   where
+  serverArgs args caps r eb = ServerArgs
+    caps (args.wallet) args.githubToken (jwtArgs args.auth) (be r eb) (args.signatureTimeout)
+  jwtArgs PlainAddressAuth = Nothing
+  jwtArgs (JWTAuth args) = Just args
+  documentation PlainAddressAuth = swaggerJson
+  documentation (JWTAuth _) = swaggerJsonWithLogin
 
   be r eb = hoistEventBackend liftIO $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb
-
-
-
-

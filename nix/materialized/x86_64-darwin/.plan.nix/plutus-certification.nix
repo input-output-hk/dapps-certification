@@ -62,6 +62,19 @@
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
+          (hsPkgs."bech32" or (errorHandler.buildDepError "bech32"))
+          (hsPkgs."ed25519" or (errorHandler.buildDepError "ed25519"))
+          (hsPkgs."cborg" or (errorHandler.buildDepError "cborg"))
+          (hsPkgs."webauthn" or (errorHandler.buildDepError "webauthn"))
+          (hsPkgs."serialise" or (errorHandler.buildDepError "serialise"))
+          (hsPkgs."cryptonite" or (errorHandler.buildDepError "cryptonite"))
+          (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
+          (hsPkgs."base58-bytestring" or (errorHandler.buildDepError "base58-bytestring"))
+          (hsPkgs."blake2" or (errorHandler.buildDepError "blake2"))
+          (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
+          (hsPkgs."cardano-addresses" or (errorHandler.buildDepError "cardano-addresses"))
+          (hsPkgs."jwt" or (errorHandler.buildDepError "jwt"))
+          (hsPkgs."dapps-certification-signing-verification" or (errorHandler.buildDepError "dapps-certification-signing-verification"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
@@ -84,6 +97,9 @@
           "Plutus/Certification/Server"
           "Plutus/Certification/Local"
           "Plutus/Certification/GitHubClient"
+          "Plutus/Certification/Crypto"
+          "Plutus/Certification/Crypto2"
+          "Plutus/Certification/JWT"
           "Plutus/Certification/WalletClient"
           "Plutus/Certification/Synchronizer"
           ];
@@ -108,6 +124,7 @@
             (hsPkgs."wai-cors" or (errorHandler.buildDepError "wai-cors"))
             (hsPkgs."singletons" or (errorHandler.buildDepError "singletons"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."time" or (errorHandler.buildDepError "time"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
