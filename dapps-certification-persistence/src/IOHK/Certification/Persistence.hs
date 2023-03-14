@@ -36,6 +36,7 @@ import IOHK.Certification.Persistence.API as X
   , getCertification
   , createCertificate
   , deleteRun
+  , markAsAborted
   , getRunStatus
   , markAsReadyForCertification
   , getAllCertifiedRunsForAddress

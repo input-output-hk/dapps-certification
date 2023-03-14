@@ -32,6 +32,7 @@ import Control.Exception hiding (Handler)
 import Plutus.Certification.WalletClient (WalletAddress)
 
 import qualified IOHK.Certification.Persistence as DB
+import Control.Lens (only)
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -127,6 +128,8 @@ dbSync uuid' status = do
   let dbStatus = toDbStatus status
   void $ DB.withDb $ case dbStatus of
     DB.Queued -> DB.syncRun uuid' now
+    -- this will change to failed or succeeded only
+    -- if the status is == Queued
     _ -> DB.updateFinishedRun uuid' (dbStatus == DB.Succeeded) now
   return status
 

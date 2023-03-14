@@ -116,9 +116,12 @@ server ServerArgs{..} = NamedAPI
         -- if abortion succeeded mark it in the db
         void (getNow >>= DB.withDb . DB.updateFinishedRun uuid False)
 
-      when (deleteRun == Just True) $
-        -- delete the run from the db
-        void (DB.withDb $ DB.deleteRun uuid)
+      -- depending on the deleteRun flag either ...
+      if deleteRun == Just True
+         -- delete the run from the db
+         then void (DB.withDb $ DB.deleteRun uuid)
+         -- or just mark it as aborted
+         else void (getNow >>= DB.withDb . DB.markAsAborted uuid)
       pure NoContent
   , getProfileBalance = \(profileId,UserAddress{..}) -> withEvent eb GetProfileBalance \ev -> do
       addField ev profileId
