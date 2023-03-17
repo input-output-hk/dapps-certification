@@ -53,9 +53,10 @@ import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Network.HTTP.Types.Method
 import Plutus.Certification.WalletClient
-import Plutus.Certification.Synchronizer 
+import Plutus.Certification.Synchronizer
+import Plutus.Certification.GitHubClient
 import Control.Concurrent (forkIO)
-
+import IOHK.Certification.Actions
 data Backend
   = Local
   | Cicero !BaseUrl
@@ -64,7 +65,8 @@ data Args = Args
   { port :: !Port
   , host :: !HostPreference
   , backend :: !Backend
-  , wallet :: WalletArgs
+  , wallet :: !WalletArgs
+  , githubToken :: !(Maybe GitHubAccessToken)
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -111,6 +113,7 @@ argsParser =  Args
       )
   <*> (localParser <|> ciceroParser)
   <*> walletParser
+  <*> optional gitHubAccessTokenParser
 
 walletParser :: Parser WalletArgs
 walletParser = WalletArgs
@@ -280,7 +283,7 @@ main = do
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
-        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (args.wallet) (be r eb))
+        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (ServerArgs args.wallet args.githubToken) (be r eb))
   exitFailure
   where
 

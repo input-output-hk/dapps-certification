@@ -10,3 +10,19 @@ section > svg.spinner {
     top: 100px;
     left: 50%;
 }
+
+
+#contentWrapper {
+    margin: 0 auto;
+    padding: 40px;
+    color: #2d333a;
+    @media (max-width: 768px) {
+      & {
+        padding: 0;
+      }
+    }
+}
+
+#globalBanners {
+    padding: 10px 40px;
+}

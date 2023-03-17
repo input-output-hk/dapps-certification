@@ -25,6 +25,7 @@ import Data.Aeson
 import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
+import IOHK.Certification.Actions (gitHubAccessTokenParser)
 
 
 type PublicKey = ByteString
@@ -238,6 +239,7 @@ dappBodyParser = DAppBody
        <> metavar "DAPP_VERSION"
        <> help "dapp version"
         )
+  <*> optional (ApiGitHubAccessToken <$> gitHubAccessTokenParser)
 
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
@@ -296,6 +298,13 @@ data Command
   | CmdVersion
   | CmdWalletAddress
   | CmdCurrentProfile !ProfileCommand
+  | CmdGetRepositoryInfo !GetRepositoryInfoArgs
+
+data GetRepositoryInfoArgs = GetGitHubAddressArgs
+  { owner :: !Text
+  , repo :: !Text
+  , gitHubAccessToken :: !(Maybe ApiGitHubAccessToken)
+  }
 
 data ProfileCommand
     = GetCurrentProfile !PublicKey
@@ -309,7 +318,28 @@ commandParser = hsubparser
  <> command "version" (CmdVersion <$ versionCommandInfo)
  <> command "profile" (CmdCurrentProfile <$> currentProfileInfo)
  <> command "wallet-address" (CmdWalletAddress <$ walletAddressCommandInfo)
+ <> command "get-repo-info" (CmdGetRepositoryInfo <$> getGitHubRepoInfo)
   )
+
+getGitHubRepoInfo :: ParserInfo GetRepositoryInfoArgs
+getGitHubRepoInfo = info getGitHubRepoParser
+  ( fullDesc
+ <> header "plutus-certification-client get-github-repo — Get the github repo information"
+  )
+
+getGitHubRepoParser :: Parser GetRepositoryInfoArgs
+getGitHubRepoParser = GetGitHubAddressArgs
+  <$> option str
+        ( long "owner"
+       <> metavar "GITHUB_OWNER"
+       <> help "github owner"
+        )
+  <*> option str
+        ( long "repo"
+       <> metavar "GITHUB_REPO"
+       <> help "github repo"
+        )
+  <*> optional (ApiGitHubAccessToken <$> gitHubAccessTokenParser)
 
 data Args = Args
   { certificationURL :: !BaseUrl
@@ -384,3 +414,5 @@ main = do
       handle $ apiClient.getCurrentProfile (addAuth pubKey)
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs pubKey profileBody)) ->
       handle $ apiClient.updateCurrentProfile (addAuth pubKey) profileBody
+    CmdGetRepositoryInfo (GetGitHubAddressArgs owner' repo' gitHubAccessToken') ->
+      handle $ apiClient.getRepositoryInfo owner' repo' gitHubAccessToken'

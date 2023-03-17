@@ -19,8 +19,9 @@ import Plutus.Certification.API.Routes as X
   , KnownActionType(..)
   , ProfileBody(..)
   , DAppBody(..)
+  , ApiGitHubAccessToken(..)
   )
-import Plutus.Certification.API.Swagger as X 
+import Plutus.Certification.API.Swagger as X
   ( swaggerJson
   , APIWithSwagger
   )
