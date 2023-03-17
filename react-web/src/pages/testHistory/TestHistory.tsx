@@ -15,7 +15,7 @@ import Toast from "components/Toast/Toast";
 import { processFinishedJson } from "components/TimelineItem/timeline.helper";
 import { isAnyTaskFailure } from "pages/certification/Certification.helper";
 import "./TestHistory.scss";
-import { run } from 'components/CreateCertificate/CreateCertificate';
+import { Run } from 'components/CreateCertificate/CreateCertificate';
 import { exportObjectToJsonFile } from "utils/utils";
 
 interface ICampaignCertificate {
@@ -40,7 +40,7 @@ dayjs.extend(utc)
 dayjs.extend(tz)
 
 const TestHistory = () => {
-  const [data, setData] = useState<Array<run>>([]);
+  const [data, setData] = useState<Array<Run>>([]);
   const [runningSpinner, setRunningSpinner] = useState("");
   const [highlightLabelFor, setHighlightLabelFor] = useState("");
   const [skipPageReset, setSkipPageReset] = useState(false);

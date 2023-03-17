@@ -21,7 +21,7 @@ import { Address,
 import Toast from "components/Toast/Toast";
 import { fetchData } from "api/api";
 
-export interface run {
+export interface Run {
     "certificationPrice": number,
     "commitDate": string;
     "commitHash": string;
@@ -34,7 +34,7 @@ export interface run {
     "syncedAt": string;
 }
 
-interface certificate {
+interface Certificate {
     "createdAt": string;
     "runId": string;
     "transactionId": string;
@@ -75,7 +75,7 @@ const CreateCertificate = () => {
         }
     }
 
-    const certificationBroadcasted = (data: certificate) => {
+    const certificationBroadcasted = (data: Certificate) => {
         console.log('broadcasted tnx data ', data);
         setTransactionId(data.transactionId)
         setOpenModal(true)
@@ -85,7 +85,7 @@ const CreateCertificate = () => {
 
     const fetchRunDetails = async (txnId?: string) => {
         fetchData.get('/run/' + uuid + '/details').then(response => {
-            const details: run = response.data
+            const details: Run = response.data
             if (details?.runStatus === 'ready-for-certification') {
                 const timeout = setTimeout(async ()=> {
                     clearTimeout(timeout)
@@ -115,7 +115,7 @@ const CreateCertificate = () => {
         fetchData.get('/profile/current/balance').then(response => {
             const availableProfileBalance: number = response.data
             fetchData.get('/run/' + uuid + '/details').then(res => {
-                const runDetails: run = res.data
+                const runDetails: Run = res.data
                 if ((availableProfileBalance - runDetails.certificationPrice) < 0) {
                     triggerTransactionFromWallet(runDetails.certificationPrice)
                 } else {
