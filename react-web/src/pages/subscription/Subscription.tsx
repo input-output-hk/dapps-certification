@@ -77,6 +77,10 @@ const Subscription = () => {
           ))}
         </div>
       </div>
+      <div className="subscription-content">Our pricing varies depending on the tier you choose. Please contact us for more information.</div>
+      <div className="subscription-content">
+      Thank you for considering our subscription offering for our SaaS tool. We are confident that our tools and professional services will help you ensure that your software is secure and compliant with industry standards. If you have any questions or would like to sign up for a subscription, please contact us.
+      </div>
     </div>
   );
 };
