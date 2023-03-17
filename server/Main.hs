@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
@@ -14,9 +13,10 @@
 {-# LANGUAGE TypeOperators #-}
 module Main where
 
+import Control.Monad.Except
+
 import Servant.Swagger.UI
 import Control.Exception hiding (Handler)
-import Control.Monad.IO.Class
 import Data.Aeson
 import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
 import Data.Bits
@@ -40,21 +40,23 @@ import Observe.Event.Wai hiding (OnException)
 import Observe.Event.Servant.Client
 import System.IO
 import Control.Concurrent.MVar
-import Control.Monad
 import Control.Concurrent.Async
 import Network.Wai
 import Plutus.Certification.API
 import Plutus.Certification.Cache hiding (lookup)
 import Plutus.Certification.Cicero
 import Plutus.Certification.Client
-import Plutus.Certification.Server
+import Plutus.Certification.Server as Server
 import Plutus.Certification.Local
 import Data.Text.Encoding
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Network.HTTP.Types.Method
 import Plutus.Certification.WalletClient
-
+import Plutus.Certification.Synchronizer
+import Plutus.Certification.GitHubClient
+import Control.Concurrent (forkIO)
+import IOHK.Certification.Actions
 data Backend
   = Local
   | Cicero !BaseUrl
@@ -63,7 +65,8 @@ data Args = Args
   { port :: !Port
   , host :: !HostPreference
   , backend :: !Backend
-  , wallet :: WalletArgs
+  , wallet :: !WalletArgs
+  , githubToken :: !(Maybe GitHubAccessToken)
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -82,7 +85,7 @@ ciceroParser = Cicero
      <> metavar "CICERO_URL"
      <> help "URL of the cicero server"
      <> showDefaultWith showBaseUrl
-     <> (Opts.value $ BaseUrl Http "localhost" 8080 "")
+     <> Opts.value ( BaseUrl Http "localhost" 8080 "")
       )
 
 localParser :: Parser Backend
@@ -110,6 +113,7 @@ argsParser =  Args
       )
   <*> (localParser <|> ciceroParser)
   <*> walletParser
+  <*> optional gitHubAccessTokenParser
 
 walletParser :: Parser WalletArgs
 walletParser = WalletArgs
@@ -133,10 +137,15 @@ walletParser = WalletArgs
      <> metavar "WALLET_URL"
      <> help "URL for wallet api"
      <> showDefaultWith showBaseUrl
-     <> (Opts.value $ BaseUrl Http "localhost" 8090 "")
+     <> Opts.value ( BaseUrl Http "localhost" 8090 "")
       )
-
-
+  <*> option auto
+      ( long "wallet-certification-price"
+     <> metavar "CERTIFICATION_PRICE"
+     <> help "price of certification in lovelace"
+     <> showDefault
+     <> Opts.value 1000000
+      )
 
 opts :: ParserInfo Args
 opts = info (argsParser <**> helper)
@@ -158,6 +167,7 @@ data RootEventSelector f where
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
+  InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -182,6 +192,7 @@ renderRoot (InjectRunRequest s) = runRequestJSON s
 renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
+renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 
 --TODO: remove after proper DB is implemented
 dummyHash :: ByteString -> Int
@@ -201,7 +212,7 @@ authHandler = mkAuthHandler handler
   ensureProfile :: ByteString -> Handler (DB.ProfileId,UserAddress)
   ensureProfile bs = do
     let address = decodeUtf8 bs
-    profileIdM <- (getProfileFromDb bs)
+    profileIdM <- getProfileFromDb bs
     case profileIdM of
       Just pid -> pure (pid, UserAddress address)
       Nothing -> do
@@ -217,8 +228,7 @@ genAuthServerContext :: Context (AuthHandler Request (DB.ProfileId,UserAddress) 
 genAuthServerContext = authHandler :. EmptyContext
 
 initDb :: IO ()
-initDb = void $ try' $ DB.withDb $
-    DB.createTables
+initDb = void $ try' $ DB.withDb DB.createTables
   where
   try' :: IO a -> IO (Either SomeException a)
   try' = try
@@ -253,9 +263,7 @@ main = do
                                   . narrowEventBackend InjectRunClient
                                   $ eb
                                   ) $ CiceroCaps {..}
-        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal
-                                                            $ eb
-                                                            )
+        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
@@ -269,11 +277,18 @@ main = do
                      , corsMethods = [methodGet,methodPost,methodPut,methodDelete,methodHead]
                      }
 
+
       _ <- initDb
+      _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) genAuthServerContext .
-        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (wallet args) (be r eb))
+        (\r -> swaggerSchemaUIServer swaggerJson :<|> server caps (ServerArgs args.wallet args.githubToken) (be r eb))
   exitFailure
   where
+
   be r eb = hoistEventBackend liftIO $ narrowEventBackend InjectServerSel $ modifyEventBackend (setAncestor r) eb
+
+
+
+

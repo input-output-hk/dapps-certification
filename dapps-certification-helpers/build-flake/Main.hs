@@ -10,11 +10,13 @@ import IOHK.Certification.Actions
 import Observe.Event
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
-import System.IO
+import IOHK.Certification.Interface
 
 data Args = Args
   { flake :: !FilePath
+  , githubToken :: !(Maybe GitHubAccessToken)
   }
+
 
 argsParser :: Parser Args
 argsParser =  Args
@@ -22,6 +24,8 @@ argsParser =  Args
               ( metavar "FLAKE"
              <> help "the path to the flake"
               )
+          <*> optional gitHubAccessTokenParser
+
 argsInfo :: ParserInfo Args
 argsInfo = info (argsParser <**> helper)
   ( fullDesc
@@ -30,8 +34,8 @@ argsInfo = info (argsParser <**> helper)
 
 instrumentedMain :: EventBackend IO r MainSelector -> Args -> IO ()
 instrumentedMain backend (Args {..}) = do
-  res <- buildFlake (narrowEventBackend Build backend) (const $ pure ()) flake
-  hPutStrLn stdout res
+  res <- buildFlake (narrowEventBackend Build backend) (const $ pure ()) githubToken flake
+  putStrLn res
 
 main :: IO ()
 main = do

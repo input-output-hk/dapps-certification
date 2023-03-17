@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,16 +16,16 @@ import Network.HTTP.Client.TLS
 import Options.Applicative
 import Control.Exception hiding (handle)
 import Data.UUID as UUID
-import Data.ByteString.Char8 as BS hiding (hPutStrLn)
-import Data.ByteString.Lazy.Char8 (hPutStrLn)
+import Data.ByteString.Char8 as BS
+import Data.ByteString.Lazy.Char8 as LBS (putStrLn)
 import Data.Coerce
 import Network.URI hiding (scheme)
 import Servant.API hiding (addHeader)
 import Data.Aeson
-import System.IO (stdout)
 import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
+import IOHK.Certification.Actions (gitHubAccessTokenParser)
 
 
 type PublicKey = ByteString
@@ -42,10 +41,10 @@ flakeRefReader = do
 
 createRunParser :: Parser CreateRunArgs
 createRunParser = CreateRunArgs
-  <$> (CommitOrBranch <$> (option str
+  <$> (CommitOrBranch <$> option str
     ( metavar "REF"
    <> help "the flake reference pointing to the repo to build"
-    )))
+    ))
   <*> publicKeyParser
 
 createRunInfo :: ParserInfo CreateRunArgs
@@ -240,6 +239,7 @@ dappBodyParser = DAppBody
        <> metavar "DAPP_VERSION"
        <> help "dapp version"
         )
+  <*> optional (ApiGitHubAccessToken <$> gitHubAccessTokenParser)
 
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
@@ -287,10 +287,24 @@ versionCommandInfo = info (pure ())
  <> header "plutus-certification-client version — Get the version of the server"
   )
 
+walletAddressCommandInfo :: ParserInfo ()
+walletAddressCommandInfo = info (pure ())
+  ( fullDesc
+ <> header "plutus-certification-client wallet-address — Get the wallet address the backend operates with"
+  )
+
 data Command
   = CmdRun !RunCommand
   | CmdVersion
+  | CmdWalletAddress
   | CmdCurrentProfile !ProfileCommand
+  | CmdGetRepositoryInfo !GetRepositoryInfoArgs
+
+data GetRepositoryInfoArgs = GetGitHubAddressArgs
+  { owner :: !Text
+  , repo :: !Text
+  , gitHubAccessToken :: !(Maybe ApiGitHubAccessToken)
+  }
 
 data ProfileCommand
     = GetCurrentProfile !PublicKey
@@ -301,9 +315,31 @@ data UpdateCurrentProfileArgs = UpdateCurrentProfileArgs PublicKey ProfileBody
 commandParser :: Parser Command
 commandParser = hsubparser
   ( command "run" (CmdRun <$> runCommandInfo)
- <> command "version" (const CmdVersion <$> versionCommandInfo)
+ <> command "version" (CmdVersion <$ versionCommandInfo)
  <> command "profile" (CmdCurrentProfile <$> currentProfileInfo)
+ <> command "wallet-address" (CmdWalletAddress <$ walletAddressCommandInfo)
+ <> command "get-repo-info" (CmdGetRepositoryInfo <$> getGitHubRepoInfo)
   )
+
+getGitHubRepoInfo :: ParserInfo GetRepositoryInfoArgs
+getGitHubRepoInfo = info getGitHubRepoParser
+  ( fullDesc
+ <> header "plutus-certification-client get-github-repo — Get the github repo information"
+  )
+
+getGitHubRepoParser :: Parser GetRepositoryInfoArgs
+getGitHubRepoParser = GetGitHubAddressArgs
+  <$> option str
+        ( long "owner"
+       <> metavar "GITHUB_OWNER"
+       <> help "github owner"
+        )
+  <*> option str
+        ( long "repo"
+       <> metavar "GITHUB_REPO"
+       <> help "github repo"
+        )
+  <*> optional (ApiGitHubAccessToken <$> gitHubAccessTokenParser)
 
 data Args = Args
   { certificationURL :: !BaseUrl
@@ -327,9 +363,9 @@ argsParser = Args
        <> metavar "CERTIFICATION_URL"
        <> help "URL of the certification server"
        <> showDefaultWith showBaseUrl
-       <> (value $ BaseUrl Https "testing.dapps.iog.io" 443 "")
+       <> value (BaseUrl Https "testing.dapps.iog.io" 443 "")
         )
-  <*> (optional $ option str
+  <*> optional ( option str
         ( long "user"
        <> metavar "USER"
        <> help "User name for BASIC authentication with the certification server"
@@ -342,7 +378,7 @@ argsInfo = info (argsParser <**> helper)
  <> header "plutus-certification-cli — A tool for interacting with the Plutus Certification service"
   )
 addAuth :: PublicKey -> AuthenticatedRequest (AuthProtect "public-key")
-addAuth = flip mkAuthenticatedRequest (\v -> addHeader hAuthorization (BS.unpack v))
+addAuth = flip mkAuthenticatedRequest (addHeader hAuthorization . BS.unpack)
 
 type instance AuthClientData (AuthProtect "public-key") = PublicKey
 
@@ -353,16 +389,18 @@ main = do
   let apiClient = client $ Proxy @API
       cEnv = mkClientEnv manager args.certificationURL
       handle :: (ToJSON a) => ClientM a -> IO ()
-      handle c = runClientM c cEnv >>= either throwIO (hPutStrLn stdout . encode)
+      handle c = runClientM c cEnv >>= either throwIO (LBS.putStrLn . encode)
   case args.cmd of
     CmdVersion ->
       handle $ apiClient.version
+    CmdWalletAddress ->
+      handle $ apiClient.walletAddress
     CmdRun (Create (CreateRunArgs ref pubKey)) ->
       handle $ apiClient.createRun (addAuth pubKey) ref
     CmdRun (Get ref) ->
       handle $ apiClient.getRun ref
     CmdRun (Abort (AbortRunArgs ref pubKey deleteRun)) ->
-      handle $ (const True <$> apiClient.abortRun (addAuth pubKey) ref deleteRun)
+      handle (True <$ apiClient.abortRun (addAuth pubKey) ref deleteRun)
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
       handle $ apiClient.getLogs ref zt act
@@ -371,8 +409,10 @@ main = do
     CmdRun (GetCertification ref) ->
       handle $ apiClient.getCertification ref
     CmdRun (CreateCertification (CreateCertificationArgs ref pubKey)) ->
-      handle $ apiClient.createCertification (addAuth pubKey) ref
+      handle (True <$ apiClient.createCertification (addAuth pubKey) ref)
     CmdCurrentProfile (GetCurrentProfile pubKey) ->
       handle $ apiClient.getCurrentProfile (addAuth pubKey)
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs pubKey profileBody)) ->
       handle $ apiClient.updateCurrentProfile (addAuth pubKey) profileBody
+    CmdGetRepositoryInfo (GetGitHubAddressArgs owner' repo' gitHubAccessToken') ->
+      handle $ apiClient.getRepositoryInfo owner' repo' gitHubAccessToken'

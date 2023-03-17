@@ -10,6 +10,10 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists            #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.Certification.API.Routes where
 
@@ -30,10 +34,13 @@ import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
-
+import Plutus.Certification.WalletClient
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
-import qualified Control.Lens as L
+import Control.Lens hiding ((.=))
+import qualified Data.Swagger.Lens as SL
+import Plutus.Certification.GitHubClient (RepositoryInfo)
+import Control.Arrow (ArrowChoice(left))
 
 type API = NamedRoutes NamedAPI
 
@@ -78,6 +85,12 @@ type GetRunsRoute = "run"
   :> QueryParam "count" Int
   :> Get '[JSON] [DB.Run]
 
+type GetRunDetailsRoute = "run"
+  :> Description "Get the details of a run"
+  :> Capture "id" RunIDV1
+  :> "details"
+  :> Get '[JSON] DB.Run
+
 type GetCurrentProfileRoute = "profile"
   :> Description "Get the current profile information"
   :> "current"
@@ -96,16 +109,53 @@ type CreateCertificationRoute = "run"
   :> AuthProtect "public-key"
   :> Capture "id" RunIDV1
   :> "certificate"
-  :> Post '[JSON] DB.Certification
+  :> PostNoContent
 
--- TODO: the certification object remains to be added in a future commit
 type GetCertificateRoute = "run"
   :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
   :> Capture "id" RunIDV1
   :> "certificate"
   :> Get '[JSON] DB.Certification
 
-data CertificateCreationResponse = CertificateCreationResponse
+type GetBalanceRoute = "profile"
+  :> Description "Get the current balance of the profile"
+  :> "current"
+  :> "balance"
+  :> AuthProtect "public-key"
+  :> Get '[JSON] Int
+
+type WalletAddressRoute = "wallet-address"
+  :> Description "Get the wallet address the backend operates with"
+  :> Get '[JSON] WalletAddress
+
+type GitHubRoute = "repo"
+  :> Description "Get the github repo information"
+  :> Capture "owner" Text
+  :> Capture "repo" Text
+  :> Servant.Header "Authorization" ApiGitHubAccessToken
+  :> Get '[JSON] RepositoryInfo
+
+newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
+  deriving (Generic)
+
+instance ToJSON ApiGitHubAccessToken where
+  toJSON = toJSON . ghAccessTokenToText . unApiGitHubAccessToken
+
+instance FromJSON ApiGitHubAccessToken where
+  parseJSON = withText "ApiGitHubAccessToken" $ \token ->
+    case ghAccessTokenFromText token of
+      Left err -> fail err
+      Right t  -> pure $ ApiGitHubAccessToken t
+
+instance ToHttpApiData ApiGitHubAccessToken where
+  -- | Convert a 'GitHubAccessToken' to a 'Text' value.
+  toUrlPiece  = ghAccessTokenToText . unApiGitHubAccessToken
+
+instance FromHttpApiData ApiGitHubAccessToken where
+  -- | Parse a 'GitHubAccessToken' from a 'Text' value.
+  parseUrlPiece  = left Text.pack . fmap ApiGitHubAccessToken . ghAccessTokenFromText
+
+newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
 
@@ -121,6 +171,10 @@ data NamedAPI mode = NamedAPI
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute
   , createCertification :: mode :- CreateCertificationRoute
   , getCertification :: mode :- GetCertificateRoute
+  , walletAddress :: mode :- WalletAddressRoute
+  , getProfileBalance :: mode :- GetBalanceRoute
+  , getRunDetails :: mode :- GetRunDetailsRoute
+  , getRepositoryInfo :: mode :- GitHubRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -128,6 +182,7 @@ data DAppBody = DAppBody
   , dappOwner :: Text
   , dappRepo :: Text
   , dappVersion :: Text
+  , dappGitHubToken :: Maybe ApiGitHubAccessToken
   } deriving stock Generic
 
 instance FromJSON DAppBody where
@@ -136,6 +191,7 @@ instance FromJSON DAppBody where
       <*> v .: "owner"
       <*> v .: "repo"
       <*> v .: "version"
+      <*> v .: "githubToken"
 
 instance ToJSON DAppBody where
   toJSON DAppBody{..} = object
@@ -143,6 +199,7 @@ instance ToJSON DAppBody where
     , "owner"  .= dappOwner
     , "repo"  .= dappRepo
     , "version"  .= dappVersion
+    , "githubToken"  .= dappGitHubToken
     ]
 
 data ProfileBody = ProfileBody
@@ -216,7 +273,7 @@ instance MimeRender OctetStream RunIDV1 where
 instance MimeUnrender OctetStream RunIDV1 where
   mimeUnrender _ ridbs = case fromByteString ridbs of
     Just rid -> pure $ RunID rid
-    Nothing -> Left $ "couldn't parse '" ++ (BSL8.unpack ridbs) ++ "' as a run ID"
+    Nothing -> Left $ "couldn't parse '" ++ BSL8.unpack ridbs ++ "' as a run ID"
 
 data StepState
   = Running
@@ -289,8 +346,8 @@ instance ToJSON IncompleteRunStatus where
   toEncoding (Certifying (CertifyingStatus {..})) = pairs
     ( "status" .= ("certifying" :: Text)
    <> "state"  .= certifyingState
-   <> (maybe mempty ("progress" .=) certifyingProgress)
-   <> (maybe mempty ("plan" .=) certifyingPlan)
+   <> maybe mempty ("progress" .=) certifyingProgress
+   <> maybe mempty ("plan" .=) certifyingPlan
     )
 
 instance FromJSON IncompleteRunStatus where
@@ -361,26 +418,49 @@ instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
 
+
+instance ToParamSchema ApiGitHubAccessToken where
+  toParamSchema _ = mempty
+    & type_ ?~ SwaggerString
+    & maxLength ?~ 40
+    -- we use SL qualified because of an issue
+    -- of parsing for the hlint. it seems to be
+    -- some kind of bug
+    & SL.pattern ?~ ghAccessTokenPattern
+
+ghAccessTokenPattern :: Pattern
+ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
+
+
+instance ToSchema ApiGitHubAccessToken where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
+      & type_ ?~ SwaggerString
+      & maxLength ?~ 40
+      & SL.pattern ?~ ghAccessTokenPattern
+
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
+    apiGitHubAccessTokenSchema <- declareSchemaRef (Proxy :: Proxy ApiGitHubAccessToken)
     return $ NamedSchema (Just "DAppBody") $ profileSchema
+        & properties . at "githubToken" ?~ apiGitHubAccessTokenSchema
 
 instance ToSchema ProfileBody
 
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
-      L.& type_ L.?~ SwaggerString
+      & type_ ?~ SwaggerString
 
 instance ToSchema CommitOrBranch  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "CommitOrBranch") $ mempty
-      L.& type_ L.?~ SwaggerString
+      & type_ ?~ SwaggerString
 
 instance ToSchema Cicero.Run.RunLog where
   --TODO: find a way to embed aeson Value to the definition
-  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") $ mempty
+  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") mempty
 instance ToSchema IncompleteRunStatus where
   declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 

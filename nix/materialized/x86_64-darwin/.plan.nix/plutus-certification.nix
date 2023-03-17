@@ -72,13 +72,20 @@
           "Plutus/Certification/API/Routes"
           "Plutus/Certification/API/Swagger"
           "Plutus/Certification/Web3StorageClient"
+          "Plutus/Certification/Internal"
+          "Plutus/Certification/WalletClient/Transaction"
+          "Plutus/Certification/TransactionBroadcaster"
+          "Plutus/Certification/Server/Internal"
+          "Plutus/Certification/Server/Instance"
           "Plutus/Certification/API"
           "Plutus/Certification/Cache"
           "Plutus/Certification/Cicero"
           "Plutus/Certification/Client"
           "Plutus/Certification/Server"
           "Plutus/Certification/Local"
-          "Plutus/Certification/GithubClient"
+          "Plutus/Certification/GitHubClient"
+          "Plutus/Certification/WalletClient"
+          "Plutus/Certification/Synchronizer"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -102,8 +109,12 @@
             (hsPkgs."singletons" or (errorHandler.buildDepError "singletons"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
+            (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
+            (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
+            (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
             (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
             (hsPkgs."servant-swagger-ui" or (errorHandler.buildDepError "servant-swagger-ui"))
             ];
@@ -129,6 +140,7 @@
             (hsPkgs."time" or (errorHandler.buildDepError "time"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
             (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
+            (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
           buildable = true;

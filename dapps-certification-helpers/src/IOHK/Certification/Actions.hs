@@ -1,61 +1,64 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE ApplicativeDo     #-}
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeApplications  #-}
 module IOHK.Certification.Actions where
 
-import Data.Coerce
-import Paths_dapps_certification_helpers
-import System.Directory
-import Network.URI hiding (path)
-import Control.Exception
-import Control.Concurrent.Async
-import Control.Monad.IO.Unlift
-import Data.Aeson.Internal
-import Data.Aeson.Types
-import Data.Aeson.Text
-import Data.Time.Clock.POSIX
-import Data.Text as T
-import Data.Text.IO hiding (putStrLn)
-import Data.Text.Encoding
-import Data.ByteString as BS hiding (hPutStr)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Lazy.Internal as LBS
-import qualified Data.Text.Lazy as LT
-import Data.ByteString.Base16
-import System.Process.Typed
-import System.Process (Pid, getPid)
-import Data.Aeson.Parser
-import Data.Aeson.Parser.Internal
-import Observe.Event
-import Observe.Event.Render.JSON
-import Data.Void
-import System.IO hiding (hPutStrLn, hPutStr)
-import System.FilePath
-import Control.Monad
-import Control.Monad.Catch hiding (finally)
-import Data.List.NonEmpty
-import Data.Map as Map
-import qualified Data.Vector as V
-import Data.List as L
-import Data.Acquire
-import Control.Monad.Trans.Resource
-import IOHK.Certification.Interface hiding (Success)
-import Conduit
-import Data.Conduit.Aeson
+import           Conduit
+import           Control.Concurrent.Async
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.Catch               hiding (finally)
+import           Control.Monad.Trans.Resource
+import           Data.Acquire
+import           Data.Aeson.Internal               as Aeson
+import           Data.Aeson.Parser
+import           Data.Aeson.Parser.Internal
+import           Data.Aeson.Text                   as Aeson
+import           Data.Aeson.Types                  as Aeson
+import           Data.ByteString                   as BS hiding (hPutStr)
+import           Data.ByteString.Base16
+import           Data.Coerce
+import           Data.Conduit.Aeson
+import           Data.List                         as L
+import           Data.List.NonEmpty
+import           Data.Map                          as Map
+import           Data.Text                         as T
+import           Data.Text.Encoding
+import           Data.Text.IO                      hiding (putStrLn)
+import           Data.Time.Clock.POSIX
+import           Data.Void
+import           IOHK.Certification.Interface      hiding (Success)
+import           Network.URI                       hiding (path)
+import           Observe.Event
+import           Observe.Event.Render.JSON
+import           Options.Applicative               as Optparse
+import           Paths_dapps_certification_helpers
+import           System.Directory
+import           System.FilePath
+import           System.IO                         hiding (hPutStr, hPutStrLn)
+import           System.Process                    (Pid, getPid)
+import           System.Process.Typed
+import           Text.Regex
 
-generateFlake :: EventBackend IO r GenerateFlakeSelector ->(Text -> IO ()) -> URI -> FilePath -> IO ()
-generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFlake \ev -> do
+import qualified Data.ByteString.Lazy              as LBS
+import qualified Data.ByteString.Lazy.Internal     as LBS
+import qualified Data.Text.Lazy                    as LT
+import qualified Data.Vector                       as V
+
+
+generateFlake :: EventBackend IO r GenerateFlakeSelector -> (Text -> IO ()) -> Maybe GitHubAccessToken -> URI -> FilePath -> IO ()
+generateFlake backend addLogEntry ghAccessTokenM flakeref output = withEvent backend GenerateFlake \ev -> do
   addField ev $ GenerateRef flakeref
   addField ev $ GenerateDir output
 
   let lockBackend = narrowEventBackend LockFlake
                   $ subEventBackend ev
-  lock <- lockRef lockBackend flakeref
+  lock <- lockRef lockBackend ghAccessTokenM flakeref
 
   let logWrittenFile fname = addLogEntry $ T.pack $ fname ++ " written at " ++ output
   withSubEvent ev WriteFlakeNix \_ -> withFile (output </> "flake.nix") WriteMode \h -> do
@@ -89,8 +92,8 @@ generateFlake backend addLogEntry flakeref output = withEvent backend GenerateFl
 
   logWrittenFile "Certify.nix"
 
-buildFlake :: EventBackend IO r BuildFlakeSelector -> (Text -> IO ()) -> FilePath -> IO FilePath
-buildFlake backend addLogEntry dir = do
+buildFlake :: EventBackend IO r BuildFlakeSelector ->  (Text -> IO ()) -> Maybe GitHubAccessToken -> FilePath -> IO FilePath
+buildFlake backend addLogEntry ghAccessTokenM dir = do
     buildJson <- withEvent backend BuildingFlake \ev -> do
       let backend' = narrowEventBackend ReadNixBuild
                    $ subEventBackend ev
@@ -98,25 +101,25 @@ buildFlake backend addLogEntry dir = do
     case eitherDecodeWith jsonEOF decodeBuild buildJson of
       Left (path, err) -> throw $ DecodeBuild path err
       Right (BuildResult {..} :| []) -> case Map.lookup "out" outputs of
-        Just p -> pure p
+        Just p  -> pure p
         Nothing -> throw $ MissingOut drvPath
       Right (_ :| tl) -> throw . ExtraBuilds $ L.length tl
   where
-    cmd = proc "nix" [ "build"
-                     , "--refresh"
-                     , "path:" ++ dir
-                     , "--no-link"
-                     , "--json"
-                     , "--print-build-logs"
-                     ]
+    cmd = proc "nix" $ [ "build"
+                       , "--refresh"
+                       , "path:" ++ dir
+                       , "--no-link"
+                       , "--json"
+                       , "--print-build-logs"
+                       ] ++ accessTokenToArg ghAccessTokenM
 
 runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
 runCertify addLogEntry certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
-            Error s -> liftIO $ fail s
-            Success m -> do
+            Aeson.Error s -> liftIO $ fail s
+            Aeson.Success m -> do
               liftIO $ addLogEntry $ LT.toStrict $ encodeToLazyText v
               yield m
               toMessage
@@ -133,7 +136,7 @@ acquireProcessWait :: ProcessConfig i o e -> Acquire (Process i o e)
 acquireProcessWait cfg = mkAcquireType (startProcess cfg) cleanup
   where
     cleanup p ReleaseException = stopProcess p
-    cleanup p _ = finally (checkExitCode p) (stopProcess p)
+    cleanup p _                = finally (checkExitCode p) (stopProcess p)
 
 newtype SHA1Hash = SHA1Hash ByteString
 
@@ -150,14 +153,14 @@ renderSHA1Hash = encodeBase16 . coerce
 
 data GitHubFlakeLock = GitHubFlakeLock
   { owner :: !Text
-  , repo :: !Text
-  , rev :: !SHA1Hash
+  , repo  :: !Text
+  , rev   :: !SHA1Hash
   }
 
 data FlakeLock = FlakeLock
   { lastModified :: !POSIXTime
-  , narHash :: !Text -- Sigh https://github.com/haskell-crypto/cryptonite/issues/337
-  , gitHubFlake :: !GitHubFlakeLock -- Assuming GH only for now...
+  , narHash      :: !Text -- Sigh https://github.com/haskell-crypto/cryptonite/issues/337
+  , gitHubFlake  :: !GitHubFlakeLock -- Assuming GH only for now...
   }
 
 writeNix :: Handle -> FlakeLock -> IO ()
@@ -179,14 +182,14 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
     flip (withObject "flake-lock") lock \o' -> do
       ty <- o' .: "type"
       when (ty /= ghTy) $
-        parserThrowError [ (Key "locked"), (Key "type") ] ("invalid flake type " ++ show ty)
+        parserThrowError [ Key "locked", Key "type" ] ("invalid flake type " ++ show ty)
 
       lastModified <- o' .: "lastModified"
       narHash <- o' .: "narHash"
 
       owner <- o' .: "owner"
       repo <- o' .: "repo"
-      rev <- o' .: "rev" >>= decodeRev [ (Key "locked"), (Key "rev") ]
+      rev <- o' .: "rev" >>= decodeRev [ Key "locked", Key "rev" ]
       pure $ FlakeLock
         { gitHubFlake = GitHubFlakeLock {..}
         , ..
@@ -195,12 +198,12 @@ decodeFlakeLock = iparse $ withObject "flake-metadata" \o -> do
     ghTy :: Text
     ghTy = "github"
 
-    decodeRev :: JSONPath -> Text -> Parser SHA1Hash
+    decodeRev :: JSONPath -> Text -> Aeson.Parser SHA1Hash
     decodeRev path r = case parseSHA1Hash r of
       Left (NotBase16 msg) ->
-        parserThrowError path $ "rev " ++ (show r) ++ " is not valid base16: " ++ (show msg)
+        parserThrowError path $ "rev " ++ show r ++ " is not valid base16: " ++ show msg
       Left (BadLength len) ->
-        parserThrowError path $ "rev " ++ (show r) ++ " is a base16 string representing " ++ (show len) ++ " bytes, expecting 20"
+        parserThrowError path $ "rev " ++ show r ++ " is a base16 string representing " ++ show len ++ " bytes, expecting 20"
       Right h -> pure h
 
 logHandleText :: (MonadUnliftIO m)
@@ -260,14 +263,14 @@ readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProc
           backend' = causedEventBackend launchEv
 
           readStderrBackend = narrowEventBackend ReadingStderr
-                            $ backend'
+                            backend'
 
           readStderr = logHandleText readStderrBackend addLogEntry $ getStderr p
 
           readStdoutBackend = narrowEventBackend ReadingStdout
-                            $ backend'
+                            backend'
 
-          readStdout = (LBS.fromChunks . Prelude.reverse)
+          readStdout = LBS.fromChunks . Prelude.reverse
                     <$> logDrainHandle readStdoutBackend (getStdout p) (\bs -> pure . (bs :)) []
 
       withRunInIO \run -> withAsync (run readStdout) \stdoutAsync ->
@@ -279,10 +282,10 @@ readProcessLogStderr_ backend cfg addLogEntry  = withEvent backend LaunchingProc
   where
     cfg' = setStdout createPipe
          $ setStderr createPipe
-         $ cfg
+         cfg
 
-lockRef :: EventBackend IO r LockSelector -> URI -> IO FlakeLock
-lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
+lockRef :: EventBackend IO r LockSelector -> Maybe GitHubAccessToken -> URI -> IO FlakeLock
+lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> do
     addField ev $ LockingRef flakeref
     meta <- withSubEvent ev GettingMetadata \metaEv -> do
       let backend' = narrowEventBackend ReadNixFlakeMetadata
@@ -294,13 +297,30 @@ lockRef backend flakeref = withEvent backend LockingFlake \ev -> do
         addField ev $ LockingLock lock
         pure lock
   where
-    cmd = proc "nix" [ "flake"
-                     , "--refresh"
-                     , "metadata"
-                     , "--no-update-lock-file"
-                     , "--json"
-                     , (uriToString id flakeref "")
-                     ]
+    cmd = proc "nix" $ [ "flake"
+                       , "--refresh"
+                       , "metadata"
+                       , "--no-update-lock-file"
+                       , "--json"
+                       , uriToString id flakeref ""
+                       ] ++ accessTokenToArg ghAccessTokenM
+
+accessTokenToArg :: Maybe GitHubAccessToken -> [[Char]]
+accessTokenToArg = maybe [] \token -> ["--access-tokens", "github.com="++ T.unpack (ghAccessTokenToText token)]
+
+gitHubAccessTokenReader :: ReadM GitHubAccessToken
+gitHubAccessTokenReader = do
+  text <- str
+  case ghAccessTokenFromText text of
+    Left err -> readerError $ "couldn't parse '" ++ T.unpack text ++ "' as a GitHub access token: " ++ err
+    Right ghAccessToken -> pure ghAccessToken
+
+gitHubAccessTokenParser :: Optparse.Parser GitHubAccessToken
+gitHubAccessTokenParser = option gitHubAccessTokenReader
+        ( long "gh-access-token"
+       <> metavar "GH_ACCESS_TOKEN"
+       <> help "GitHub access token to be used for authentication in case of private repos or restricted access is needed"
+        )
 
 data BuildResult = BuildResult
   { drvPath :: !FilePath
@@ -314,7 +334,7 @@ decodeBuild = iparse $ withArray "build-results" \builds -> do
     decoded <- V.mapM decodeResult builds
     pure $ V.unsafeHead decoded :| V.toList (V.unsafeTail decoded)
   where
-    decodeResult :: Value -> Parser BuildResult
+    decodeResult :: Value -> Aeson.Parser BuildResult
     decodeResult = withObject "build-result" \o -> BuildResult
       <$> o .: "drvPath"
       <*> o .: "outputs"
@@ -343,8 +363,13 @@ data LaunchField
   = forall stdin stdoutIgnored stderrIgnored . LaunchConfig !(ProcessConfig stdin stdoutIgnored stderrIgnored)
   | LaunchingPid !Pid
 
+ghAccessFlexibleTokenPattern = "gh[oprst]_[A-Za-z0-9]+"
+
 renderLaunchField :: RenderFieldJSON LaunchField
-renderLaunchField (LaunchConfig cfg) = ("launch-config", toJSON $ show cfg)
+renderLaunchField (LaunchConfig cfg) = ("launch-config", toJSON redactedCfgString)
+  where
+  redactGitHubAccess = subRegex (mkRegex ghAccessFlexibleTokenPattern)
+  redactedCfgString = redactGitHubAccess (show cfg) "<<REDACTED>>"
 renderLaunchField (LaunchingPid pid) = ("launched-pid", toJSON $ toInteger pid)
 
 data LogHandleSelector f where
@@ -455,7 +480,7 @@ instance ToJSON LockException where
     )
 
 renderElement :: JSONPathElement -> Value
-renderElement (Key k) = object [ "key" .= k ]
+renderElement (Key k)   = object [ "key" .= k ]
 renderElement (Index i) = object [ "index" .= i ]
 
 instance Exception LockException where
