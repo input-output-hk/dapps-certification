@@ -30,6 +30,7 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
+import { clearStates } from "./slices/logRunTime.slice";
 import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
 import { useConfirm } from "material-ui-confirm";
 
@@ -85,6 +86,7 @@ const Certification = () => {
     form.reset({
       commit: "",
     });
+    dispatch(clearStates())
   }
 
   const formHandler = (formData: ISearchForm) => {
@@ -335,11 +337,10 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {runState ? (
-            <>
-              <InformationTable logs={logInfo} />
-            </>
-          ) : null}
+          
+          {/* To show 'View Logs' always  */}
+          <InformationTable logs={logInfo} />
+          
           {unitTestSuccess === false && Object.keys(resultData).length ? (
             <>
               <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />

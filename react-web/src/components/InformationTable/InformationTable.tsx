@@ -10,7 +10,6 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
-        logContentRef.current?.scrollIntoView({behavior: 'smooth'})
     }, [logs])
 
     const showLogView = () => {
@@ -18,7 +17,6 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
         const timeout = setTimeout(() => {
             clearTimeout(timeout)
             bottomRef.current?.scrollIntoView({behavior: 'smooth'}); // scroll to bottom 
-            logContentRef.current?.scrollIntoView({behavior: 'smooth'})
         }, 2);
     }
 

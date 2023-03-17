@@ -34,3 +34,25 @@ export const formatToTitleCase = (value: string) => {
     return finalResult.trim();
   }
 }
+
+export const formatTimeToReadable = (duration: number) => {
+    const milliseconds = Math.floor(duration % 1000),
+      seconds = Math.floor((duration / 1000) % 60),
+      minutes = Math.floor((duration / (1000 * 60)) % 60),
+      hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  
+    let timeStr = '';
+    if (hours) {
+      timeStr += hours + 'h '
+    }
+    if (minutes) {
+      timeStr += minutes + 'm '
+    }
+    if (seconds) {
+      timeStr += seconds + 's '
+    }
+    if (milliseconds) {
+      timeStr += milliseconds + 'ms'
+    }
+    return timeStr
+}
