@@ -47,13 +47,13 @@ type ProfileId = ID Profile
 
 instance FromJSON Profile where
     parseJSON = withObject "Profile" $ \v -> Profile def
-      <$> v .: "address"
-      <*> v .:? "website"  .!= Nothing
-      <*> v .:? "vendor"  .!= Nothing
-      <*> v .:? "twitter"  .!= Nothing
-      <*> v .:? "linkedin"  .!= Nothing
-      <*> v .:? "authors"  .!= Nothing
-      <*> v .:? "contacts"  .!= Nothing
+      <$> v .:  "address"
+      <*> v .:? "website"     .!= Nothing
+      <*> v .:? "vendor"      .!= Nothing
+      <*> v .:? "twitter"     .!= Nothing
+      <*> v .:? "linkedin"    .!= Nothing
+      <*> v .:? "authors"     .!= Nothing
+      <*> v .:? "contacts"    .!= Nothing
 
 instance ToSchema Profile where
    declareNamedSchema _ = do
@@ -70,6 +70,7 @@ instance ToSchema Profile where
           , ("linkedin", textSchemaM)
           , ("authors", textSchemaM)
           , ("contacts", textSchemaM)
+          , ("githubToken", textSchemaM)
           ]
       & required .~ [ "address", "dapp" ]
 
@@ -129,6 +130,7 @@ data DApp = DApp
   , dappOwner   :: Text
   , dappRepo    :: Text
   , dappVersion :: Text
+  , dappGitHubToken :: Maybe Text
   } deriving (Generic,Show)
 
 instance ToSchema DApp where
@@ -141,6 +143,7 @@ instance ToSchema DApp where
           , ("owner", textSchema)
           , ("repo", textSchema)
           , ("version", textSchema)
+          , ("githubToken", textSchema)
           ]
       & required .~ ["name", "owner", "repo", "version"]
 
@@ -150,6 +153,7 @@ instance FromJSON DApp where
     <*> v .: "owner"
     <*> v .: "repo"
     <*> v .: "version"
+    <*> v .: "githubToken"
 
 instance ToJSON DApp where
   toJSON (DApp{..}) = object
@@ -157,6 +161,7 @@ instance ToJSON DApp where
       , "owner" .= dappOwner
       , "repo" .= dappRepo
       , "version" .= dappVersion
+      , "githubToken" .= fmap (const ("<<REDACTED>>" :: Text)) dappGitHubToken
       ]
 
 instance SqlRow DApp

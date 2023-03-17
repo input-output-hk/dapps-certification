@@ -1,5 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -15,12 +16,13 @@ module Plutus.Certification.Server.Instance where
 import Conduit
 import Control.Monad.Catch
 import Servant
+import Servant.Client as Client
 import Control.Monad.State.Strict
 import Observe.Event
 import Observe.Event.BackendModification
 import Network.URI
 import Plutus.Certification.API as API
-import Plutus.Certification.GithubClient
+import Plutus.Certification.GitHubClient
 import Control.Monad.Except
 import Data.Time.LocalTime
 import Data.Maybe
@@ -28,7 +30,7 @@ import Data.Aeson
 import Network.HTTP.Client      hiding (Proxy,parseUrl)
 
 import Network.HTTP.Types
-
+import Control.Applicative
 import Data.Text as Text hiding (elem,replicate, last)
 import Data.Text.Encoding
 import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
@@ -43,28 +45,37 @@ import qualified Plutus.Certification.Web3StorageClient  as IPFS
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
-  { submitJob = \mods -> nt . submitJob mods
+  { submitJob = \mods ghAccessTokenM -> nt . submitJob mods ghAccessTokenM
   , getRuns = \mods -> transPipe nt . getRuns mods
   , abortRuns = \mods -> nt . abortRuns mods
   , getLogs = \mods act -> transPipe nt . getLogs mods act
   }
 
+-- | A type for server arguments including the wallet arguments
+-- and the github access token as optional
+
+data ServerArgs = ServerArgs
+  { walletArgs :: Wallet.WalletArgs
+  , githubToken :: Maybe GitHubAccessToken
+  }
+
 -- | An implementation of 'API'
 server :: (MonadMask m,MonadIO m, MonadError ServerError m)
        => ServerCaps m r
-       -> Wallet.WalletArgs
+       -> ServerArgs
        -> EventBackend m r ServerEventSelector
        -> ServerT API m
-server ServerCaps {..} wargs eb = NamedAPI
+server ServerCaps {..} ServerArgs{..} eb = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , walletAddress = withEvent eb WalletAddress . const $ pure wargs.walletAddress
+  , walletAddress = withEvent eb WalletAddress . const $ pure walletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
-      fref <- getFlakeRef profileId commitOrBranch
+      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
+      let githubToken' =  profileAccessToken <|> githubToken
       -- ensure the ref is in the right format before start the job
       (commitDate,commitHash) <- getCommitDateAndHash fref
       addField ev $ CreateRunRef fref
-      res <- submitJob (setAncestor $ reference ev) fref
+      res <- submitJob (setAncestor $ reference ev) githubToken' fref
       addField ev $ CreateRunID res
       createDbRun fref profileId res commitDate commitHash
       pure res
@@ -109,7 +120,10 @@ server ServerCaps {..} wargs eb = NamedAPI
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
-      let dappM = fmap (\DAppBody{..} -> DB.DApp{..}) dapp
+      let dappM = fmap (\DAppBody{..} -> DB.DApp{
+            dappId, dappName,dappOwner,dappVersion,dappRepo,
+            dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
+          }) dapp
       DB.withDb $ do
         _ <- DB.upsertProfile (DB.Profile{..}) dappM
         -- it's safe to call partial function fromJust
@@ -157,8 +171,35 @@ server ServerCaps {..} wargs eb = NamedAPI
     addField ev rid
     DB.withDb (DB.getCertification uuid)
       >>= maybeToServerError err404 "Certification not found"
+  , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
+    addField ev (GetRepoInfoOwner owner)
+    addField ev (GetRepoInfoRepo repo)
+    let ghAccessTokenM = unApiGitHubAccessToken <$> apiGhAccessTokenM
+        -- if there is no github access token, we use the default one
+        -- provided from arguments
+        ghAccessTokenM' =  ghAccessTokenM <|> githubToken
+    liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
   }
   where
+    fromClientResponse = \case
+      Left err -> throwError $ serverErrorFromClientError err
+      Right a -> pure a
+    serverErrorFromClientError :: ClientError -> ServerError
+    serverErrorFromClientError clientResponse =
+      case clientResponse of
+        FailureResponse _ resp -> errorFromClientResponse resp
+        DecodeFailure _ resp -> err500WithResp resp
+        UnsupportedContentType _ resp -> err500WithResp resp
+        InvalidContentTypeHeader resp -> err500WithResp resp
+        ConnectionError _ -> err500 {errBody = "Connection error"}
+      where
+      err500WithResp resp = err500 {errBody = LSB.pack $ show resp}
+
+    errorFromClientResponse :: Client.Response -> ServerError
+    errorFromClientResponse resp =
+      let (Status code msg) = responseStatusCode resp
+          err = ServerError code "GitHub API error" (LSB.fromStrict msg) []
+      in err
     uploadToIpfs :: (Monad m, MonadIO m, MonadError ServerError m) => CertificationResult -> m IPFS.UploadResponse
     uploadToIpfs certResultM = do
       resp <- IPFS.uploadReportToIpfs IPFS.apiKey (LSB.toStrict $ encode certResultM)
@@ -175,7 +216,7 @@ server ServerCaps {..} wargs eb = NamedAPI
       _ <- dbSync uuid status
       pure run
 
-    getFlakeRef profileId commitOrBranch =
+    getFlakeRefAndAccessToken profileId commitOrBranch =
       getProfileDApp profileId >>= flip createFlakeRef commitOrBranch
 
     eitherToServerError baseHttpError f = either
@@ -191,9 +232,10 @@ server ServerCaps {..} wargs eb = NamedAPI
         $ forbidden "DApp owner or repo are empty"
 
       let uri = "github:" <> encodeUtf8 dappOwner <> "/" <> encodeUtf8 dappRepo <> "/" <> encodeUtf8 commitOrBranch
-      eitherToServerError
+      fref <- eitherToServerError
         err400 LSB.pack
         (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
+      pure (fref,knownGhAccessTokenFromText <$> dappGitHubToken)
 
     forbidden str = throwError $ err403 { errBody = str}
 
@@ -212,7 +254,9 @@ server ServerCaps {..} wargs eb = NamedAPI
 
     getCommitDateAndHash FlakeRef{..} = do
       (owner,repo,path') <- extractUriSegments uri
-      commitInfoE <- liftIO $ getCommitInfo owner repo path'
+      -- TODO: here we might have to use a github token
+      -- provided by the user for authorizing our app to access a private repo
+      commitInfoE <- liftIO $ getCommitInfo githubToken owner repo path'
       case commitInfoE of
            Left e -> throwError err400 { errBody = LSB.pack $ show e}
            Right (Commit hash (CommitDetails _ _ (Author _ _ time))) -> pure (time,hash)
@@ -225,4 +269,4 @@ server ServerCaps {..} wargs eb = NamedAPI
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
       DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate
-        commitHash (wargs.walletCertificationPrice) profileId
+        commitHash (walletArgs.walletCertificationPrice) profileId
