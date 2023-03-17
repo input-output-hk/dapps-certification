@@ -28,6 +28,8 @@ library
       resourcet,
       conduit,
       conduit-aeson,
+      optparse-applicative,
+      regex-compat,
       dapps-certification-interface
     hs-source-dirs:   src
     other-modules: Paths_dapps_certification_helpers
@@ -38,6 +40,7 @@ executable generate-flake
     build-depends:
       base,
       dapps-certification-helpers,
+      dapps-certification-interface,
       optparse-applicative,
       network-uri,
       eventuo11y,
@@ -51,6 +54,7 @@ executable build-flake
     build-depends:
       base,
       dapps-certification-helpers,
+      dapps-certification-interface,
       optparse-applicative,
       eventuo11y
     main-is: Main.hs

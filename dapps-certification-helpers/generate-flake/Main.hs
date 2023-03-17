@@ -13,10 +13,12 @@ import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
 import System.Directory
 import Data.Aeson
+import IOHK.Certification.Interface
 
 data Args = Args
   { flakeref :: !URI
   , output :: !FilePath
+  , githubToken :: !(Maybe GitHubAccessToken)
   }
 
 -- TODO Deduplicate with certification-client
@@ -39,6 +41,8 @@ argsParser =  Args
               ( metavar "DIR"
              <> help "the output directory for the flake (must not exist)"
               )
+          <*> optional gitHubAccessTokenParser
+
 argsInfo :: ParserInfo Args
 argsInfo = info (argsParser <**> helper)
   ( fullDesc
@@ -50,7 +54,7 @@ instrumentedMain backend (Args {..}) = do
   withEvent backend CreateOutput \ev -> do
     addField ev output
     createDirectory output
-  generateFlake (narrowEventBackend Generate backend) (const $ pure ()) flakeref output
+  generateFlake (narrowEventBackend Generate backend) (const $ pure ()) githubToken flakeref output
 
 main :: IO ()
 main = do

@@ -90,19 +90,21 @@ upsertProfile profile@Profile{..} dappM = do
   void $ upsert profiles
      (\p -> p ! #ownerAddress .== text ownerAddress)
      (`with`
-      [ #website  := fromTextMaybe website
-      , #vendor   := fromTextMaybe vendor
-      , #twitter  := fromTextMaybe twitter
-      , #linkedin := fromTextMaybe linkedin
-      , #authors  := fromTextMaybe authors
-      , #contacts := fromTextMaybe contacts
+      [ #website     := fromTextMaybe website
+      , #vendor      := fromTextMaybe vendor
+      , #twitter     := fromTextMaybe twitter
+      , #linkedin    := fromTextMaybe linkedin
+      , #authors     := fromTextMaybe authors
+      , #contacts    := fromTextMaybe contacts
       ])
      [#profileId (def :: ID Profile) profile]
   -- we query this because upsert returns id only when inserts
   profileIdM <- getProfileId ownerAddress
   forM_ profileIdM $ \pid -> case dappM of
+    -- if there is no dapp we delete the dapp entry
     Nothing -> do
         void $ deleteFrom dapps (\dapp -> dapp ! #dappId .== literal pid)
+    -- if there is a dapp we upsert it
     Just dapp@DApp{..} -> do
       void $ upsert dapps
           (\dapp' -> dapp' ! #dappId .== literal pid)
@@ -112,6 +114,7 @@ upsertProfile profile@Profile{..} dappM = do
            , #dappRepo := text dappRepo
            , #dappVersion := text dappVersion
            , #dappId := literal profileId
+           , #dappGitHubToken := literal dappGitHubToken
            ]
           )
           [dapp { dappId = pid }]

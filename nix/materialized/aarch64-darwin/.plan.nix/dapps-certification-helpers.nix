@@ -56,6 +56,8 @@
           (hsPkgs."resourcet" or (errorHandler.buildDepError "resourcet"))
           (hsPkgs."conduit" or (errorHandler.buildDepError "conduit"))
           (hsPkgs."conduit-aeson" or (errorHandler.buildDepError "conduit-aeson"))
+          (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
+          (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
           ];
         buildable = true;
@@ -70,6 +72,7 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
+            (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
             (hsPkgs."network-uri" or (errorHandler.buildDepError "network-uri"))
             (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
@@ -84,6 +87,7 @@
           depends = [
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
+            (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
             (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
             (hsPkgs."eventuo11y" or (errorHandler.buildDepError "eventuo11y"))
             ];

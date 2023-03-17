@@ -79,3 +79,9 @@ export const processTablesDataForChart = (resultObj: any, tableAttr: string) => 
 export const getPlannedCertificationTaskCount = (plannedTasks: any[]) => {
   return plannedTasks.filter(item => item.name && typeof item.name === 'string').length
 }
+
+export interface Log {
+  Time: string,
+  Text: string,
+  Source: string
+}

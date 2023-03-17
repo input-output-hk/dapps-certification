@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
-import { getProfileDetails } from "store/slices/auth.slice";
+import { getProfileDetails, setNetwork } from "store/slices/auth.slice";
 
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 import Loader from "components/Loader/Loader";
+import Toast from "components/Toast/Toast";
 
 import './ConnectWallet.scss';
 
@@ -24,6 +25,7 @@ const ConnectWallet = () => {
     const [walletName, setWalletName] = useState("")
     const [address, setAddress] = useState("")
     const [isOpen, setIsOpen] = useState(false)
+    const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
     const [walletLoading, setWalletLoading] = useState(false)
 
     const openConnectWalletModal = useCallback(() => setIsOpen(true),[])
@@ -34,17 +36,27 @@ const ConnectWallet = () => {
         try {
             setWalletLoading(true)
             const enabledWallet = await CardanoNS[walletName].enable();
-            setWallet(enabledWallet)
-            setWalletName(walletName)
-            if (enabledWallet) {
-                const response = await enabledWallet.getChangeAddress()
-                setAddress(Address.from_bytes(Buffer.from(response, "hex")).to_bech32())
-            }
+            enabledWallet.getNetworkId().then(async (data: number) => {
+                dispatch(setNetwork(data))
+                setWallet(enabledWallet)
+                setWalletName(walletName)
+                if (enabledWallet) {
+                    const response = await enabledWallet.getChangeAddress()
+                    setAddress(Address.from_bytes(Buffer.from(response, "hex")).to_bech32())
+                }
+            })
         } catch (e) { handleError(e); }
     }
 
-    const handleError = (err: any) => {
-        console.log(err)
+    const handleError = (error: any) => {
+        if (error.info) {
+            setErrorToast({display: true, message: error.info})
+        } else if (error.response) {
+          setErrorToast({display: true, statusText: error.response.statusText, message: error.response.data || undefined})
+        } else {
+          setErrorToast({display: true})
+        }
+        setTimeout(() => { setErrorToast({display: false}) }, 3000)
     }
 
     useEffect(() => {
@@ -88,8 +100,16 @@ const ConnectWallet = () => {
                         })
                     }
                     { walletLoading ? <Loader /> : null}
+                    {
+                        (errorToast && errorToast.display) ? (<span className="error">{errorToast.message}</span>): null
+                    }
                 </div>
             </Modal>
+            {/* {(errorToast && errorToast.display) ? (
+                ((errorToast.message && errorToast.statusText) ? 
+                <Toast message={errorToast.message} title={errorToast.statusText}/> :
+                <Toast />))
+            : null} */}
         </>
     )
 }

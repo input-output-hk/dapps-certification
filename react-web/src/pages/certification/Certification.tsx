@@ -30,6 +30,7 @@ import CreateCertificate from "components/CreateCertificate/CreateCertificate";
 
 import { useAppDispatch, useAppSelector } from "store/store";
 import { clearUuid, setUuid } from "./slices/certification.slice";
+import { clearStates } from "./slices/logRunTime.slice";
 import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
 import { useConfirm } from "material-ui-confirm";
 
@@ -85,6 +86,7 @@ const Certification = () => {
     form.reset({
       commit: "",
     });
+    dispatch(clearStates())
   }
 
   const formHandler = (formData: ISearchForm) => {
@@ -290,24 +292,21 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
+            {runStatus !== "finished" ? (
+              <button
+                className="back-btn"
+                onClick={(e) => {
+                  resetStates();
+                }}
+              >
+                {" "}
+                <img
+                  src="images/back.png"
+                  alt="back_btn"
+                />
+              </button>
+            ) : null}
             <header>
-              {runStatus === "finished" ? (
-                <button
-                  className="back-btn"
-                  onClick={(e) => {
-                    resetStates();
-                  }}
-                >
-                  {" "}
-                  <img
-                    src="images/back.png"
-                    alt="back_btn"
-                    style={{ width: "30px", padding: "10px" }}
-                  />
-                </button>
-              ) : (
-                ""
-              )}
               <h2
                 id="breadcrumb"
                 style={{alignSelf:"center"}}
@@ -335,11 +334,10 @@ const Certification = () => {
               hasFailedTasks={isAnyTaskFailure(resultData)}
             />
           </div>
-          {runState ? (
-            <>
-              <InformationTable logs={logInfo} />
-            </>
-          ) : null}
+          
+          {/* To show 'View Logs' always  */}
+          <InformationTable logs={logInfo} />
+          
           {unitTestSuccess === false && Object.keys(resultData).length ? (
             <>
               <ResultContainer unitTestSuccess={unitTestSuccess} result={resultData} />

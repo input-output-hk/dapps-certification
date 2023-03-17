@@ -38,7 +38,6 @@ import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
 
-
 data InitializingField
   = WalletArgsField WalletArgs
   | DelayField Int
@@ -223,6 +222,8 @@ startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
 startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynchronizer $ \ev -> do
   addField ev $ WalletArgsField args
   addField ev $ DelayField delayInSeconds
+  -- TODO maybe a forkIO here will be better than into the calling function
+  -- hence, now, the parent instrumentation event will never terminate 
   forever $ do
     monitorWalletTransactions (subEventBackend ev) args
     liftIO $ threadDelay delayInMicroseconds
