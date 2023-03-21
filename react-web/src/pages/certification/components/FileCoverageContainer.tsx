@@ -76,23 +76,21 @@ const FileCoverageContainer: React.FC<{
     const renderRows = () => {
         return coverageIndexFiles ? coverageIndexFiles.map((file: string, index) => {
             return (
-                <>
-                    <li className="coverage-file" key={index}>
-                        <>
-                            {/* To be changed to location of the file code coverage UI */}
-                            <span className="link" onClick={(_) => onOpenModal(file)}>{file}</span>
-                            <Modal id="coverageHtmlModal" open={isOpen===file} onCloseModal={onCloseModal}>
-                                <div>{parseHTMLContents(file)}</div>
-                            </Modal>
-                        </>
-                        <div>
-                            <div className="meter-bar">
-                                <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
-                            </div>
-                            <span className="coverage-percentage">{percentagePerFile[file]}%</span>
+                <li className="coverage-file" key={index}>
+                    <>
+                        {/* To be changed to location of the file code coverage UI */}
+                        <span className="link" onClick={(_) => onOpenModal(file)}>{file}</span>
+                        <Modal id="coverageHtmlModal" open={isOpen===file} onCloseModal={onCloseModal}>
+                            <div>{parseHTMLContents(file)}</div>
+                        </Modal>
+                    </>
+                    <div>
+                        <div className="meter-bar">
+                            <div className="progress" style={{width: percentagePerFile[file] + "%"}}></div>
                         </div>
-                    </li>
-                </>
+                        <span className="coverage-percentage">{percentagePerFile[file]}%</span>
+                    </div>
+                </li>
             );
         }) : null;
     };
