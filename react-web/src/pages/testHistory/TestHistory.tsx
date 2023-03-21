@@ -15,22 +15,12 @@ import Toast from "components/Toast/Toast";
 import { processFinishedJson } from "components/TimelineItem/timeline.helper";
 import { isAnyTaskFailure } from "pages/certification/Certification.helper";
 import "./TestHistory.scss";
-
-interface ICampaign {
-  commitDate: string;
-  commitHash: string;
-  created: string;
-  finishedAt: string;
-  syncedAt: string;
-  repoUrl: string;
-  runStatus: "queued" | "failed" | "succeeded" | "certified" | "ready-for-certification" | "aborted";
-  runId: string;
-}
+import { Run } from 'components/CreateCertificate/CreateCertificate';
+import { exportObjectToJsonFile } from "utils/utils";
 
 interface ICampaignCertificate {
   runId: string;
   transactionId: string;
-  reportContentId: string;
   createdAt: string;
 }
 
@@ -38,11 +28,19 @@ interface IRunCertifications {
   [key: string]: ICampaignCertificate
 }
 
+interface IRunReportData {
+  id: string;
+  raw: any; // finished result JSON
+}
+interface IRunReport {
+  [key: string]: IRunReportData
+}
+
 dayjs.extend(utc)
 dayjs.extend(tz)
 
 const TestHistory = () => {
-  const [data, setData] = useState<Array<ICampaign>>([]);
+  const [data, setData] = useState<Array<Run>>([]);
   const [runningSpinner, setRunningSpinner] = useState("");
   const [highlightLabelFor, setHighlightLabelFor] = useState("");
   const [skipPageReset, setSkipPageReset] = useState(false);
@@ -51,6 +49,7 @@ const TestHistory = () => {
   const confirm = useConfirm();
 
   const certificationData: IRunCertifications = {};
+  const reportData: IRunReport = {};
   const timeZone = dayjs.tz.guess()
 
   useEffect(() => {
@@ -67,6 +66,16 @@ const TestHistory = () => {
 
   const getCertificationData = (runId: string): ICampaignCertificate | null => {
     return certificationData[runId] ? certificationData[runId] : null
+  }
+
+  const setReportData = (runId: string, type: 'id' | 'raw', response: any) => {
+    const data: any = { id: null, raw: null}
+    data[type] = response;
+    reportData[runId] = data;
+  }
+
+  const getReportData = (runId: string) => {
+    return reportData[runId] ? reportData[runId] : null
   }
 
   const handleError = (error: any) => {
@@ -173,7 +182,39 @@ const TestHistory = () => {
     }
   };
 
-  const viewReportOrCertificate = async (type: string, runId: string) => {
+  const openReport = (reportData: IRunReportData | null) => {
+    if (reportData?.id) {
+      const url = `ipfs://${reportData.id}/`
+      window.open(url, "_blank");
+    } else if (reportData?.raw) {
+      exportObjectToJsonFile(reportData.raw);      
+    }
+  }
+  const viewReport = async (runId: string) => {
+    const reportData: IRunReportData | null = getReportData(runId)
+    if (!reportData) {
+      fetchData.get("/run/" + runId + "/details").catch(handleError).then((response:any) => {
+        setErrorToast({display: false})
+        if (response.data.reportContentId && response.data.runStatus === "certified") {
+          setReportData(runId, 'id', response.data.reportContentId)
+          openReport(getReportData(runId))
+        } else {
+          // assuming campaign finished, but not certified; fetch report from result
+          fetchData.get("/run/" + runId).catch(handleError).then((res:any) => {
+            if (res.data.status === 'finished' && res.data.hasOwnProperty("result")) {
+              const resultJson = Array.isArray(res.data.result) ? res.data.result[0] : res.data.result
+              setReportData(runId, 'raw', resultJson)
+              openReport(getReportData(runId))
+            }
+          })
+        }
+      })
+    } else {
+      openReport(reportData)
+    }
+  }
+
+  const viewCertificate = async (runId: string) => {
     const certData = getCertificationData(runId)
     if (!certData) {
       const response: any = await fetchData.get("/run/" + runId + "/certificate").catch(handleError);
@@ -182,22 +223,16 @@ const TestHistory = () => {
       if (response) {
         setErrorToast({display: false})
         setCertificationData(runId, response.data);
-        triggerNavigation(type, response.data);
+        openCertificate(response.data);
       }
     } else {
-      triggerNavigation(type, certData);
+      openCertificate(certData);
     }
   };
 
-  const triggerNavigation = (type: string, data: any) => {
-    const { reportContentId, transactionId } = data;
-    let url;
-    if (type === "report") {
-      // url = `https://${reportContentId}.ipfs.w3s.link/`;
-      url = `ipfs://${reportContentId}/`
-    } else {
-      url = `https://preprod.cardanoscan.io/transaction/${transactionId}`;
-    }
+  const openCertificate = (data: any) => {
+    const { transactionId } = data;
+    let url = `https://preprod.cardanoscan.io/transaction/${transactionId}`;
     window.open(url, "_blank");
   };
 
@@ -256,14 +291,15 @@ const TestHistory = () => {
       disableSortBy: true,
       accessor: "viewReport",
       Cell: (props: any) => {
-        if (props.row.original.runStatus === "succeeded" || props.row.original.runStatus === "ready-for-certification" || props.row.original.runStatus === "certified") {
+        const notCertified: boolean = props.row.original.runStatus === "succeeded" || props.row.original.runStatus === "ready-for-certification"
+        if (notCertified || props.row.original.runStatus === "certified") {
           return (
             <Button
               size="small"
               type="submit"
-              buttonLabel={"View Report"}
+              buttonLabel={`${notCertified ? 'Download' : 'View'} Report`}
               onClick={() => {
-                viewReportOrCertificate("report", props.row.original.runId);
+                viewReport(props.row.original.runId);
               }}
             />
           );
@@ -282,7 +318,7 @@ const TestHistory = () => {
               type="submit"
               buttonLabel={"View Certificate"}
               onClick={() => {
-                viewReportOrCertificate("certificate", props.row.original.runId);
+                viewCertificate(props.row.original.runId);
               }}
             />
           );
