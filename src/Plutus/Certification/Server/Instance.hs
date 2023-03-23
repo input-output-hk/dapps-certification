@@ -73,7 +73,7 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
       let githubToken' =  profileAccessToken <|> githubToken
       -- ensure the ref is in the right format before start the job
-      (commitDate,commitHash) <- getCommitDateAndHash fref
+      (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
       addField ev $ CreateRunRef fref
       res <- submitJob (setAncestor $ reference ev) githubToken' fref
       addField ev $ CreateRunID res
@@ -252,11 +252,11 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       isOwner <- (== Just profileId) <$> DB.withDb (DB.getRunOwner uuid)
       unless isOwner $ throwError err403
 
-    getCommitDateAndHash FlakeRef{..} = do
+    getCommitDateAndHash githubToken' FlakeRef{..} = do
       (owner,repo,path') <- extractUriSegments uri
       -- TODO: here we might have to use a github token
       -- provided by the user for authorizing our app to access a private repo
-      commitInfoE <- liftIO $ getCommitInfo githubToken owner repo path'
+      commitInfoE <- liftIO $ getCommitInfo githubToken' owner repo path'
       case commitInfoE of
            Left e -> throwError err400 { errBody = LSB.pack $ show e}
            Right (Commit hash (CommitDetails _ _ (Author _ _ time))) -> pure (time,hash)
