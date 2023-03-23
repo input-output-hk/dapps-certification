@@ -4,12 +4,14 @@ import { getRepoAccess, postExternal } from "api/api";
 interface RepoAccessState {
     verifying: boolean,
     accessible: boolean,
-    showConfirmConnection: boolean
+    showConfirmConnection: boolean,
+    accessToken: string
 }
 const initialState: RepoAccessState = {
     verifying: false,
     accessible: false,
-    showConfirmConnection: false
+    showConfirmConnection: false,
+    accessToken: ""
 };
 
 
@@ -28,11 +30,7 @@ export const verifyRepoAccess = createAsyncThunk(
 
 export const getUserAccessToken = createAsyncThunk("getUserAccessToken", async(payload: any, {rejectWithValue}) => {
     const response: any = postExternal.post("https://github.com/login/oauth/access_token" + payload.queryParams)
-    if(response.data.access_token) {
-        return response.data.access_token
-    } else {
-        return rejectWithValue('Something wrong occurred!')
-    }
+    return response
 })  
 
 export const repoAccessSlice = createSlice({
@@ -41,7 +39,11 @@ export const repoAccessSlice = createSlice({
   reducers: {
     clearStates: () => {
         localStorage.removeItem('accessToken')
+        localStorage.removeItem('profile')
         return initialState
+    },
+    clearAccessToken: (state) => {
+      state.accessToken = ""
     }
   },
   extraReducers: (builder) => {
@@ -50,7 +52,6 @@ export const repoAccessSlice = createSlice({
         state.verifying = false;
         state.accessible = false;
         state.showConfirmConnection = true;
-        console.log('failed repo access - ', actions)
       })
       .addCase(verifyRepoAccess.pending, (state, actions) => {
         state.verifying = true;
@@ -62,18 +63,18 @@ export const repoAccessSlice = createSlice({
         state.showConfirmConnection = false;
       })
       .addCase(getUserAccessToken.rejected, (state, actions) => {
-
-        })
+        state.accessToken = ""
+      })
       .addCase(getUserAccessToken.pending, (state, actions) => {
         
       })
-      .addCase(getUserAccessToken.fulfilled, (state, actions) => {
-        const token: string = actions.payload
-        console.log('fulfilled - ', token)
+      .addCase(getUserAccessToken.fulfilled, (state, actions) => { console.log('payload-', actions.payload)
+        const token: string = actions.payload?.data.access_token
         localStorage.setItem('accessToken', token)
+        state.accessToken = token;
       });
   },
 });
-export const { clearStates } = repoAccessSlice.actions;
+export const { clearStates, clearAccessToken } = repoAccessSlice.actions;
 
 export default repoAccessSlice.reducer;

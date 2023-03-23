@@ -34,7 +34,12 @@ export const getRepoAccess = axios.create({
   },
 })
 
-export const postExternal = axios.create()
+export const postExternal = axios.create({
+  headers: {
+    "Content-type": "application/json",
+    Accept: "application/json",
+  },
+})
 
 fetchData.interceptors.request.use(
   (config: AxiosRequestConfig) => onRequest(config),

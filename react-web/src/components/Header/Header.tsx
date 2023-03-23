@@ -38,7 +38,7 @@ const Header = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate("/");
+      // navigate("/");
     }
   // can't add navigate to the array as it would break internal navigations
   // eslint-disable-next-line react-hooks/exhaustive-deps

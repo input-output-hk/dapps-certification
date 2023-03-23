@@ -11,7 +11,7 @@ import { useAppDispatch, useAppSelector } from "store/store";
 import "./UserProfile.scss";
 import { userProfileSchema } from "./userProfile.schema";
 import { IUserProfile } from "./userProfile.interface";
-import { getUserAccessToken, verifyRepoAccess } from "./slices/repositoryAccess.slice";
+import { clearStates, clearAccessToken, getUserAccessToken, verifyRepoAccess } from "./slices/repositoryAccess.slice";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -20,14 +20,17 @@ const UserProfile = () => {
   const { userDetails, address, wallet, walletName } = useAppSelector((state: any) => state.auth);
   const [isEdit, setIsEdit] = useState(false);
 
-  const { verifying, accessible, showConfirmConnection } = useAppSelector((state) => state.repoAccess);
-  
+  const { verifying, accessible, showConfirmConnection, accessToken } = useAppSelector((state) => state.repoAccess);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const githubAccessCode = searchParams.get("code");
+
   const form: any = useForm({
     schema: userProfileSchema,
     mode: "onChange",
   });
 
-  useEffect(() => {
+  const initializeFormState = () => {
     const { dapp, contacts, authors, linkedin, twitter, vendor, website } = userDetails;
     let formData: {
       contacts?: string;
@@ -45,15 +48,26 @@ const UserProfile = () => {
     if (dapp !== null) {
       const { name, owner, repo, version } = dapp
       formData = { ...formData, name, owner, repo, version }
-      // setOwnerVal(owner)
-      // setRepoVal(repo)
     }
 
-    form.reset(formData)
+    const profileInLS: any = localStorage.getItem('profile')
+    if (profileInLS && profileInLS !== 'undefined') {
+      form.reset(JSON.parse(profileInLS))
+    } else {
+      form.reset(formData)
+    }
     
-    if (!userDetails.dapp?.owner || !userDetails.dapp?.repo) {
+    if (!userDetails.dapp?.owner || !userDetails.dapp?.repo || profileInLS) {
       setIsEdit(true);
     }
+
+    localStorage.removeItem('profile')
+    localStorage.removeItem('accessToken')
+  }
+
+  useEffect(() => {
+    initializeFormState()
+    dispatch(clearStates())
   }, [userDetails, form]);
 
   const formHandler = (formData: any) => {
@@ -66,7 +80,7 @@ const UserProfile = () => {
           "owner": formData.owner,
           "repo": formData.repo,
           "version": formData.version,
-          "githubToken": null
+          "githubToken": accessToken || null
         },
         "linkedin": formData.linkedin,
         "twitter": formData.twitter,
@@ -82,6 +96,7 @@ const UserProfile = () => {
           /** For mock */
           // getProfileDetails({url: "static/data/new-profile.json"})
         );
+        dispatch(clearAccessToken())
         navigate('/')
       })
     };
@@ -91,69 +106,56 @@ const UserProfile = () => {
   
   const CLIENT_ID = "10c45fe6a101a3abe3a0"; //of CertificationApp OAuthApp owned by CertGroup in anusree91
   const CLIENT_SECRET = "9fe0553a4727c47b434e732c3e258ba54c992051";
+  // Lists all repo and have to manually click 'Grant' for the repo we need. 
+  // If that is not chosen, it doesn't ask again for permission
+
 
   // const CLIENT_ID = "Iv1.78d108e12af627c4" // of CertTestApp GithubApp under CertGroup
   // const CLIENT_SECRET = "a77d34c1ffde5c4a7f0749fd7f969d6bbcda1ae7"
 
-  const [searchParams] = useSearchParams();
   useEffect(() => {
     // to extract ?code= from the app base url redirected after Github connect
-    // const queryString = window.location.search; 
-    // const urlParams = new URLSearchParams(queryString)
-    // const code = urlParams.get('code')
-    const code = searchParams.get("code");
-    console.log(code) //afb8d4a70a5fb4c1c062
-    if (code) {
-      // send codeParam to api and get back access_token to be saved in store
-      const params = "?client_id=" + CLIENT_ID + "&client_secret=" + CLIENT_SECRET + "&code=" + code
-      dispatch(getUserAccessToken({queryParams: params}));
-      onGitDetailsChange() // verifyRepo()
+    if (githubAccessCode) {
+      (async () => {
+        const params = "?client_id=" + CLIENT_ID + "&client_secret=" + CLIENT_SECRET + "&code=" + githubAccessCode
+        const access_token = await dispatch(getUserAccessToken({queryParams: params}))
+        searchParams.delete("code");
+        setSearchParams(searchParams);
+        dispatch(verifyRepoAccess({owner: "CertTestOrg1", repo: "plutus-apps-pvt"}));
+      })()
+    } else {
+      localStorage.removeItem('profile')
     }
-
   }, [])
 
   const connectToGithub = () => {
+    // store current form data in localStorage
+    localStorage.setItem('profile', JSON.stringify(form.getValues()))
+
     // fetch CLIENT_ID from api 
     window.location.assign("https://github.com/login/oauth/authorize?client_id=" + CLIENT_ID + "&scope=repo")
   }
 
-  // const [ownerVal, setOwnerVal] = useState("")
-  // const [repoVal, setRepoVal] = useState("")
-  
-  // const onOwnerChange = (e:any) => {
-  //   setOwnerVal(e.target.value)
-  // }
-
-  // const onRepoChange = (e:any) => {
-  //   setRepoVal(e.target.value)
-  // }
-
-  // const verifyRepo = () => {
-  //   console.log(repoVal, ownerVal)
-  //   dispatch(verifyRepoAccess({owner: ownerVal, repo: repoVal}))
-  // }
-
   const onGitDetailsChange = (event?: any, type?: string) => {
     const ownerVal = form.getValues("owner"),
       repoVal = form.getValues("repo");
-    if (ownerVal.length > 3 && repoVal.length > 3) {
-      // let valueVar = type === "owner" ? "repo" : "owner";
-      // const formValue = form.getValues(valueVar);
-      // if (formValue !== "" || formValue !== null) {
-        dispatch(verifyRepoAccess({owner: ownerVal, repo: repoVal}));
-      // }
+    if ((ownerVal === 'CertTestOrg1' || ownerVal === 'CertTestOrg2') && (repoVal === 'CertTestRepoPvt1' || repoVal === 'CertTestRepoPub1' || repoVal === 'CertTestRepoPvt3' || repoVal === 'plutus-apps' || repoVal === 'plutus-apps-pvt')) {
+      dispatch(verifyRepoAccess({owner: ownerVal, repo: repoVal}));
     }
   };
 
   const confirmConnectModal = () => {
-    confirm({ 
-      title: "Verify the Repository details", 
-      description: "Either the github owner or repository doesn't exist, or this is a private repository. Please proceed to connect the repository if it is a private one. .",
-      confirmationText: "Connect"
-    }).then(async () => {
-        connectToGithub()
-      })
-      .catch(() => { });
+    setTimeout(() => {
+      confirm({ 
+        title: "Verify the Repository details", 
+        description: "Unable to find the entered repository. Please go back and correct the Owner/Repository. Or, is this a Private one? If so, please hit Connect to authorize us to access it!",
+        confirmationText: "Connect",
+        cancellationText: "Go back"
+      }).then(async () => {
+          connectToGithub()
+        })
+        .catch(() => { });
+    }, 0)
   }
 
   return (
@@ -161,7 +163,6 @@ const UserProfile = () => {
       <div id="profileContainer">
         <div>
           <Form form={form} onSubmit={formHandler}>
-            {/* <Button buttonLabel={"Connect Github"} displayStyle="primary-outline" onClick={verifyRepo}/> */}
             <Input
               label="dApp Name"
               type="text"
@@ -177,8 +178,6 @@ const UserProfile = () => {
               type="text"
               required={true}
               disablefocus="true"
-              // onChange={onOwnerChange}
-              // value={ownerVal}
               {...form.register("owner", {
                 onChange: (e: any) => {
                   onGitDetailsChange(e, "owner");
@@ -192,8 +191,6 @@ const UserProfile = () => {
                 type="text"
                 required={true}
                 disablefocus="true"
-                // onChange={onRepoChange}
-                // value={repoVal}
                 {...form.register("repo", {
                   onChange: (e: any) => {
                     onGitDetailsChange(e, "repo");
@@ -320,6 +317,8 @@ const UserProfile = () => {
                     displayStyle="secondary"
                     buttonLabel={"Cancel"}
                     onClick={() => {
+                      localStorage.removeItem('profile')
+                      initializeFormState()
                       setIsEdit(false);
                     }}
                   />
@@ -335,7 +334,7 @@ const UserProfile = () => {
           </Form>
         </div>
       </div>
-      {showConfirmConnection ? confirmConnectModal() : null}
+      {showConfirmConnection && isEdit ? confirmConnectModal() : null}
     </>
   );
 };

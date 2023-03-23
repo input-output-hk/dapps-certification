@@ -25,7 +25,7 @@ export function onRepoAccessRequest(config: AxiosRequestConfig) {
   const accessToken: any = localStorage.getItem('accessToken')
   const TokenAuth = accessToken;
 
-  if (accessToken) {
+  if (accessToken && accessToken !== 'undefined') {
     config.headers = {
       ...config.headers,
       Authorization: TokenAuth,

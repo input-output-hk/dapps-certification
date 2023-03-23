@@ -11,6 +11,7 @@
   fieldset > label {
     display: flex;
     flex-direction: column-reverse;
+    margin-bottom: 20px;
     & > label.info {
       align-self: flex-end;
       line-height: 25px;
