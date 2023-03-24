@@ -151,12 +151,13 @@ server ServerArgs{..} = NamedAPI
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
-      let dappM = fmap (\DAppBody{..} -> DB.DApp{
+          website' = fmap (Text.pack . showBaseUrl) website
+          dappM = fmap (\DAppBody{..} -> DB.DApp{
             dappId, dappName,dappOwner,dappVersion,dappRepo,
             dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
           }) dapp
       DB.withDb $ do
-        _ <- DB.upsertProfile (DB.Profile{..}) dappM
+        _ <- DB.upsertProfile (DB.Profile{website=website',..}) dappM
         -- it's safe to call partial function fromJust
 
         fromJust <$> DB.getProfile profileId

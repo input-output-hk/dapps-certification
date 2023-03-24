@@ -36,20 +36,17 @@ import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
 import Plutus.Certification.WalletClient
-import qualified IOHK.Certification.Persistence as DB
-import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import Control.Lens hiding ((.=))
-import qualified Data.Swagger.Lens as SL
 import Plutus.Certification.GitHubClient (RepositoryInfo)
 import Control.Arrow (ArrowChoice(left))
 import GHC.TypeLits
-import Control.Lens hiding ((.=))
-
-
-import qualified IOHK.Certification.Persistence as DB
-import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
+import Servant.Client (BaseUrl)
 import IOHK.Certification.SignatureVerification 
   (COSEKey,COSESign1, decodeHex,encodeHex)
+
+import qualified Data.Swagger.Lens as SL
+import qualified IOHK.Certification.Persistence as DB
+import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
@@ -153,7 +150,6 @@ type ServerTimestamp = "server-timestamp"
   :> Description "Get the current server timestamp"
   :> Get '[JSON] Integer
 
-
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
 
@@ -254,7 +250,7 @@ instance FromJSON DAppBody where
       <*> v .: "owner"
       <*> v .: "repo"
       <*> v .: "version"
-      <*> v .: "githubToken"
+      <*> v .:? "githubToken" .!= Nothing
 
 instance ToJSON DAppBody where
   toJSON DAppBody{..} = object
@@ -267,7 +263,7 @@ instance ToJSON DAppBody where
 
 data ProfileBody = ProfileBody
    { dapp :: !(Maybe DAppBody)
-   , website :: !(Maybe Text)
+   , website :: !(Maybe BaseUrl)
    , vendor :: !(Maybe Text)
    , twitter :: !(Maybe Text)
    , linkedin :: !(Maybe Text)
@@ -509,8 +505,34 @@ instance ToSchema DAppBody where
     return $ NamedSchema (Just "DAppBody") $ profileSchema
         & properties . at "githubToken" ?~ apiGitHubAccessTokenSchema
 
-instance ToSchema ProfileBody
+-- | A phantom type for website for swagger schema
+data Website
 
+instance ToSchema Website where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "BaseUrl") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ baseUrlPattern
+
+baseUrlPattern :: Pattern
+baseUrlPattern = "^[(http(s)?):\\/\\/(www\\.)?a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)$"
+
+instance ToSchema ProfileBody where
+   declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    dappSchema <- declareSchemaRef (Proxy :: Proxy DAppBody)
+    urlSchema <- declareSchemaRef (Proxy :: Proxy Website)
+    return $ NamedSchema (Just "Profile") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("dapp", dappSchema)
+          , ("website", urlSchema)
+          , ("vendor", textSchema)
+          , ("twitter", textSchema)
+          , ("linkedin", textSchema)
+          , ("authors", textSchema)
+          , ("contacts", textSchema)
+          ]
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
