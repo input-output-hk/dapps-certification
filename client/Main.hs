@@ -260,7 +260,7 @@ dappBodyParser = DAppBody
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
   <$> optional dappBodyParser
-  <*> optional (option str
+  <*> optional (option baseUrlReader
         ( long "website"
        <> metavar "WEBSITE"
        <> help "dapp website url"
