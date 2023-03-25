@@ -3,6 +3,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE Rank2Types #-}
 module Main where
 
 import Plutus.Certification.API
@@ -26,9 +27,13 @@ import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
+import qualified Data.ByteString.Base16 as Hexa
 
 
-type PublicKey = ByteString
+newtype PublicKey = PublicKey { unPublicKey :: ByteString }
+newtype JWT = JWT { unJWT :: ByteString }
+
+data Auth = PublicKeyAuth PublicKey | JWTAuth JWT
 
 flakeRefReader :: ReadM FlakeRefV1
 flakeRefReader = do
@@ -45,7 +50,11 @@ createRunParser = CreateRunArgs
     ( metavar "REF"
    <> help "the flake reference pointing to the repo to build"
     ))
-  <*> publicKeyParser
+  <*> authParser
+
+authParser :: Parser Auth
+authParser = (PublicKeyAuth <$> publicKeyParser) <|> (JWTAuth <$> jwtParser)
+
 
 createRunInfo :: ParserInfo CreateRunArgs
 createRunInfo = info createRunParser
@@ -60,10 +69,17 @@ getRunParser = argument (maybeReader (coerce . UUID.fromString))
   )
 
 publicKeyParser :: Parser PublicKey
-publicKeyParser = option str
+publicKeyParser = PublicKey <$> option str
   ( long "public-key"
  <> metavar "PUB_KEY"
  <> help "wallet public Key"
+  )
+
+jwtParser :: Parser JWT
+jwtParser = JWT <$> option str
+  ( long "auth-token"
+ <> metavar "JWT"
+ <> help "authorization token provided by `plutus-certification-client login` "
   )
 
 getRunInfo :: ParserInfo RunIDV1
@@ -94,7 +110,7 @@ getLogsParser = GetLogsArgs
 
 getRunsParser :: Parser GetRunsArgs
 getRunsParser = GetRunsArgs
-  <$> publicKeyParser
+  <$> authParser
   <*> optional (option generalReader
         ( long "after"
        <> metavar "AFTER"
@@ -109,7 +125,7 @@ getRunsParser = GetRunsArgs
 abortRunParser :: Parser AbortRunArgs
 abortRunParser = AbortRunArgs
   <$> getRunParser
-  <*> publicKeyParser
+  <*> authParser
   <*> optional ( option auto
         ( long "delete-run"
        <> metavar "DELETE_RUN"
@@ -152,7 +168,7 @@ createCertificationInfo = info createCertificationParser
 createCertificationParser :: Parser CreateCertificationArgs
 createCertificationParser = CreateCertificationArgs
   <$> getRunParser
-  <*> publicKeyParser
+  <*> authParser
 
 data RunCommand
   = Create !CreateRunArgs
@@ -174,13 +190,13 @@ runCommandParser = hsubparser
  <> command "create-certification" (CreateCertification <$> createCertificationInfo)
   )
 
-data CreateRunArgs = CreateRunArgs !CommitOrBranch !PublicKey
+data CreateRunArgs = CreateRunArgs !CommitOrBranch !Auth
 
-data GetRunsArgs = GetRunsArgs !PublicKey !(Maybe UTCTime) !(Maybe Int)
+data GetRunsArgs = GetRunsArgs !Auth !(Maybe UTCTime) !(Maybe Int)
 
 type DeleteRun = Maybe Bool
-data AbortRunArgs = AbortRunArgs !RunIDV1 !PublicKey !DeleteRun
-data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !PublicKey
+data AbortRunArgs = AbortRunArgs !RunIDV1 !Auth !DeleteRun
+data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !Auth
 
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
@@ -214,7 +230,7 @@ updateCurrentProfileInfo = info updateCurrentProfileInfoParser
 
 updateCurrentProfileInfoParser :: Parser UpdateCurrentProfileArgs
 updateCurrentProfileInfoParser = UpdateCurrentProfileArgs
-  <$> publicKeyParser
+  <$> authParser
   <*> profileBodyParser
 
 dappBodyParser :: Parser DAppBody
@@ -275,8 +291,8 @@ profileBodyParser = ProfileBody
        <> help "the list of contacts represented as a string"
         ))
 
-getCurrentProfileInfo :: ParserInfo PublicKey
-getCurrentProfileInfo = info publicKeyParser
+getCurrentProfileInfo :: ParserInfo Auth
+getCurrentProfileInfo = info authParser
   ( fullDesc
  <> header "plutus-certification-client profile get — Get the current profile information"
   )
@@ -293,12 +309,48 @@ walletAddressCommandInfo = info (pure ())
  <> header "plutus-certification-client wallet-address — Get the wallet address the backend operates with"
   )
 
+loginInfo :: ParserInfo LoginBody
+loginInfo = info loginBodyParser
+  ( fullDesc
+ <> header "plutus-certification-client login — Login to the backend"
+  )
+
+loginBodyParser :: Parser LoginBody
+loginBodyParser = LoginBody
+  <$> option str
+        ( long "wallet-address"
+       <> metavar "WALLET_ADDRESS"
+       <> help "bech32 wallet address"
+        )
+  <*> option hexaReader
+        ( long "wallet-public-key"
+       <> metavar "WALLET_PUBLIC_KEY"
+       <> help "hex-encoded public key"
+        )
+  <*> option hexaReader
+        ( long "message-signature"
+       <> metavar "MESSAGE_SIGNATURE"
+       <> help "encoded signature of the message"
+        )
+  <*> optional (option generalReader
+        ( long "expiration"
+       <> metavar "EXPIRATION"
+       <> help "lifetime of the token in seconds. if bigger then server's max, server's max will be used"
+        ))
+serverTimestampInfo :: ParserInfo ()
+serverTimestampInfo = info (pure ())
+  ( fullDesc
+ <> header "plutus-certification-client server-timestamp — Get the server timestamp"
+  )
+
 data Command
   = CmdRun !RunCommand
   | CmdVersion
   | CmdWalletAddress
   | CmdCurrentProfile !ProfileCommand
   | CmdGetRepositoryInfo !GetRepositoryInfoArgs
+  | CmdLogin !LoginBody
+  | CmdServerTimestamp
 
 data GetRepositoryInfoArgs = GetGitHubAddressArgs
   { owner :: !Text
@@ -307,10 +359,10 @@ data GetRepositoryInfoArgs = GetGitHubAddressArgs
   }
 
 data ProfileCommand
-    = GetCurrentProfile !PublicKey
+    = GetCurrentProfile !Auth
     | UpdateCurrentProfile !UpdateCurrentProfileArgs
 
-data UpdateCurrentProfileArgs = UpdateCurrentProfileArgs PublicKey ProfileBody
+data UpdateCurrentProfileArgs = UpdateCurrentProfileArgs !Auth !ProfileBody
 
 commandParser :: Parser Command
 commandParser = hsubparser
@@ -319,6 +371,8 @@ commandParser = hsubparser
  <> command "profile" (CmdCurrentProfile <$> currentProfileInfo)
  <> command "wallet-address" (CmdWalletAddress <$ walletAddressCommandInfo)
  <> command "get-repo-info" (CmdGetRepositoryInfo <$> getGitHubRepoInfo)
+ <> command "login" (CmdLogin <$> loginInfo)
+ <> command "server-timestamp" (CmdServerTimestamp <$ serverTimestampInfo)
   )
 
 getGitHubRepoInfo :: ParserInfo GetRepositoryInfoArgs
@@ -343,7 +397,6 @@ getGitHubRepoParser = GetGitHubAddressArgs
 
 data Args = Args
   { certificationURL :: !BaseUrl
-  , certificationUser :: !(Maybe PublicKey)
   , cmd :: !Command
   }
 
@@ -356,6 +409,13 @@ baseUrlReader = do
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
 
+hexaReader :: ReadM ByteString
+hexaReader = do
+  urlStr <- str
+  case Hexa.decode (BS.pack urlStr) of
+    Left e -> readerError $ "invalid hexa string '" ++ urlStr ++ "': " ++ e
+    Right b -> pure b
+
 argsParser :: Parser Args
 argsParser = Args
   <$> option baseUrlReader
@@ -365,11 +425,6 @@ argsParser = Args
        <> showDefaultWith showBaseUrl
        <> value (BaseUrl Https "testing.dapps.iog.io" 443 "")
         )
-  <*> optional ( option str
-        ( long "user"
-       <> metavar "USER"
-       <> help "User name for BASIC authentication with the certification server"
-        ))
   <*> commandParser
 
 argsInfo :: ParserInfo Args
@@ -377,42 +432,58 @@ argsInfo = info (argsParser <**> helper)
   ( fullDesc
  <> header "plutus-certification-cli — A tool for interacting with the Plutus Certification service"
   )
+
 addAuth :: PublicKey -> AuthenticatedRequest (AuthProtect "public-key")
-addAuth = flip mkAuthenticatedRequest (addHeader hAuthorization . BS.unpack)
+addAuth = flip mkAuthenticatedRequest (addHeader hAuthorization . BS.unpack . unPublicKey)
+
+addJwtAuth :: JWT -> AuthenticatedRequest (AuthProtect "jwt-token")
+addJwtAuth = flip mkAuthenticatedRequest (addHeader hAuthorization . ("Bearer " <>) . BS.unpack . unJWT)
 
 type instance AuthClientData (AuthProtect "public-key") = PublicKey
+type instance AuthClientData (AuthProtect "jwt-token") = JWT
 
 main :: IO ()
 main = do
   args <- execParser argsInfo
   manager <- newTlsManagerWith $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
-  let apiClient = client $ Proxy @API
+  let apiClient = client $ Proxy @(API "public-key")
       cEnv = mkClientEnv manager args.certificationURL
       handle :: (ToJSON a) => ClientM a -> IO ()
       handle c = runClientM c cEnv >>= either throwIO (LBS.putStrLn . encode)
+      withAuth :: ToJSON b
+               => Auth
+               -> (forall a. Client ClientM (API a) -> AuthenticatedRequest (AuthProtect a) -> ClientM b)
+               -> IO ()
+      withAuth auth f = handle $ case auth of
+        PublicKeyAuth pubKey -> f apiClient (addAuth pubKey)
+        JWTAuth jwt -> f (client $ Proxy @(API "jwt-token")) (addJwtAuth jwt)
   case args.cmd of
     CmdVersion ->
       handle $ apiClient.version
     CmdWalletAddress ->
       handle $ apiClient.walletAddress
-    CmdRun (Create (CreateRunArgs ref pubKey)) ->
-      handle $ apiClient.createRun (addAuth pubKey) ref
+    CmdRun (Create (CreateRunArgs ref auth)) ->
+      withAuth auth $ \c authKey -> c.createRun authKey ref
     CmdRun (Get ref) ->
       handle $ apiClient.getRun ref
-    CmdRun (Abort (AbortRunArgs ref pubKey deleteRun)) ->
-      handle (True <$ apiClient.abortRun (addAuth pubKey) ref deleteRun)
+    CmdRun (Abort (AbortRunArgs ref auth deleteRun)) ->
+      withAuth auth $ \c authKey -> True <$ c.abortRun authKey ref deleteRun
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
       handle $ apiClient.getLogs ref zt act
     CmdRun (GetRuns (GetRunsArgs pubKey after' count')) ->
-      handle $ apiClient.getRuns (addAuth pubKey) after' count'
+      withAuth pubKey $ \c authKey -> c.getRuns authKey after' count'
     CmdRun (GetCertification ref) ->
       handle $ apiClient.getCertification ref
-    CmdRun (CreateCertification (CreateCertificationArgs ref pubKey)) ->
-      handle (True <$ apiClient.createCertification (addAuth pubKey) ref)
-    CmdCurrentProfile (GetCurrentProfile pubKey) ->
-      handle $ apiClient.getCurrentProfile (addAuth pubKey)
-    CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs pubKey profileBody)) ->
-      handle $ apiClient.updateCurrentProfile (addAuth pubKey) profileBody
     CmdGetRepositoryInfo (GetGitHubAddressArgs owner' repo' gitHubAccessToken') ->
       handle $ apiClient.getRepositoryInfo owner' repo' gitHubAccessToken'
+    CmdRun (CreateCertification (CreateCertificationArgs ref auth)) ->
+      withAuth auth $ \c authKey -> True <$ c.createCertification authKey ref
+    CmdCurrentProfile (GetCurrentProfile auth) ->
+      withAuth auth $ \c authKey -> c.getCurrentProfile authKey
+    CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) ->
+      withAuth auth $ \c authKey -> c.updateCurrentProfile authKey profileBody
+    CmdLogin loginBody -> do
+      handle $ apiClient.login loginBody
+    CmdServerTimestamp ->
+      handle $ apiClient.serverTimestamp

@@ -218,8 +218,18 @@ syncRun runId time= update runs
 deleteRun :: MonadSelda m => UUID -> m Int
 deleteRun runId = deleteFrom runs
   (\run -> (run ! #runId .== literal runId )
-  .&& ((run ! #runStatus ./= literal Certified)
-  .|| (run ! #runStatus ./= literal ReadyForCertification)))
+  .&& (run ! #runStatus ./= literal Certified)
+  .&& (run ! #runStatus ./= literal ReadyForCertification))
+
+markAsAborted :: MonadSelda m => UUID -> UTCTime -> m Int
+markAsAborted runId time = update runs
+    (\run -> (run ! #runId .== literal runId) .&& (run ! #runStatus .== literal Queued))
+    (`with`
+      [ #runStatus := literal Aborted
+      , #syncedAt := literal time
+      , #finishedAt := literal (Just time)
+      ]
+    )
 
 markAsReadyForCertification :: (MonadSelda m,MonadMask m)
                             => UUID

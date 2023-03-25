@@ -9,6 +9,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Plutus.Certification.API.Swagger where
@@ -21,30 +22,43 @@ import Data.Proxy
 import Data.Swagger as SWG
 import Plutus.Certification.API.Routes
 import Data.Text
+import GHC.TypeLits
 
-type UnnamedApi
+-- TODO: separate jwt auth from the plain auth
+type UnnamedApi (auth :: Symbol)
      = VersionRoute
   :<|> VersionHeadRoute
-  :<|> CreateRunRoute
+  :<|> CreateRunRoute auth
   :<|> GetRunRoute
-  :<|> AbortRunRoute
+  :<|> AbortRunRoute auth
   :<|> GetLogsRoute
-  :<|> GetRunsRoute
-  :<|> GetCurrentProfileRoute
-  :<|> UpdateCurrentProfileRoute
-  :<|> CreateCertificationRoute
+  :<|> GetRunsRoute auth
+  :<|> GetCurrentProfileRoute auth
+  :<|> UpdateCurrentProfileRoute auth
+  :<|> CreateCertificationRoute auth
   :<|> GetCertificateRoute
-  :<|> GetBalanceRoute
+  :<|> GetBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute
+
+type UnnamedApiWithLogin (auth :: Symbol)
+     = UnnamedApi auth
+  :<|> LoginRoute
+  :<|> ServerTimestamp
 
 instance (HasSwagger sub) => HasSwagger (AuthProtect  "public-key" :> sub) where
   toSwagger _ = toSwagger (Proxy :: Proxy (Servant.Header "Authorization" Text :> sub))
 
 swaggerJson :: Swagger
-swaggerJson = toSwagger (Proxy :: Proxy UnnamedApi)
-  & info.title          .~ "Plutus Certification API"
-  & info.(SWG.version)  .~ "1.0"
-  & info.description    ?~ "This is an API for the Plutus Certification Service"
+swaggerJson = toSwagger (Proxy :: Proxy (UnnamedApi "public-key"))
+  & info.title        .~ "Plutus Certification API"
+  & info.SWG.version  .~ "1.0"
+  & info.description  ?~ "This is an API for the Plutus Certification Service"
 
-type APIWithSwagger = SwaggerSchemaUI "swagger-ui" "swagger.json" :<|> API
+swaggerJsonWithLogin :: Swagger
+swaggerJsonWithLogin = toSwagger (Proxy :: Proxy (UnnamedApiWithLogin "public-key"))
+  & info.title        .~ "Plutus Certification API"
+  & info.SWG.version  .~ "1.0"
+  & info.description  ?~ "This is an API for the Plutus Certification Service"
+
+type APIWithSwagger = SwaggerSchemaUI "swagger-ui" "swagger.json" :<|> API "public-key"
