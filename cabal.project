@@ -1,5 +1,11 @@
 index-state: 2023-01-25T00:00:00Z
-packages: . dapps-certification-interface dapps-certification-helpers dapps-certification-persistence
+packages:
+    .
+    dapps-certification-interface
+    dapps-certification-helpers
+    dapps-certification-persistence
+    dapps-certification-signature-verification
+
 package plutus-certification
   ghc-options: -Wall
 
@@ -11,6 +17,22 @@ package dapps-certification-helpers
 
 package dapps-certification-persistence
   ghc-options: -Wall
+
+package dapps-certification-signature-verification
+  ghc-options: -Wall
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-crypto
+  tag: 2547ad1e80aeabca2899951601079408becbc92c
+  --sha256: 1p2kg2w02q5w1cvqzhfhqmxviy4xrzada3mmb096j2n6hfr20kri
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-addresses
+  tag: 5ceb877c46a9dde9bde2032dbf94ed6dd84626a5
+  subdir: core
+  --sha256: 0hyvzr4jypl67lzfqq9hd354w4nrl0510fcsmqr6fgaik46j8pc9
 
 write-ghc-environment-files: never
 tests: true

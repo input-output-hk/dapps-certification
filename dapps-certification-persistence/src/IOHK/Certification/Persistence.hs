@@ -1,4 +1,5 @@
-module IOHK.Certification.Persistence (module X) where
+module IOHK.Certification.Persistence (module X,toId,fromId) where
+import Database.Selda
 import IOHK.Certification.Persistence.Structure as X
   ( Run(..)
   , Status(..)
@@ -35,6 +36,7 @@ import IOHK.Certification.Persistence.API as X
   , getCertification
   , createCertificate
   , deleteRun
+  , markAsAborted
   , getRunStatus
   , markAsReadyForCertification
   , getAllCertifiedRunsForAddress

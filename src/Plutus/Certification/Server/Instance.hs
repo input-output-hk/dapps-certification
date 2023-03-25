@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -27,7 +26,7 @@ import Control.Monad.Except
 import Data.Time.LocalTime
 import Data.Maybe
 import Data.Aeson
-import Network.HTTP.Client      hiding (Proxy,parseUrl)
+import Network.HTTP.Client hiding (Proxy,parseUrl)
 
 import Network.HTTP.Types
 import Control.Applicative
@@ -37,8 +36,15 @@ import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
 import IOHK.Certification.Interface hiding (Status)
 import Plutus.Certification.Server.Internal
 
-import Data.ByteString.Lazy.Char8 qualified as LSB
-import Paths_plutus_certification qualified as Package
+import Servant.Server.Experimental.Auth (AuthServerData)
+import Data.Time (addUTCTime)
+import Plutus.Certification.JWT (jwtEncode, JWTArgs(..))
+import IOHK.Certification.SignatureVerification as SV
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Text.Read (readMaybe)
+
+import qualified Data.ByteString.Lazy.Char8 as LSB
+import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
@@ -51,29 +57,40 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   , getLogs = \mods act -> transPipe nt . getLogs mods act
   }
 
+
 -- | A type for server arguments including the wallet arguments
 -- and the github access token as optional
-
-data ServerArgs = ServerArgs
-  { walletArgs :: Wallet.WalletArgs
+data ServerArgs m r = ServerArgs
+  { serverCaps :: ServerCaps m r
+  , serverWalletArgs :: Wallet.WalletArgs
   , githubToken :: Maybe GitHubAccessToken
+  , serverJWTArgs :: Maybe JWTArgs
+  , serverEventBackend :: EventBackend m r ServerEventSelector
+  , serverSigningTimeout :: Seconds
   }
 
+
+type Seconds = Integer
+
 -- | An implementation of 'API'
-server :: (MonadMask m,MonadIO m, MonadError ServerError m)
-       => ServerCaps m r
-       -> ServerArgs
-       -> EventBackend m r ServerEventSelector
-       -> ServerT API m
-server ServerCaps {..} ServerArgs{..} eb = NamedAPI
+server :: ( MonadMask m
+          , MonadIO m
+          , MonadError ServerError m
+          -- constraint for the auth server data to be equal to the tuple
+          -- of profile id and user address
+          , AuthServerData (AuthProtect auth) ~ (DB.ProfileId,UserAddress)
+          )
+       => ServerArgs m r
+       -> ServerT (API auth) m
+server ServerArgs{..} = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , walletAddress = withEvent eb WalletAddress . const $ pure walletArgs.walletAddress
+  , walletAddress = withEvent eb WalletAddress . const $ pure serverWalletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
       let githubToken' =  profileAccessToken <|> githubToken
       -- ensure the ref is in the right format before start the job
-      (commitDate,commitHash) <- getCommitDateAndHash fref
+      (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
       addField ev $ CreateRunRef fref
       res <- submitJob (setAncestor $ reference ev) githubToken' fref
       addField ev $ CreateRunID res
@@ -99,9 +116,12 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
         -- if abortion succeeded mark it in the db
         void (getNow >>= DB.withDb . DB.updateFinishedRun uuid False)
 
-      when (deleteRun == Just True) $
-        -- delete the run from the db
-        void (DB.withDb $ DB.deleteRun uuid)
+      -- depending on the deleteRun flag either ...
+      if deleteRun == Just True
+         -- delete the run from the db
+         then void (DB.withDb $ DB.deleteRun uuid)
+         -- or just mark it as aborted
+         else void (getNow >>= DB.withDb . DB.markAsAborted uuid)
       pure NoContent
   , getProfileBalance = \(profileId,UserAddress{..}) -> withEvent eb GetProfileBalance \ev -> do
       addField ev profileId
@@ -179,6 +199,23 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
         -- provided from arguments
         ghAccessTokenM' =  ghAccessTokenM <|> githubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
+  , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
+      addField ev address
+      now <- getNow
+      -- ensure the profile exists
+      (pid,UserAddress userAddress) <- ensureProfile $  encodeUtf8 address
+      --verify the wallet signature validation
+      verifySignature key signature address
+      -- verify the message timestamp
+      verifyMessageTimeStamp signature
+
+      let -- minimum between the expiration time and the jwtExpirationSeconds
+          expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration
+          expiresAt = addUTCTime (fromIntegral expiration') now
+
+      -- encode jwt with with expiration time
+      pure $ jwtEncode jwtSecret expiresAt (DB.fromId pid, userAddress)
+  , serverTimestamp = withEvent eb Version (const $ round . utcTimeToPOSIXSeconds <$> getNow)
   }
   where
     fromClientResponse = \case
@@ -200,6 +237,50 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       let (Status code msg) = responseStatusCode resp
           err = ServerError code "GitHub API error" (LSB.fromStrict msg) []
       in err
+    -- | unfolds the payload from the signed message
+    unfoldMessage bs = case unfoldPayload bs of
+      Left err -> throwError err403 { errBody = LSB.pack err }
+      Right payload -> pure . decodeUtf8 . unMessage $ payload.message
+
+    -- | extracts the timestamp from the signed message
+    extractTimeStampFromMsg bs = do
+      msg <- unfoldMessage bs
+      case extractTimestamp msg of
+        Nothing -> throwError err403 { errBody = "Invalid message format"}
+        Just ts -> pure ts
+
+    -- | extracts the timestamp from the signed message and verifies it
+    verifyMessageTimeStamp = extractTimeStampFromMsg >=> verifyTimeStamp
+
+    -- | verifies that the timestamp from the signed message is not older than `serverSigningTimeout`
+    verifyTimeStamp ts = do
+      now <- round . utcTimeToPOSIXSeconds <$> getNow
+      let diff = now - ts
+      -- if the difference greater than the timeout or the timestamp is in the future
+      -- then the message is invalid
+      when (diff > serverSigningTimeout || diff < 0) $
+        throwError err403 { errBody = "Invalid message timestamp"}
+
+    -- | extracts an int time stamp from a string of form "xxxxxx<<timestamp>>xxxxxx"
+    -- the timestamp is enclosed in double angle brackets
+    extractTimestamp :: Read b => Text -> Maybe b
+    extractTimestamp t = do
+      let (_,post) = Text.breakOn "<<" t
+      let (ts,post') = Text.breakOn ">>" (Text.drop 2 post)
+      guard $ not $ Text.null post'
+      readMaybe $ Text.unpack ts
+
+    ServerCaps {..} = serverCaps
+    jwtArgs = serverJWTArgs
+    eb = serverEventBackend
+    verifySignature key signature address =
+      let res = verifyCIP30Signature key signature Nothing (Just $ Bech32Address address)
+      in either (\err ->throwError err403 { errBody = LSB.pack err}) (const $ pure ()) res
+
+    whenJWTProvided handler = case jwtArgs of
+      Nothing -> throwError err404
+      Just jwtArgs'-> handler jwtArgs'
+
     uploadToIpfs :: (Monad m, MonadIO m, MonadError ServerError m) => CertificationResult -> m IPFS.UploadResponse
     uploadToIpfs certResultM = do
       resp <- IPFS.uploadReportToIpfs IPFS.apiKey (LSB.toStrict $ encode certResultM)
@@ -252,11 +333,11 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       isOwner <- (== Just profileId) <$> DB.withDb (DB.getRunOwner uuid)
       unless isOwner $ throwError err403
 
-    getCommitDateAndHash FlakeRef{..} = do
+    getCommitDateAndHash githubToken' FlakeRef{..} = do
       (owner,repo,path') <- extractUriSegments uri
       -- TODO: here we might have to use a github token
       -- provided by the user for authorizing our app to access a private repo
-      commitInfoE <- liftIO $ getCommitInfo githubToken owner repo path'
+      commitInfoE <- liftIO $ getCommitInfo githubToken' owner repo path'
       case commitInfoE of
            Left e -> throwError err400 { errBody = LSB.pack $ show e}
            Right (Commit hash (CommitDetails _ _ (Author _ _ time))) -> pure (time,hash)
@@ -269,4 +350,4 @@ server ServerCaps {..} ServerArgs{..} eb = NamedAPI
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
       DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate
-        commitHash (walletArgs.walletCertificationPrice) profileId
+        commitHash (serverWalletArgs.walletCertificationPrice) profileId

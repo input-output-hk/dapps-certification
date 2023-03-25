@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -11,7 +12,7 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE KindSignatures #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -41,8 +42,16 @@ import Control.Lens hiding ((.=))
 import qualified Data.Swagger.Lens as SL
 import Plutus.Certification.GitHubClient (RepositoryInfo)
 import Control.Arrow (ArrowChoice(left))
+import GHC.TypeLits
+import Control.Lens hiding ((.=))
 
-type API = NamedRoutes NamedAPI
+
+import qualified IOHK.Certification.Persistence as DB
+import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
+import IOHK.Certification.SignatureVerification 
+  (COSEKey,COSESign1, decodeHex,encodeHex)
+
+type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
 type VersionRoute = "version"
   :> Description "Get the api version"
@@ -52,9 +61,9 @@ type VersionHeadRoute = "version"
   :> Description "Get the api version (Response Headers only)"
   :> HeadNoContent
 
-type CreateRunRoute = "run"
+type CreateRunRoute (auth :: Symbol) = "run"
   :> Description "Create a new testing run"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> ReqBody '[PlainText] CommitOrBranch
   :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
 
@@ -63,9 +72,9 @@ type GetRunRoute = "run"
   :> Capture "id" RunIDV1
   :> Get '[JSON] RunStatusV1
 
-type AbortRunRoute = "run"
+type AbortRunRoute (auth :: Symbol) = "run"
   :> Description "Abort a run and deletes the history entry if query param is provided"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> Capture "id" RunIDV1
   :> QueryParam "delete" Bool
   :> DeleteNoContent
@@ -78,9 +87,9 @@ type GetLogsRoute = "run"
   :> QueryParam "action-type" KnownActionType
   :> Get '[JSON] [Cicero.Run.RunLog]
 
-type GetRunsRoute = "run"
+type GetRunsRoute (auth :: Symbol) = "run"
   :> Description "Query through multiple runs belonging to the profile identified by the auth-key"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> QueryParam "after" UTCTime
   :> QueryParam "count" Int
   :> Get '[JSON] [DB.Run]
@@ -91,22 +100,22 @@ type GetRunDetailsRoute = "run"
   :> "details"
   :> Get '[JSON] DB.Run
 
-type GetCurrentProfileRoute = "profile"
+type GetCurrentProfileRoute (auth :: Symbol) = "profile"
   :> Description "Get the current profile information"
   :> "current"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> Get '[JSON] DB.ProfileDTO
 
-type UpdateCurrentProfileRoute = "profile"
+type UpdateCurrentProfileRoute (auth :: Symbol) = "profile"
   :> Description "Update the current profile information"
   :> "current"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> ReqBody '[JSON] ProfileBody
   :> Put '[JSON] DB.ProfileDTO
 
-type CreateCertificationRoute = "run"
+type CreateCertificationRoute (auth :: Symbol) = "run"
   :> Description "Store the L1 Report into IPFS and broadcasts the Certificate onchain"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> Capture "id" RunIDV1
   :> "certificate"
   :> PostNoContent
@@ -117,11 +126,11 @@ type GetCertificateRoute = "run"
   :> "certificate"
   :> Get '[JSON] DB.Certification
 
-type GetBalanceRoute = "profile"
+type GetBalanceRoute (auth :: Symbol) = "profile"
   :> Description "Get the current balance of the profile"
   :> "current"
   :> "balance"
-  :> AuthProtect "public-key"
+  :> AuthProtect auth
   :> Get '[JSON] Int
 
 type WalletAddressRoute = "wallet-address"
@@ -134,6 +143,16 @@ type GitHubRoute = "repo"
   :> Capture "repo" Text
   :> Servant.Header "Authorization" ApiGitHubAccessToken
   :> Get '[JSON] RepositoryInfo
+
+type LoginRoute = "login"
+  :> Description "Get a jwt token based on the provided credentials"
+  :> ReqBody '[JSON] LoginBody
+  :> Post '[JSON] Text
+
+type ServerTimestamp = "server-timestamp"
+  :> Description "Get the current server timestamp"
+  :> Get '[JSON] Integer
+
 
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
@@ -155,26 +174,70 @@ instance FromHttpApiData ApiGitHubAccessToken where
   -- | Parse a 'GitHubAccessToken' from a 'Text' value.
   parseUrlPiece  = left Text.pack . fmap ApiGitHubAccessToken . ghAccessTokenFromText
 
+data LoginBody = LoginBody
+  { address :: !WalletAddress
+  , key :: !COSEKey
+  , signature :: !COSESign1
+  , expiration :: !(Maybe Integer)
+  } deriving (Generic)
+
+instance ToSchema LoginBody where
+  declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    expirationScheme <- declareSchemaRef (Proxy :: Proxy Integer)
+    return $ NamedSchema (Just "LoginBody") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("address", textSchema)
+          , ("key", textSchema)
+          , ("signature", textSchema)
+          , ("expiration", expirationScheme)
+          ]
+      & required .~ ["address", "key", "signature"]
+
+instance FromJSON LoginBody where
+   parseJSON = withObject "LoginBody" $ \v -> do
+    key <- decodeHex . encodeUtf8 <$> (v .: "key")
+    signature <- decodeHex. encodeUtf8 <$> v .: "signature"
+    address <- v .: "address"
+    expiration <- v .:? "expiration" .!= Nothing
+    case (key, signature) of
+      (Right key', Right signature') ->
+        pure $ LoginBody address key' signature' expiration
+      (Left err, _) -> fail $ "key: " <> err
+      (_, Left err) -> fail $ "signature: " <> err
+
+instance ToJSON LoginBody where
+  toJSON LoginBody{..} = object (
+      [ "address" .= address
+      , "key" .= decodeUtf8 (encodeHex key)
+      , "signature" .= decodeUtf8 (encodeHex signature)
+      ] ++ maybe [] (\exp' -> ["expiration" .= exp']) expiration
+      )
+
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
 
-data NamedAPI mode = NamedAPI
+-- TODO: separate jwt auth from the plain auth
+data NamedAPI (auth :: Symbol) mode = NamedAPI
   { version :: mode :- VersionRoute
   , versionHead :: mode :- VersionHeadRoute
-  , createRun :: mode :- CreateRunRoute
+  , createRun :: mode :- CreateRunRoute auth
   , getRun :: mode :- GetRunRoute
-  , abortRun :: mode :- AbortRunRoute
+  , abortRun :: mode :- AbortRunRoute auth
   , getLogs :: mode :- GetLogsRoute
-  , getRuns :: mode :- GetRunsRoute
-  , getCurrentProfile :: mode :- GetCurrentProfileRoute
-  , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute
-  , createCertification :: mode :- CreateCertificationRoute
+  , getRuns :: mode :- GetRunsRoute auth
+  , getCurrentProfile :: mode :- GetCurrentProfileRoute auth
+  , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
+  , createCertification :: mode :- CreateCertificationRoute auth
   , getCertification :: mode :- GetCertificateRoute
   , walletAddress :: mode :- WalletAddressRoute
-  , getProfileBalance :: mode :- GetBalanceRoute
+  , getProfileBalance :: mode :- GetBalanceRoute auth
   , getRunDetails :: mode :- GetRunDetailsRoute
   , getRepositoryInfo :: mode :- GitHubRoute
+  , login :: mode :- LoginRoute
+  , serverTimestamp :: mode :- ServerTimestamp
   } deriving stock Generic
 
 data DAppBody = DAppBody

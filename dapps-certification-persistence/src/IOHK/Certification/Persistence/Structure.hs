@@ -166,7 +166,7 @@ instance ToJSON DApp where
 
 instance SqlRow DApp
 
-data Status = Queued | Failed | Succeeded | ReadyForCertification | Certified
+data Status = Queued | Failed | Succeeded | ReadyForCertification | Certified | Aborted
   deriving (Show, Read, Bounded, Enum, Eq, Generic)
 
 instance ToJSON Status where
@@ -176,6 +176,7 @@ instance ToJSON Status where
   toJSON Succeeded = toJSON ("succeeded" :: Text)
   toJSON ReadyForCertification = toJSON ("ready-for-certification" :: Text)
   toJSON Certified = toJSON ("certified" :: Text)
+  toJSON Aborted = toJSON ("aborted" :: Text)
 
 instance FromJSON Status where
     parseJSON =
@@ -186,6 +187,7 @@ instance FromJSON Status where
         handle "succeeded" = pure Succeeded
         handle "certified" = pure Succeeded
         handle "ready-for-certification" = pure ReadyForCertification
+        handle "aborted" = pure Aborted
         handle t = fail $ "provided text (" ++ show t ++ ") is not a Status"
 
 instance SqlType Status
@@ -208,7 +210,7 @@ data Run = Run
 
 instance ToSchema Status where
    declareNamedSchema _ = do
-    let values = ["queued", "failed", "succeeded", "certified", "ready-for-certification"] :: [Value]
+    let values = ["queued", "failed", "succeeded", "certified", "ready-for-certification","aborted"] :: [Value]
     return $ NamedSchema (Just "RunStatus") $ mempty
       & type_ ?~ SwaggerString
       & enum_ ?~ values
