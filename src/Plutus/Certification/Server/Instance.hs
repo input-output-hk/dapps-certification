@@ -152,12 +152,13 @@ server ServerArgs{..} = NamedAPI
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
           website' = fmap (Text.pack . showBaseUrl) website
+          twitter' = fmap unTwitter twitter
           dappM = fmap (\DAppBody{..} -> DB.DApp{
             dappId, dappName,dappOwner,dappVersion,dappRepo,
             dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
           }) dapp
       DB.withDb $ do
-        _ <- DB.upsertProfile (DB.Profile{website=website',..}) dappM
+        _ <- DB.upsertProfile (DB.Profile{website=website',twitter=twitter',..}) dappM
         -- it's safe to call partial function fromJust
 
         fromJust <$> DB.getProfile profileId

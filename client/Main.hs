@@ -28,6 +28,7 @@ import Data.Time
 import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
 import qualified Data.ByteString.Base16 as Hexa
+import Control.Monad (unless)
 
 
 newtype PublicKey = PublicKey { unPublicKey :: ByteString }
@@ -270,7 +271,7 @@ profileBodyParser = ProfileBody
        <> metavar "VENDOR"
        <> help "vendor identification"
         ))
-  <*> optional (option str
+  <*> optional (option twitterReader
         ( long "twitter"
        <> metavar "TWITTER"
        <> help "twitter account"
@@ -408,6 +409,13 @@ baseUrlReader = do
       Just (InvalidBaseUrlException s) -> readerError $ "invalid URL '" ++ urlStr ++ "': " ++ s
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
+
+twitterReader :: ReadM Twitter
+twitterReader = do
+  twitterStr <- str
+  unless (isTwitterValid twitterStr) $
+    readerError $ "invalid twitter account '" <> Text.unpack twitterStr <> "'"
+  pure $ Twitter twitterStr
 
 hexaReader :: ReadM ByteString
 hexaReader = do
