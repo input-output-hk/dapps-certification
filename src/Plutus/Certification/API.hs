@@ -7,6 +7,7 @@ import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
 import Plutus.Certification.API.Routes as X
   ( API
+  , Twitter(..)
   , NamedAPI(..)
   , VersionV1(..)
   , RunIDV1(..)
@@ -21,6 +22,7 @@ import Plutus.Certification.API.Routes as X
   , DAppBody(..)
   , ApiGitHubAccessToken(..)
   , LoginBody(..)
+  , isTwitterValid
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson

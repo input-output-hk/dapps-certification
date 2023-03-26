@@ -41,8 +41,9 @@ import Plutus.Certification.GitHubClient (RepositoryInfo)
 import Control.Arrow (ArrowChoice(left))
 import GHC.TypeLits
 import Servant.Client (BaseUrl)
-import IOHK.Certification.SignatureVerification 
+import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
+import Data.Char (isAlphaNum)
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -261,11 +262,34 @@ instance ToJSON DAppBody where
     , "githubToken"  .= dappGitHubToken
     ]
 
+newtype Twitter = Twitter { unTwitter :: Text }
+
+instance FromJSON Twitter where
+    parseJSON = withText "Twitter" $ \v ->
+      -- validate twitter account regex format ^[A-Za-z0-9_]{1,15}$
+      if not (isTwitterValid v)
+        then fail "Invalid twitter account format"
+        else pure $ Twitter v
+
+isTwitterValid :: Text -> Bool
+isTwitterValid v = not (
+  Text.length v > 15 || Text.length v < 1 || Text.any (\c -> not (isAlphaNum c || c == '_')) v
+  )
+
+instance ToJSON Twitter where
+  toJSON (Twitter v) = String v
+
+instance ToSchema Twitter where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "Twitter") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ "^[A-Za-z0-9_]{1,15}$"
+
 data ProfileBody = ProfileBody
    { dapp :: !(Maybe DAppBody)
    , website :: !(Maybe BaseUrl)
    , vendor :: !(Maybe Text)
-   , twitter :: !(Maybe Text)
+   , twitter :: !(Maybe Twitter)
    , linkedin :: !(Maybe Text)
    , authors :: Maybe Text
    , contacts :: Maybe Text
@@ -522,13 +546,14 @@ instance ToSchema ProfileBody where
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     dappSchema <- declareSchemaRef (Proxy :: Proxy DAppBody)
     urlSchema <- declareSchemaRef (Proxy :: Proxy Website)
+    twitterSchema <- declareSchemaRef (Proxy :: Proxy Twitter)
     return $ NamedSchema (Just "Profile") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("dapp", dappSchema)
           , ("website", urlSchema)
           , ("vendor", textSchema)
-          , ("twitter", textSchema)
+          , ("twitter", twitterSchema)
           , ("linkedin", textSchema)
           , ("authors", textSchema)
           , ("contacts", textSchema)
