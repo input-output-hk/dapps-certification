@@ -31,6 +31,8 @@ const UserProfile = () => {
   const [activeRepo, setActiveRepo] = useState(true);
   const [ownerErr, setOwnerErr] = useState(false);
   const [repoErr, setRepoErr] = useState(false);
+  const [canShowConnectModal, setCanShowConnectModal] = useState(false)
+  const [focussedOwnerRepo, setFocussedOwnerRepo] = useState(false)
 
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
@@ -128,22 +130,20 @@ const UserProfile = () => {
   };
 
   useEffect(() => {
-    if (timer) {
-      clearTimeout(timer)
-      setTimer(null)
-      dispatch(hideConfirmConnection())
-    }
-    const newTimer = setTimeout(() => {
-      // if(type === 'owner' && currentVal !== '' && repo.length !== 0 ){
-      //   dispatch(verifyRepoAccess({owner: currentVal, repo: repo}));
-      // } else if(type === 'repo' && currentVal !== '' && owner.length !== 0) {
-      //   dispatch(verifyRepoAccess({owner: owner, repo: currentVal}));
-      // }
-      if (owner.length && repo.length) { console.log('3')
-        dispatch(verifyRepoAccess({owner: owner, repo: repo}));
+    if (focussedOwnerRepo) {    
+      if (timer) {
+        clearTimeout(timer)
+        setTimer(null);
+        dispatch(hideConfirmConnection());
       }
-    }, 1000)
-    setTimer(newTimer)
+      const newTimer = setTimeout(() => {
+        if (owner.length && repo.length) {
+          setCanShowConnectModal(true)
+          dispatch(verifyRepoAccess({owner: owner, repo: repo}));
+        }
+      }, 1000)
+      setTimer(newTimer)
+    }
   }, [owner, repo])
 
   const inputChanged = (e: any,type:string) => {
@@ -153,6 +153,14 @@ const UserProfile = () => {
     } else{
       setRepo(currentVal)
     }
+    setCanShowConnectModal(false)
+    setFocussedOwnerRepo(true)
+    dispatch(hideConfirmConnection());
+  }
+
+  const inputBlurred = (e: any, type: string) => {
+    setFocussedOwnerRepo(false)
+    setCanShowConnectModal(false)
   }
   
   const CLIENT_ID = "10c45fe6a101a3abe3a0"; //of CertificationApp OAuthApp owned by CertGroup in anusree91
@@ -173,19 +181,23 @@ const UserProfile = () => {
         searchParams.delete("code");
         setSearchParams(searchParams);
         const formData = form.getValues()
-        console.log(formData, formData.owner, formData.repo)
+        setCanShowConnectModal(false)
+        setFocussedOwnerRepo(false)
         const timeout = setTimeout(() => {
           clearTimeout(timeout);
+          setCanShowConnectModal(true)
+          clearTimeout(timer)
+          setTimer(null)
           dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
         }, 0)
       })()
     } else {
+      setCanShowConnectModal(false)
       localStorage.removeItem('profile')
     }
   }, [])
 
   const connectToGithub = () => {
-    console.log('in connect ,', form.getValues(), owner, repo)
     const data = {...form.getValues(), owner: owner, repo: repo}
     // store current form data in localStorage
     localStorage.setItem('profile', JSON.stringify(data))
@@ -195,7 +207,7 @@ const UserProfile = () => {
   }
 
 
-  const confirmConnectModal = () => {console.log('4');
+  const confirmConnectModal = () => {
     setTimeout(() => {
       confirm({ 
         title: "Verify the Repository details", 
@@ -230,6 +242,7 @@ const UserProfile = () => {
                 }`}
                 onClick={(_) => {
                   setActiveOwner(true);
+                  setFocussedOwnerRepo(true)
                   document.getElementById("owner" || "")?.focus();
                 }}
               >
@@ -239,6 +252,7 @@ const UserProfile = () => {
                   value={owner}
                   type="text"
                   onChange={(e) => inputChanged(e, "owner")}
+                  onBlur={(e) => inputBlurred(e, "owner")}
                 />
               </div>
               {ownerErr? <span className="danger error-msg">This field is required</span> : ''}
@@ -297,6 +311,7 @@ const UserProfile = () => {
                 }`}
                 onClick={(_) => {
                   setActiveRepo(true);
+                  setFocussedOwnerRepo(true)
                   document.getElementById("repo" || "")?.focus();
                 }}>
                 <label>dApp Repository<span style={{color: 'red'}}>*</span></label>
@@ -304,6 +319,7 @@ const UserProfile = () => {
                   value={repo}
                   type="text"
                   onChange={(e) => inputChanged(e, "repo")}
+                  onBlur={(e) => inputBlurred(e, "repo")}
                 />
               </div>
               {repoErr? <span className="danger error-msg">This field is required</span>: ''}
@@ -398,7 +414,7 @@ const UserProfile = () => {
           </Form>
         </div>
       </div>
-      {showConfirmConnection && isEdit ? confirmConnectModal() : null}
+      {showConfirmConnection && isEdit && canShowConnectModal ? confirmConnectModal() : null}
     </>
   );
 };

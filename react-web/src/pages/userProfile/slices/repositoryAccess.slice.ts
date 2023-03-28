@@ -44,9 +44,11 @@ export const repoAccessSlice = createSlice({
     },
     clearAccessToken: (state) => {
       state.accessToken = ""
+      return state
     },
     hideConfirmConnection: (state) => {
       state.showConfirmConnection = false;
+      return state
     }
   },
   extraReducers: (builder) => {
