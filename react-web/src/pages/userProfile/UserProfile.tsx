@@ -57,29 +57,24 @@ const UserProfile = () => {
       version?: string;
     } = { contacts, authors, linkedin, twitter, vendor, website };
     
-    if (dapp !== null) {
-      const { name, owner, repo, version } = dapp
-      formData = { ...formData, name, version }
-      setOwner(owner);
-      setRepo(repo)
-    }
-
     const profileInLS: any = localStorage.getItem('profile')
     if (profileInLS && profileInLS !== 'undefined') {
       const profileFormData = JSON.parse(profileInLS);
       setOwner(profileFormData.owner);
       setRepo(profileFormData.repo)
       form.reset(profileFormData)
-    } else {
-      form.reset(formData)
+    } 
+    else if (dapp !== null) {
+      const { name, owner, repo, version } = dapp
+      formData = { ...formData, name, version }
+      setOwner(owner);
+      setRepo(repo)
+      form.reset(formData);
     }
     
     if (!userDetails.dapp?.owner || !userDetails.dapp?.repo || profileInLS) {
       setIsEdit(true);
     }
-
-    localStorage.removeItem('profile')
-    localStorage.removeItem('accessToken')
   }
 
   useEffect(() => {
@@ -88,9 +83,9 @@ const UserProfile = () => {
   }, [userDetails, form]);
 
   const isOwnerRepoValidationError = () => {
-    owner.length ===0 ? setOwnerErr(true) : setOwnerErr(false);
-    repo.length ===0 ? setRepoErr(true) : setRepoErr(false);
-    return owner.length ===0 || repo.length ===0;
+    !owner.length ? setOwnerErr(true) : setOwnerErr(false);
+    !repo.length ? setRepoErr(true) : setRepoErr(false);
+    return !owner.length || !repo.length;
   }
 
   const formHandler = (formData: any) => {
@@ -148,9 +143,9 @@ const UserProfile = () => {
 
   const inputChanged = (e: any,type:string) => {
     const currentVal = e.target.value
-    if(type === 'owner'){
+    if(type === 'owner') {
       setOwner(currentVal)
-    } else{
+    } else if (type ==='repo') {
       setRepo(currentVal)
     }
     setCanShowConnectModal(false)
@@ -169,7 +164,7 @@ const UserProfile = () => {
   // If that is not chosen, it doesn't ask again for permission
 
 
-  // const CLIENT_ID = "Iv1.78d108e12af627c4" // of CertTestApp GithubApp under CertGroup
+  // const CLIENT_ID = "Iv1.78d108e12af627c4" // of CertTestApp GithubApp under CertGroup in anusree91
   // const CLIENT_SECRET = "a77d34c1ffde5c4a7f0749fd7f969d6bbcda1ae7"
 
   useEffect(() => {
@@ -183,12 +178,14 @@ const UserProfile = () => {
         const formData = form.getValues()
         setCanShowConnectModal(false)
         setFocussedOwnerRepo(false)
-        const timeout = setTimeout(() => {
+        const timeout = setTimeout(async () => {
           clearTimeout(timeout);
           setCanShowConnectModal(true)
           clearTimeout(timer)
           setTimer(null)
-          dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
+          await dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
+          localStorage.removeItem('profile')
+          localStorage.removeItem('accessToken')
         }, 0)
       })()
     } else {

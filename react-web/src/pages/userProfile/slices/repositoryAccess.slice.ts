@@ -39,7 +39,6 @@ export const repoAccessSlice = createSlice({
   reducers: {
     clearStates: () => {
         localStorage.removeItem('accessToken')
-        localStorage.removeItem('profile')
         return initialState
     },
     clearAccessToken: (state) => {
