@@ -11,7 +11,11 @@ import { useAppDispatch, useAppSelector } from "store/store";
 import "./UserProfile.scss";
 import { userProfileSchema } from "./userProfile.schema";
 import { IUserProfile } from "./userProfile.interface";
-import { clearStates, clearAccessToken, getUserAccessToken, verifyRepoAccess } from "./slices/repositoryAccess.slice";
+import { clearStates, 
+  clearAccessToken, 
+  getUserAccessToken, 
+  verifyRepoAccess, 
+  hideConfirmConnection } from "./slices/repositoryAccess.slice";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -19,8 +23,14 @@ const UserProfile = () => {
   const confirm = useConfirm();
   const { userDetails, address, wallet, walletName } = useAppSelector((state: any) => state.auth);
   const [isEdit, setIsEdit] = useState(false);
-
   const { verifying, accessible, showConfirmConnection, accessToken } = useAppSelector((state) => state.repoAccess);
+  const [owner, setOwner] = useState('');
+  const [repo, setRepo] = useState('');
+  const [timer, setTimer] = useState<any>(null);
+  const [activeOwner, setActiveOwner] = useState(true);
+  const [activeRepo, setActiveRepo] = useState(true);
+  const [ownerErr, setOwnerErr] = useState(false);
+  const [repoErr, setRepoErr] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
@@ -47,12 +57,17 @@ const UserProfile = () => {
     
     if (dapp !== null) {
       const { name, owner, repo, version } = dapp
-      formData = { ...formData, name, owner, repo, version }
+      formData = { ...formData, name, version }
+      setOwner(owner);
+      setRepo(repo)
     }
 
     const profileInLS: any = localStorage.getItem('profile')
     if (profileInLS && profileInLS !== 'undefined') {
-      form.reset(JSON.parse(profileInLS))
+      const profileFormData = JSON.parse(profileInLS);
+      setOwner(profileFormData.owner);
+      setRepo(profileFormData.repo)
+      form.reset(profileFormData)
     } else {
       form.reset(formData)
     }
@@ -70,15 +85,24 @@ const UserProfile = () => {
     dispatch(clearStates())
   }, [userDetails, form]);
 
+  const isOwnerRepoValidationError = () => {
+    owner.length ===0 ? setOwnerErr(true) : setOwnerErr(false);
+    repo.length ===0 ? setRepoErr(true) : setRepoErr(false);
+    return owner.length ===0 || repo.length ===0;
+  }
+
   const formHandler = (formData: any) => {
+    if (isOwnerRepoValidationError()) {
+      return;
+    }
     const submitProfile = async () => {
       const reqData: IUserProfile = {
         "authors": formData.authors,
         "contacts": formData.contacts,
         "dapp": {
           "name": formData.name,
-          "owner": formData.owner,
-          "repo": formData.repo,
+          "owner": owner,
+          "repo": repo,
           "version": formData.version,
           "githubToken": accessToken || null
         },
@@ -103,6 +127,33 @@ const UserProfile = () => {
     submitProfile();
   };
 
+  useEffect(() => {
+    if (timer) {
+      clearTimeout(timer)
+      setTimer(null)
+      dispatch(hideConfirmConnection())
+    }
+    const newTimer = setTimeout(() => {
+      // if(type === 'owner' && currentVal !== '' && repo.length !== 0 ){
+      //   dispatch(verifyRepoAccess({owner: currentVal, repo: repo}));
+      // } else if(type === 'repo' && currentVal !== '' && owner.length !== 0) {
+      //   dispatch(verifyRepoAccess({owner: owner, repo: currentVal}));
+      // }
+      if (owner.length && repo.length) { console.log('3')
+        dispatch(verifyRepoAccess({owner: owner, repo: repo}));
+      }
+    }, 1000)
+    setTimer(newTimer)
+  }, [owner, repo])
+
+  const inputChanged = (e: any,type:string) => {
+    const currentVal = e.target.value
+    if(type === 'owner'){
+      setOwner(currentVal)
+    } else{
+      setRepo(currentVal)
+    }
+  }
   
   const CLIENT_ID = "10c45fe6a101a3abe3a0"; //of CertificationApp OAuthApp owned by CertGroup in anusree91
   const CLIENT_SECRET = "9fe0553a4727c47b434e732c3e258ba54c992051";
@@ -121,7 +172,12 @@ const UserProfile = () => {
         const access_token = await dispatch(getUserAccessToken({queryParams: params}))
         searchParams.delete("code");
         setSearchParams(searchParams);
-        dispatch(verifyRepoAccess({owner: "CertTestOrg1", repo: "plutus-apps-pvt"}));
+        const formData = form.getValues()
+        console.log(formData, formData.owner, formData.repo)
+        const timeout = setTimeout(() => {
+          clearTimeout(timeout);
+          dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
+        }, 0)
       })()
     } else {
       localStorage.removeItem('profile')
@@ -129,22 +185,17 @@ const UserProfile = () => {
   }, [])
 
   const connectToGithub = () => {
+    console.log('in connect ,', form.getValues(), owner, repo)
+    const data = {...form.getValues(), owner: owner, repo: repo}
     // store current form data in localStorage
-    localStorage.setItem('profile', JSON.stringify(form.getValues()))
+    localStorage.setItem('profile', JSON.stringify(data))
 
     // fetch CLIENT_ID from api 
     window.location.assign("https://github.com/login/oauth/authorize?client_id=" + CLIENT_ID + "&scope=repo")
   }
 
-  const onGitDetailsChange = (event?: any, type?: string) => {
-    const ownerVal = form.getValues("owner"),
-      repoVal = form.getValues("repo");
-    if ((ownerVal === 'CertTestOrg1' || ownerVal === 'CertTestOrg2') && (repoVal === 'CertTestRepoPvt1' || repoVal === 'CertTestRepoPub1' || repoVal === 'CertTestRepoPvt3' || repoVal === 'plutus-apps' || repoVal === 'plutus-apps-pvt')) {
-      dispatch(verifyRepoAccess({owner: ownerVal, repo: repoVal}));
-    }
-  };
 
-  const confirmConnectModal = () => {
+  const confirmConnectModal = () => {console.log('4');
     setTimeout(() => {
       confirm({ 
         title: "Verify the Repository details", 
@@ -172,31 +223,27 @@ const UserProfile = () => {
               disablefocus="true"
               {...form.register("name")}
             />
-            <Input
-              label="dApp Owner"
-              disabled={!isEdit}
-              type="text"
-              required={true}
-              disablefocus="true"
-              {...form.register("owner", {
-                onChange: (e: any) => {
-                  onGitDetailsChange(e, "owner");
-                },
-              })}
-            />
+            <div className="input-wrapper">
+              <div
+                className={`input ${activeOwner ? "active" : ""} ${
+                  !isEdit ? "disabled" : ""
+                }`}
+                onClick={(_) => {
+                  setActiveOwner(true);
+                  document.getElementById("owner" || "")?.focus();
+                }}
+              >
+                <label>dApp Owner<span style={{color: 'red'}}>*</span></label>
+                <input
+                  id="owner"
+                  value={owner}
+                  type="text"
+                  onChange={(e) => inputChanged(e, "owner")}
+                />
+              </div>
+              {ownerErr? <span className="danger error-msg">This field is required</span> : ''}
+            </div>
             <label>
-              <Input
-                label="dApp Repository"
-                disabled={!isEdit}
-                type="text"
-                required={true}
-                disablefocus="true"
-                {...form.register("repo", {
-                  onChange: (e: any) => {
-                    onGitDetailsChange(e, "repo");
-                  },
-                })}
-              />
               {isEdit ? (
                 <>
                   {verifying ? (
@@ -244,6 +291,23 @@ const UserProfile = () => {
                 </>
               ) : null}
             </label>
+            <div className="input-wrapper">
+              <div  className={`input ${activeRepo ? "active" : ""} ${
+                  !isEdit ? "disabled" : ""
+                }`}
+                onClick={(_) => {
+                  setActiveRepo(true);
+                  document.getElementById("repo" || "")?.focus();
+                }}>
+                <label>dApp Repository<span style={{color: 'red'}}>*</span></label>
+                <input
+                  value={repo}
+                  type="text"
+                  onChange={(e) => inputChanged(e, "repo")}
+                />
+              </div>
+              {repoErr? <span className="danger error-msg">This field is required</span>: ''}
+            </div>
             <Input
               label="dApp Version"
               type="text"
@@ -323,7 +387,7 @@ const UserProfile = () => {
                     }}
                   />
                   <Button
-                    disabled={!form.formState.isValid || !accessible}
+                    disabled={!form.formState.isValid || !accessible || ownerErr || repoErr}
                     type="submit"
                     buttonLabel={"Save"}
                     onClick={() => {}}
