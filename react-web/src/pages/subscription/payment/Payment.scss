@@ -14,22 +14,12 @@
     .btn-layout {
         text-align: center;
         margin: 40px;
-        .button-pay {
+        button {
+            margin: 0.5rem;
             width: 30%;
             @media only screen and (max-width: 768px) {
                 width: 80%;
               }
         }
-      .pay {
-        background-color: #2ecc71;
-        color: white;
-        outline: none;
-        border: 1px solid #2ecc71;
-      }
-      .cancel {
-        background-color: white;
-        color: #2ecc71;
-        border: 1px solid #2ecc71;
-      }
     }
   }

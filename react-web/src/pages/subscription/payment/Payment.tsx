@@ -1,10 +1,12 @@
 import { BigNum } from "@emurgo/cardano-serialization-lib-browser";
 import { fetchData } from "api/api";
+import Button from "components/Button/Button";
 import Modal from "components/Modal/Modal";
+import Toast from "components/Toast/Toast";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { handleError, payFromWallet } from "store/slices/walletTransaction.slice";
+import { payFromWallet } from "store/slices/walletTransaction.slice";
 import { useAppSelector } from "store/store";
 import "./Payment.scss";
 
@@ -16,7 +18,7 @@ function Payment() {
   const { address, wallet } = useAppSelector((state) => state.auth);
   const { error } = useAppSelector(state => state.walletTransaction);
   const [transactionId, setTransactionId] = useState("")
-  const [subscriptionSuccess, setSubscriptionSuccess] = useState(false)
+  const [ showError, setShowError ] = useState("");
   const [ openModal, setOpenModal ] = useState(false);
 
   const onCloseModal = () => { 
@@ -34,33 +36,33 @@ function Payment() {
         errorMsg = errorObj?.response.message + ' Please try again.'
     } else if (errorObj?.response?.data) {
         errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
+    } else {
+      errorMsg = 'Something wrong occurred. Please try again later.'
     }
-    // setShowError(errorMsg.length > 50 ? 'Something wrong occurred. Please try again later.' : errorMsg);
+    setShowError(errorMsg);
     const timeout = setTimeout(() => { 
       clearTimeout(timeout); 
-      // setShowError("") 
+      setShowError("") 
     }, 5000)
-    // setCertifying(false);
-    if (errorObj?.response?.status === 403) {
-        // setDisableCertify(true)
-    }
+    setOpenModal(false)
     console.log(errorMsg)
 }
 
   useEffect(() => {
-    handleError(error)
+    error && handleError(error)
   }, [error])
 
   const triggerPayment = async () => {
+    setShowError("")
     fetchData.get('/profile/current/balance').then(response => {
       const availableProfileBalance: number = response.data
       // fetchData.get().then(res => {
           // const runDetails: Run = res.data
-          // if ((availableProfileBalance - state.lovelace) < 0) {
+          if ((availableProfileBalance - state.lovelace) < 0) {
               triggerTransactionFromWallet(state.lovelace)
-          // } else {
-          //     initiatePurchase()
-          // }
+          } else {
+              initiatePurchase()
+          }
       // })
     })
   }
@@ -74,11 +76,10 @@ function Payment() {
   }
 
   const initiatePurchase = () => {
-    fetchData.post('/profile/current/subscriptions/' + state.tierId)
-      .catch(handleError)
+    fetchData.post('/profile/current/subscriptions/' + state.id)
       .then((response: any) => {
-        setSubscriptionSuccess(true)
-      })
+        setOpenModal(true); console.log('post subscription success')
+      }).catch(handleError)
   }
 
   return (
@@ -90,20 +91,17 @@ function Payment() {
         <p>{state.description}</p>
       </div>
       <div className="btn-layout">
-        <button onClick={() => navigate(-1)} className="cancel button-pay">
-          Cancel
-        </button>
-        <button className="pay button-pay" onClick={() => triggerPayment()}>Pay ${state.price}</button>
+        <Button buttonLabel={"Cancel"} onClick={() => navigate(-1)} className="cancel" displayStyle="primary-outline"></Button>
+        <Button buttonLabel={"Pay $" + state.price} onClick={() => triggerPayment()} className="pay" displayStyle="primary"></Button>
       </div>
-      {subscriptionSuccess ? 
-        <Modal open={openModal} title="Certification Successful" onCloseModal={onCloseModal}>
-          <p>Successfully initiated subscription of {state.name}</p>
-          <span>
-              View your performed payment transaction &nbsp;
-              <a target="_blank" rel="noreferrer" href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}>here</a>!
-          </span>
-        </Modal>
-      : null}
+      <Modal open={openModal} title="Subscription Requested" onCloseModal={onCloseModal}>
+        <p style={{marginBottom: '2rem'}}>Successfully initiated subscription of {state.name}</p>
+        <span>
+            View your performed payment transaction&nbsp;
+            <a target="_blank" rel="noreferrer" href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}>here</a>!
+        </span>
+      </Modal>
+      {showError ? <Toast message={showError} /> : null}
     </div>
   );
 }

@@ -3,11 +3,11 @@ import "./PricingCard.scss";
 import { useNavigate } from "react-router-dom";
 
 
-const PricingCard: React.FC<any> = ({ tierId, name, disabled, featureSet, description, lovelace, price, type }) => {
+const PricingCard: React.FC<any> = ({ id, name, enabled, featureSet, description, lovelace, price, type }) => {
 
   const navigate = useNavigate();
   const onPayment = (e: any) => {
-    navigate("/subscription/payment", { state: { tierId, name, featureSet, description, lovelace, price, type } });
+    navigate("/subscription/payment", { state: { id, name, featureSet, description, lovelace, price, type } });
   };
 
   const contactUs = () => {
@@ -15,7 +15,7 @@ const PricingCard: React.FC<any> = ({ tierId, name, disabled, featureSet, descri
   }
 
   return (
-    <div className={`card_content clearfix ${disabled? 'disabled' : ''}`}>
+    <div className={`card_content clearfix ${enabled? '' : 'disabled'}`}>
       <div className={`${price ? 'card_head_price' : ''} card_head clearfix`}>
         <div className="card_head_content clearfix">
           <div className="head_bg"></div>
