@@ -71,7 +71,6 @@ export const payFromWallet: any = createAsyncThunk("payFromWallet", (data: any, 
                 utxos.forEach((utxo: any) => {
                     txnUnspentOutputs.add(TransactionUnspentOutput.from_hex(utxo))
                 })
-                console.log(Value.new(cert_fee_lovelace) )
                 txBuilder.add_output(TransactionOutput.new(Address.from_bech32(applicationWallet_receiveAddr), Value.new(cert_fee_lovelace) ))
                 txBuilder.add_inputs_from(txnUnspentOutputs, CoinSelectionStrategyCIP2.LargestFirst)
                 txBuilder.add_change_if_needed(Address.from_bech32(data.address))
@@ -84,8 +83,6 @@ export const payFromWallet: any = createAsyncThunk("payFromWallet", (data: any, 
                     const txSigned = Transaction.new(txBuilder.build(), txVkeyWitnesses );
                     const encodedSignedTx = Buffer.from(txSigned.to_bytes()).toString("hex");
                     data.wallet.submitTx(encodedSignedTx).then((txnId: string) => {
-                        console.log(' transaction id - ', txnId)
-                        // triggerSubmitCertificate(txnId)
                         resolve(txnId);
                     }).catch(throwError)
                 }).catch(throwError)
@@ -109,11 +106,9 @@ export const walletTransactionSlice = createSlice({
             state.loading = true;
         })
         .addCase(payFromWallet.fulfilled, (state, actions) => {
-            console.log('fulfiled - ', actions)
             state.error = false;
         })
         .addCase(payFromWallet.rejected, (state, actions) => {
-            console.log('rejected - ', actions)
             handleError(actions.error)
             state.loading = false
         })
