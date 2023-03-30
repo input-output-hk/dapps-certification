@@ -158,7 +158,11 @@ server ServerArgs{..} = NamedAPI
             dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
           }) dapp
       DB.withDb $ do
-        _ <- DB.upsertProfile (DB.Profile{website=website',twitter=twitter',..}) dappM
+        _ <- DB.upsertProfile (DB.Profile
+                { website=website'
+                , twitter=twitter'
+                , linkedin=fmap unLinkedIn linkedin
+                ,..}) dappM
         -- it's safe to call partial function fromJust
 
         fromJust <$> DB.getProfile profileId

@@ -50,6 +50,7 @@ library
     temporary,
     jwt ^>=0.11.0,
     unordered-containers,
+    regex-compat,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -134,6 +135,7 @@ executable plutus-certification-client
     http-types ^>= 0.12.3,
     dapps-certification-helpers,
     base16-bytestring,
+    regex-compat,
     plutus-certification
   main-is: Main.hs
   hs-source-dirs: client

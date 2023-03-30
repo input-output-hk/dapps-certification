@@ -27,8 +27,9 @@ import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
-import qualified Data.ByteString.Base16 as Hexa
 import Control.Monad (unless)
+import Text.Regex
+import qualified Data.ByteString.Base16 as Hexa
 
 
 newtype PublicKey = PublicKey { unPublicKey :: ByteString }
@@ -55,7 +56,6 @@ createRunParser = CreateRunArgs
 
 authParser :: Parser Auth
 authParser = (PublicKeyAuth <$> publicKeyParser) <|> (JWTAuth <$> jwtParser)
-
 
 createRunInfo :: ParserInfo CreateRunArgs
 createRunInfo = info createRunParser
@@ -276,7 +276,7 @@ profileBodyParser = ProfileBody
        <> metavar "TWITTER"
        <> help "twitter account"
         ))
-  <*> optional (option str
+  <*> optional (option linkedinReader
         ( long "linkedin"
        <> metavar "LINKEDIN"
        <> help "linkedin account"
@@ -291,6 +291,13 @@ profileBodyParser = ProfileBody
        <> metavar "CONTACTS"
        <> help "the list of contacts represented as a string"
         ))
+
+linkedinReader :: ReadM LinkedIn
+linkedinReader = do
+  v <- str
+  case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) v of
+    Just _ -> pure (LinkedIn (Text.pack v))
+    Nothing -> fail "Invalid LinkedIn profile URL"
 
 getCurrentProfileInfo :: ParserInfo Auth
 getCurrentProfileInfo = info authParser
