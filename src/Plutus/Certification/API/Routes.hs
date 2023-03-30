@@ -44,6 +44,7 @@ import Servant.Client (BaseUrl)
 import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
 import Data.Char (isAlphaNum)
+import Text.Regex
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -285,12 +286,32 @@ instance ToSchema Twitter where
       & type_ ?~ SwaggerString
       & SL.pattern ?~ "^[A-Za-z0-9_]{1,15}$"
 
+newtype LinkedIn = LinkedIn { unLinkedIn :: Text }
+
+linkedInProfilePattern :: Text
+linkedInProfilePattern = "^(http(s)?:\\/\\/)?([\\w]+\\.)?linkedin\\.com\\/(pub|in|profile|company)\\/([a-zA-Z0-9_-]+)$"
+
+instance ToSchema LinkedIn where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "LinkedIn") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ linkedInProfilePattern
+
+instance FromJSON LinkedIn where
+  parseJSON = withText "LinkedIn" $ \v -> do
+    case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) (Text.unpack v) of
+      Just _ -> return (LinkedIn v)
+      Nothing -> fail "Invalid LinkedIn profile URL"
+
+instance ToJSON LinkedIn where
+  toJSON = toJSON . unLinkedIn
+
 data ProfileBody = ProfileBody
    { dapp :: !(Maybe DAppBody)
    , website :: !(Maybe BaseUrl)
    , vendor :: !(Maybe Text)
    , twitter :: !(Maybe Twitter)
-   , linkedin :: !(Maybe Text)
+   , linkedin :: !(Maybe LinkedIn)
    , authors :: Maybe Text
    , contacts :: Maybe Text
    } deriving stock Generic
