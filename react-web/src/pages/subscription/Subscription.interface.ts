@@ -5,13 +5,13 @@ export interface TierFeature {
     "name": string;
 }
 export interface Subscription {
-    "end_date": string;
+    "endDate": string;
     "features": Array<TierFeature>;
     "id": string;
     "name": "Developer" | "Auditor";
     "price": BigNum,
     "profileId": string;
-    "start_date": string;
+    "startDate": string;
     "status": "inactive" | "active" | "pending";
     "tierId": string;
 }
