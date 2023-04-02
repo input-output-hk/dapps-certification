@@ -10,6 +10,7 @@ interface AuthState {
   userDetails: IUserProfile;
   loading: boolean;
   network: number | null;
+  subscribedFeatures: Array<"l1-run" | "l2-upload-report">;
 }
 
 // Define the initial state using that type
@@ -19,7 +20,8 @@ const initialState: AuthState = {
   wallet: null,
   userDetails: {dapp: null},
   loading: false,
-  network: null
+  network: null,
+  subscribedFeatures: []
 };
 
 const clearLSCache = () => {
@@ -49,6 +51,9 @@ export const authSlice = createSlice({
     },
     setNetwork: (state, actions) => {
       state.network = actions.payload
+    },
+    setSubscribedFeatures: (state, actions) => {
+      state.subscribedFeatures = actions.payload
     }
   },
   extraReducers: (builder) => {
@@ -76,6 +81,6 @@ export const authSlice = createSlice({
 });
 
 
-export const { logout, clearCache, setNetwork } = authSlice.actions;
+export const { logout, clearCache, setNetwork, setSubscribedFeatures} = authSlice.actions;
 
 export default authSlice.reducer;
