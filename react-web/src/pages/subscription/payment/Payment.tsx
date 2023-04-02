@@ -76,7 +76,7 @@ function Payment() {
   }
 
   const initiatePurchase = () => {
-    fetchData.post('/profile/current/subscriptions/' + state.tier_id)
+    fetchData.post('/profile/current/subscriptions/' + state.tierId)
       .then((response: any) => {
         setOpenModal(true);
       }).catch(handleError)
@@ -92,7 +92,7 @@ function Payment() {
       </div>
       <div className="btn-layout">
         <Button buttonLabel={"Cancel"} onClick={() => navigate(-1)} className="cancel" displayStyle="primary-outline"></Button>
-        <Button buttonLabel={"Pay $" + state.usd_price} onClick={() => triggerPayment()} className="pay" displayStyle="primary"></Button>
+        <Button buttonLabel={"Pay $" + state.usdPrice} onClick={() => triggerPayment()} className="pay" displayStyle="primary"></Button>
       </div>
       <Modal open={openModal} title="Subscription Requested" onCloseModal={onCloseModal}>
         <p style={{marginBottom: '2rem'}}>Successfully initiated subscription of {state.tier_name}</p>

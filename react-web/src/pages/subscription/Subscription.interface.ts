@@ -10,10 +10,10 @@ export interface Subscription {
     "id": string;
     "name": "Developer" | "Auditor";
     "price": BigNum,
-    "profile_id": string;
+    "profileId": string;
     "start_date": string;
     "status": "inactive" | "active" | "pending";
-    "tier_id": string;
+    "tierId": string;
 }
 
 export interface Tier {
@@ -21,7 +21,8 @@ export interface Tier {
     "enabled": boolean;
     "features": Array<TierFeature>;
     "id": string;
-    "tier_id"?: string;
+    "tierId"?: string;
     "name": "Developer" | "Auditor";
-    "usd_price": number;
+    "type": "developer" | "auditor";
+    "usdPrice": number;
 }

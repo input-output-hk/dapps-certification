@@ -7,7 +7,7 @@ const SubscriptionContent = () => {
   const [developerTiers, setDeveloperTiers] = useState([
       {
         id: '1',
-        tier_id: '1',
+        tierId: '1',
         tier_name: "Tier I",
         featureSet: "Minimal Features to get L1 certificate",
         price: '100',
@@ -18,7 +18,7 @@ const SubscriptionContent = () => {
       },
       {
         id: '2', 
-        tier_id: '2',
+        tierId: '2',
         tier_name: "Tier II",
         featureSet: "All Features and customizations",
         price: '1000',
@@ -38,7 +38,7 @@ const SubscriptionContent = () => {
   const [auditorTiers, setAuditorTiers] = useState([
     {
       id: '1',
-      tier_id: '1',
+      tierId: '1',
       tier_name: "Tier I",
       featureSet: "All Features and customizations + upload of a report on chain",
       price: '1000',
@@ -48,7 +48,7 @@ const SubscriptionContent = () => {
     },
     {
       id: '2',
-      tier_id: '2',
+      tierId: '2',
       tier_name: "Tier II",
       featureSet: "All Features and customizations + upload of a report on chain + IOG's Professional Services",
       price: '',
@@ -73,9 +73,9 @@ const SubscriptionContent = () => {
   }
 
   const modifyTierData = (item: Tier, tier: any) => {
-    if ((tier.tier_id || '1') === (item.tier_id || '1')) {
+    if ((tier.tierId || '1') === (item.tierId || '1')) {
       tier = {...tier, ...item}
-      tier['ada_price'] = tier.usd_price * adaUsdPrice
+      tier['ada_price'] = tier.usdPrice * adaUsdPrice
       tier['lovelace_price'] = tier.ada_price * 1000000
       return tier
     } else {
@@ -101,7 +101,7 @@ const SubscriptionContent = () => {
   const fetchActiveSubscription = async () => {
     const response: any = await fetchData.get("/profile/current/subscriptions?just-enabled=true")
     const result: Array<Subscription> = response.data
-    if (result.length === 1 && result[0].hasOwnProperty('tier_id')) {
+    if (result.length === 1 && result[0].hasOwnProperty('tierId')) {
       // set active to the merged data set
       if (result[0].name === 'Developer') {
         setDeveloperTiers(developerTiers.map((tier: any) => modifyTierData(tier,result[0])))

@@ -39,7 +39,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
   return (
     <>
     <div className={`card_content clearfix ${props.enabled? '' : 'disabled'}`}>
-      <div className={`${props.usd_price ? 'card_head_price' : ''} card_head clearfix`}>
+      <div className={`${props.usdPrice ? 'card_head_price' : ''} card_head clearfix`}>
         <div className="card_head_content clearfix">
           <div className="head_bg"></div>
           <div className="head">
@@ -47,11 +47,11 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
           </div>
         </div>
 
-        {props.usd_price ? <>
+        {props.usdPrice ? <>
           <div className="card_price_tag clearfix">
             <span className="price">
               <span className="sign">$</span>
-              <span className="currency">{props.usd_price}</span>
+              <span className="currency">{props.usdPrice}</span>
             </span>          
           </div>
         </> : null}
@@ -67,8 +67,8 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
         </ul>
       </div>
 
-      <div className={`card_price_btn clearfix ${props.usd_price ? '' : 'card_price_btn_fixed'}`}>
-        {props.usd_price ? 
+      <div className={`card_price_btn clearfix ${props.usdPrice ? '' : 'card_price_btn_fixed'}`}>
+        {props.usdPrice ? 
           props.status === 'pending' || props.status === 'active'  ? 
             <Button displayStyle="primary-outline" buttonLabel={props.status.toUpperCase()} disabled></Button>
           :
