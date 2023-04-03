@@ -21,7 +21,6 @@ export interface Tier {
     "enabled": boolean;
     "features": Array<TierFeature>;
     "id": string;
-    "tierId"?: string;
     "name": "Developer" | "Auditor";
     "type": "developer" | "auditor";
     "usdPrice": number;

@@ -6,38 +6,38 @@ import { Subscription, Tier } from './Subscription.interface';
 const SubscriptionContent = () => {
   let developerTiers: any = [
       {
-        tierId: '1',
+        id: "1",
         tier_name: "Tier I",
         featureSet: "Minimal Features to get L1 certificate",
         description:
           "This tier is perfect for developers who are just starting out with securing their software. With this tier, you will have access to our basic features, which will help you get a L1 certificate.",
       },
       {
-        tierId: '2',
+        id: "3",
         tier_name: "Tier II",
         featureSet: "All Features and customizations",
         description:
           "This tier is perfect for developers who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your software is fully compliant with industry standards.",
       },
-      // {
-      //   tierId: 3,
-      //   tier_name: "Tier III ",
-      //   featureSet: "All Features and customizations + IOG's Professional Services",
-      //   price: '',
-      //   description:
-      //     "This tier is perfect for developers who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your software is fully compliant and secure.",
-      // }
+      {
+        id: "4",
+        tier_name: "Tier III ",
+        featureSet: "All Features and customizations + IOG's Professional Services",
+        price: '',
+        description:
+          "This tier is perfect for developers who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your software is fully compliant and secure.",
+      }
   ];
   let auditorTiers: any = [
     {
-      tierId: '1',
+      id: "2",
       tier_name: "Tier I",
       featureSet: "All Features and customizations + upload of a report on chain",
       description:
         "This tier is perfect for auditors who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your clients' software is fully compliant with industry standards.",
     },
     {
-      tierId: '2',
+      id: "5",
       tier_name: "Tier II",
       featureSet: "All Features and customizations + upload of a report on chain + IOG's Professional Services",
       description:
@@ -63,7 +63,7 @@ const SubscriptionContent = () => {
   }
 
   const modifyTierData = (tier: any, item: Tier) => {
-    if ((tier.tierId || '1') === (item.tierId || '1')) {
+    if (tier.id === item.id) {
       tier = {...tier, ...item}
       tier['ada_price'] = tier.usdPrice * adaUsdPrice
       tier['lovelace_price'] = tier.ada_price * 1000000
@@ -91,8 +91,9 @@ const SubscriptionContent = () => {
   }
 
   const mapSubscriptionData = (tier: any, item: Subscription) => {
-    if (item.name === tier.name && ((tier.tierId || '1') === (item.tierId || '1'))) {
-      tier = {...tier, ...item}
+    if (tier.id === item.tierId) {
+      const {id, ...rest} = item;
+      tier = {...tier, ...rest}
       return tier;
     } else {
       tier['enabled'] = false
