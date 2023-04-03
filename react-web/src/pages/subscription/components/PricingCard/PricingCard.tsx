@@ -7,6 +7,7 @@ import { Input } from "compositions/Form/components/Input";
 import { Form } from "compositions/Form/Form";
 import { contactFormSchema } from "./contactForm.schema";
 import { useForm } from "hooks/useForm";
+import { postExternal } from "api/api";
 
 
 const PricingCard: React.FC<any> = ( {...props} ) => {
@@ -30,11 +31,9 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
     mode: "onChange",
   });
   const formHandler = (formData: any) => {
-    (async() => {
-      // externalPost.post('https://iog-io-contact-form.vercel.app/api/contact', formData).then(res => {
-          setContactFormSubmitted(true)
-      // })
-    })()
+    postExternal.post('https://iog-io-contact-form.vercel.app/api/contact', formData).then(res => {
+        setContactFormSubmitted(true)
+    })
   }
   return (
     <>
