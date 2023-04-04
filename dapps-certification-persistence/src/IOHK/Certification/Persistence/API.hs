@@ -358,8 +358,16 @@ addInitialData = void $ do
   -- TODO: price should be configurable
   let usdPrice = 2
   -- TODO: subscription duration should be configurable
-  let developer = [ Tier def "Developer" Developer usdPrice 365 True ]
-      auditor  = [Tier def "Auditor" Auditor usdPrice 365 True]
+  let developer =
+        [ Tier def "Standard" "Minimal Features to get L1 certificate"
+          "This tier is perfect for developers who are just starting out with securing their software.\
+          \ With this tier, you will have access to our basic features, which will help you get a L1 certificate."
+          Developer usdPrice 365 True ]
+      auditor  =
+        [Tier def "Standard" "All Features and customizations + upload of a report on chain"
+         "This tier is perfect for auditors who want full access to all of our features.\
+         \ With this tier, you will have access to our full suite of tools, which will help you ensure that your clients' software is fully compliant with industry standards."
+        Auditor usdPrice 365 True]
   developerId <- insertWithPK tiers developer
   auditorId <- insertWithPK tiers auditor
   insert_ tierFeatures  [TierFeature def developerId (featureId f) | f <- devFeatures]
@@ -381,7 +389,8 @@ createSubscription startDate pid tid adaUsdPrice = do
     _ <- cancelPendingSubscription pid
 
     let subscriptionPrice = usdToLovelace tier.tierUsdPrice adaUsdPrice
-        subscriptionToInsert = Subscription def pid tid subscriptionPrice startDate endDate PendingSubscription
+        subscriptionToInsert = Subscription def pid tid (tier.tierName) (tier.tierType)
+          subscriptionPrice startDate endDate PendingSubscription
     -- create a new subscription
     subscriptionId <- insertWithPK subscriptions [subscriptionToInsert]
     let subscription = subscriptionToInsert { subscriptionId = subscriptionId}
@@ -390,15 +399,8 @@ createSubscription startDate pid tid adaUsdPrice = do
     update_ subscriptions
       (\s -> s ! #subscriptionProfileId .== literal pid .&& s ! #subscriptionId ./= literal subscriptionId)
       (`with` [ #subscriptionStatus := literal InactiveSubscription ])
-    getSubscriptionDTO subscription
+    toSubscriptionDTO subscription
   where
-  getSubscriptionDTO subscription = do
-    tier <- query $ do
-      tier <- select tiers
-      restrict (tier ! #tierId .== literal (subscriptionTierId subscription))
-      pure tier
-    toSubscriptionDTO (subscription :*: head tier) -- head should be safe enough here
-
   addDaysToUTCTime days = addUTCTime (nominalDay * fromIntegral days)
 
 -- usd to lovelace
@@ -421,9 +423,7 @@ getProfileSubscriptions pid justEnabled = do
     subscription <- select subscriptions
     restrict (subscription ! #subscriptionProfileId .== literal pid
              .&& ( if justEnabled then subscription ! #subscriptionStatus .== literal ActiveSubscription else true))
-    tier <- innerJoin  (\tier -> tier ! #tierId .== subscription ! #subscriptionTierId)
-                      (select tiers)
-    pure (subscription :*: tier )
+    pure subscription
 
   mapM toSubscriptionDTO subscription
 
@@ -448,12 +448,12 @@ getCurrentFeatures pid now = do
   -- unique the featureTypes
   pure $ nub featureTypes
 
-toSubscriptionDTO :: MonadSelda m => (Subscription :*: Tier) -> m SubscriptionDTO
-toSubscriptionDTO (Subscription{..} :*: Tier{..} ) = do
+toSubscriptionDTO :: MonadSelda m => Subscription -> m SubscriptionDTO
+toSubscriptionDTO (Subscription{..}) = do
   -- get all the features of the selected tier
   features' <- query $ do
     tierFeature <- select tierFeatures
-    restrict (tierFeature ! #tierFeatureTierId .== literal tierId)
+    restrict (tierFeature ! #tierFeatureTierId .== literal subscriptionTierId)
     -- join with the features table
     innerJoin
       (\feature -> feature ! #featureId .== tierFeature ! #tierFeatureFeatureId)
@@ -466,8 +466,9 @@ toSubscriptionDTO (Subscription{..} :*: Tier{..} ) = do
     , subscriptionDtoStartDate = subscriptionStartDate
     , subscriptionDtoEndDate = subscriptionEndDate
     , subscriptionDtoStatus = subscriptionStatus
-    , subscriptionDtoName = tierName
+    , subscriptionDtoName = subscriptionName
     , subscriptionDtoFeatures = features'
+    , subscriptionDtoType = subscriptionType
     }
 
 getAllTiers :: MonadSelda m => m [TierDTO]
