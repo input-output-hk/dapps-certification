@@ -138,7 +138,7 @@
       content: " ";
     }
   }
-.MuiPaper-root.MuiDialog-paper {
+.MuiPaper-root.MuiDialog-paper[aria-labelledBy="contactUsModal"] {
   width: 100%;
   button {
     margin-left: 37%;

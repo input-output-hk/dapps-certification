@@ -123,6 +123,7 @@ function Payment() {
         open={openModal}
         title="Subscription Requested"
         onCloseModal={onCloseModal}
+        modalId="subscriptionSuccessModal"
       >
         <p style={{ marginBottom: "2rem" }}>
           Successfully initiated subscription of {state.tier_name}
