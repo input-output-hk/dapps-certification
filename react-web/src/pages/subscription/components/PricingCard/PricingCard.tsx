@@ -59,7 +59,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
 
       <div className="card_feature_list">
         <ul>
-          <li>{props.featureSet}</li>
+          <li>{props.title}</li>
           {/* <li>
             <span>150GB</span> Storage
           </li> */}
