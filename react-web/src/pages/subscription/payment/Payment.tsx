@@ -95,7 +95,7 @@ function Payment() {
       <div className="content">
         <h4>{state.type}</h4>
         <h3>{state.tier_name}</h3>
-        <h5>{state.featureSet}</h5>
+        <h5>{state.title}</h5>
         <p>{state.description}</p>
       </div>
       <div className="btn-layout">
