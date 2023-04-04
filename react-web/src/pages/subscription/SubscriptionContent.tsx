@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import { fetchData } from 'api/api';
 import PricingCard from './components/PricingCard/PricingCard';
 import { Subscription, Tier } from './Subscription.interface';
@@ -80,9 +81,9 @@ const SubscriptionContent = () => {
       // merge with our dev/auditor data set
       result.forEach((item: Tier, idx: number) => {
         if (item.name === 'Developer') {
-          developerTiers = developerTiers.map((tier: any) => tier && modifyTierData(tier, item))
+          developerTiers = developerTiers.map((tier: any) => tier && modifyTierData(tier, item)).filter((tier: any) => tier)
         } else if (item.name === 'Auditor') {
-          auditorTiers = auditorTiers.map((tier: any) => tier && modifyTierData(tier,item))
+          auditorTiers = auditorTiers.map((tier: any) => tier && modifyTierData(tier,item)).filter((tier: any) => tier)
         }
       })
       setDeveloperTierSet(developerTiers)
@@ -113,6 +114,10 @@ const SubscriptionContent = () => {
     setAuditorTierSet(auditorTiers)
   }
 
+  const loadNoData = () => {
+    return <span className="empty-card"><Alert severity="warning">Unable to load data. Please try again later.</Alert></span>;
+  }
+
   return (
     <div className="pricing-container">
     <div className="subscription-content">
@@ -129,7 +134,9 @@ const SubscriptionContent = () => {
         standards. Here are the three tiers we offer:
       </p>
       <div className="pricing-card-container">
-        {developerTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Developer Subscription"/>) : null)}
+        {developerTierSet.length ? 
+          developerTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Developer Subscription"/>) : null)
+        : loadNoData()}
       </div>
     </div>
     <div className="tier-container">
@@ -140,7 +147,9 @@ const SubscriptionContent = () => {
         standards. Here are the two tiers we offer:
       </p>
       <div className="pricing-card-container">
-        {auditorTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Auditor Subscription" />) : null)}
+        {auditorTierSet.length ? 
+          auditorTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Auditor Subscription" />) : null)
+        : loadNoData()}
       </div>
     </div>
     <div className="subscription-content">Our pricing varies depending on the tier you choose. Please contact us for more information.</div>
