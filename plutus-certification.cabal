@@ -68,6 +68,7 @@ library
     Plutus.Certification.JWT
     Plutus.Certification.WalletClient
     Plutus.Certification.Synchronizer
+    Plutus.Certification.ProfileWallet
   other-modules:
     Paths_plutus_certification
     Plutus.Certification.API.Routes
