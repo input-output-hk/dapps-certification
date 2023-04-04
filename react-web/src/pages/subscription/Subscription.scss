@@ -27,3 +27,20 @@
       line-height: 26px;
     }
   }
+
+.head-section {
+  margin-bottom: 20px;
+  text-align: right;
+  #view-subscription-history {
+    padding: 9px 18px;
+    border-radius: 5px;
+    background-color: #d6dff4;
+    cursor: pointer;
+    &:hover {
+      background-color: #c4cee3;
+    }
+    span {
+      margin-left: 5px;
+    }
+  }
+}

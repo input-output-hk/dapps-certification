@@ -90,7 +90,13 @@ function Payment() {
       .catch(handleError);
   };
 
-  return (
+  useEffect(() => {
+    if (!state) {
+      navigate(-1)
+    }
+  })
+
+  return (state ? 
     <div className="payment-container">
       <div className="content">
         <h4>{state.type}</h4>
@@ -135,7 +141,7 @@ function Payment() {
       </Modal>
       {showError ? <Toast message={showError} /> : null}
     </div>
-  );
+  : null);
 }
 
 export default Payment;

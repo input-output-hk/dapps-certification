@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { fetchData } from 'api/api';
 import PricingCard from './components/PricingCard/PricingCard';
 import { Subscription, Tier } from './Subscription.interface';
+import { getCurrentAdaUsdPrice } from 'store/slices/auth.slice';
+import { useAppSelector } from 'store/store';
+import { useNavigate } from 'react-router-dom';
 
 const SubscriptionContent = () => {
   let developerTiers: any = [
@@ -44,23 +48,21 @@ const SubscriptionContent = () => {
         "This tier is perfect for auditors who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your clients' software is fully compliant and secure.",
     },
   ];
-  let adaUsdPrice = 0;
+
+  const dispatch = useDispatch()
+  const navigate = useNavigate();
+  const {adaUsdPrice} = useAppSelector((state) => state.auth);
   const [developerTierSet, setDeveloperTierSet] = useState([])
   const [auditorTierSet, setAuditorTierSet] = useState([])
   useEffect(() => {
     (async() => {
-      await fetchCurrentUsdPrice()
+      if (adaUsdPrice === 0) {
+        await dispatch(getCurrentAdaUsdPrice())
+      } 
       await fetchAllTiers()
       fetchActiveSubscription();
     })()
   }, []);
-
-  const fetchCurrentUsdPrice = async () => {
-    const response: any = await fetchData.get('/ada-usd-price')
-    if (response.data) {
-      adaUsdPrice = response.data
-    }
-  }
 
   const modifyTierData = (tier: any, item: Tier) => {
     if (tier.id === item.id) {
@@ -114,6 +116,13 @@ const SubscriptionContent = () => {
   }
 
   return (
+    <>
+    <div className="head-section">
+      <span id="view-subscription-history" onClick={() => navigate('/subscription/history')}>
+        <img src="images/list.svg" alt="grid" />
+        <span>View History</span>
+      </span>
+    </div>
     <div className="pricing-container">
     <div className="subscription-content">
       Welcome to our subscription offering page for our SaaS tool! We offer
@@ -148,6 +157,7 @@ const SubscriptionContent = () => {
     Thank you for considering our subscription offering for our SaaS tool. We are confident that our tools and professional services will help you ensure that your software is secure and compliant with industry standards. If you have any questions or would like to sign up for a subscription, please contact us.
     </div>
   </div>
+  </>
   )
 }
 
