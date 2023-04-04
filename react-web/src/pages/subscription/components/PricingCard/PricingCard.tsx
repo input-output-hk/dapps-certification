@@ -74,7 +74,6 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
             <button className="button-pay" onClick={(e) => {onPayment(e);}}>Next</button> 
         : <button className="button-pay" onClick={(e) => {contactUs()}}>Contact Us</button>
         }
-        <button className="button-pay" onClick={(e) => {contactUs()}}>Contact Us</button>
       </div>
     </div>
     <Modal open={showContactUs} title="Contact Us" onCloseModal={onCloseModal} modalId="contactUsModal">
