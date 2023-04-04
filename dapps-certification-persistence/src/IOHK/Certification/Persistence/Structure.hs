@@ -47,6 +47,7 @@ data SubscriptionDTO = SubscriptionDTO
   , subscriptionDtoStatus :: SubscriptionStatus
   , subscriptionDtoName :: Text
   , subscriptionDtoFeatures :: [Feature]
+  , subscriptionDtoType :: TierType
   } deriving (Generic)
 
 instance ToJSON SubscriptionDTO where

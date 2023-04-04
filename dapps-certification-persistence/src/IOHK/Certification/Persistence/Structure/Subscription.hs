@@ -110,6 +110,8 @@ features = tableFieldMod "feature"
 data Tier = Tier
   { tierId :: ID Tier
   , tierName :: Text
+  , tierSubtitle :: Text
+  , tierDescription :: Text
   , tierType :: TierType
   , tierUsdPrice :: Double
   , tierDuration :: Int
@@ -168,6 +170,8 @@ data Subscription = Subscription
   { subscriptionId :: ID Subscription
   , subscriptionProfileId :: ID Profile
   , subscriptionTierId :: ID Tier
+  , subscriptionName :: Text
+  , subscriptionType :: TierType
   , subscriptionPrice :: Int64
   , subscriptionStartDate :: UTCTime
   , subscriptionEndDate :: UTCTime
