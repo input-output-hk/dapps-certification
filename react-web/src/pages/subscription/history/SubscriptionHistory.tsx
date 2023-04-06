@@ -71,10 +71,10 @@ const SubscriptionHistory = () => {
             accessor: "name",
         },
         {
-            Header: "Amount Paid",
+            Header: "Amount Paid(in ADA)",
             accessor: "price",
             Cell: (props: any) => (
-                <span>${props.row.original.price / 1000000 / adaUsdPrice}</span>
+                <span>{props.row.original.price / 1000000}</span>
             )
         },
         {
@@ -101,7 +101,7 @@ const SubscriptionHistory = () => {
             accessor: "startDate",
             Cell: (props: any) => (
               <span>
-                {dayjs.utc(props.row.original.commitDate).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
+                {dayjs.utc(props.row.original.startDate).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
               </span>
             ),
         },
@@ -110,7 +110,7 @@ const SubscriptionHistory = () => {
             accessor: "endDate",
             Cell: (props: any) => (
               <span>
-                {dayjs.utc(props.row.original.commitDate).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
+                {dayjs.utc(props.row.original.endDate).tz(timeZone).format("YYYY-MM-DD HH:mm:ss")}
               </span>
             ),
         }
