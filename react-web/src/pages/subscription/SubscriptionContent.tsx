@@ -84,7 +84,7 @@ const SubscriptionContent = () => {
         <Button 
           displayStyle="primary" 
           onClick={() => navigate('/subscription/history')}
-          iconUrl="images/svg-edited.svg" buttonLabel={"View History"}></Button>
+          iconUrl="images/list.svg" buttonLabel={"View History"}></Button>
       </label>
     </div>
     <div className="pricing-container">
