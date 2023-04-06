@@ -74,7 +74,7 @@ const SubscriptionHistory = () => {
             Header: "Amount Paid(in ADA)",
             accessor: "price",
             Cell: (props: any) => (
-                <span>{props.row.original.price / 1000000}</span>
+                <span>{(props.row.original.price / 1000000).toFixed(2)}</span>
             )
         },
         {
