@@ -1,76 +1,35 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import Alert from '@mui/material/Alert';
 import { fetchData } from 'api/api';
 import PricingCard from './components/PricingCard/PricingCard';
 import { Subscription, Tier } from './Subscription.interface';
+import { getCurrentAdaUsdPrice } from 'store/slices/auth.slice';
+import { useAppSelector } from 'store/store';
+import { useNavigate } from 'react-router-dom';
+import Button from 'components/Button/Button';
 
 const SubscriptionContent = () => {
-  let developerTiers: any = [
-      {
-        id: "1",
-        name: "Tier I",
-        subtitle: "Minimal Features to get L1 certificate",
-        description:
-          "This tier is perfect for developers who are just starting out with securing their software. With this tier, you will have access to our basic features, which will help you get a L1 certificate.",
-      },
-      {
-        id: "3",
-        name: "Tier II",
-        subtitle: "All Features and customizations",
-        description:
-          "This tier is perfect for developers who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your software is fully compliant with industry standards.",
-      },
-      {
-        id: "4",
-        name: "Tier III ",
-        subtitle: "All Features and customizations + IOG's Professional Services",
-        price: '',
-        description:
-          "This tier is perfect for developers who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your software is fully compliant and secure.",
-      }
-  ];
-  let auditorTiers: any = [
-    {
-      id: "2",
-      name: "Tier I",
-      subtitle: "All Features and customizations + upload of a report on chain",
-      description:
-        "This tier is perfect for auditors who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your clients' software is fully compliant with industry standards.",
-    },
-    {
-      id: "5",
-      name: "Tier II",
-      subtitle: "All Features and customizations + upload of a report on chain + IOG's Professional Services",
-      description:
-        "This tier is perfect for auditors who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your clients' software is fully compliant and secure.",
-    },
-  ];
-  let adaUsdPrice = 0;
+  let developerTiers: any = [], auditorTiers: any = [];
+  const dispatch = useDispatch()
+  const navigate = useNavigate();
+  const {adaUsdPrice} = useAppSelector((state) => state.auth);
   const [developerTierSet, setDeveloperTierSet] = useState([])
   const [auditorTierSet, setAuditorTierSet] = useState([])
   useEffect(() => {
     (async() => {
-      await fetchCurrentUsdPrice()
+      if (adaUsdPrice === 0) {
+        await dispatch(getCurrentAdaUsdPrice())
+      } 
       await fetchAllTiers()
       fetchActiveSubscription();
     })()
   }, []);
 
-  const fetchCurrentUsdPrice = async () => {
-    const response: any = await fetchData.get('/ada-usd-price')
-    if (response.data) {
-      adaUsdPrice = response.data
-    }
-  }
-
-  const modifyTierData = (tier: any, item: Tier) => {
-    if ((tier.tierId || '1') === (item.tierId || '1')) {
-      tier = {...tier, ...item}
+  const modifyTierData = (tier: any) => {
       tier['ada_price'] = tier.usdPrice * adaUsdPrice
       tier['lovelace_price'] = tier.ada_price * 1000000
       return tier
-    } else {
-      return null
-    }
   }
 
   const fetchAllTiers = async () => {
@@ -79,10 +38,11 @@ const SubscriptionContent = () => {
     if (result.length) {
       // merge with our dev/auditor data set
       result.forEach((item: Tier, idx: number) => {
-        if (item.name === 'Developer') {
-          developerTiers = developerTiers.map((tier: any) => tier && modifyTierData(tier, item))
-        } else if (item.name === 'Auditor') {
-          auditorTiers = auditorTiers.map((tier: any) => tier && modifyTierData(tier,item))
+        item = modifyTierData(item)
+        if (item.type === 'developer') {
+          developerTiers.push(item)
+        } else if (item.type === 'auditor') {
+          auditorTiers.push(item)
         }
       })
       setDeveloperTierSet(developerTiers)
@@ -91,8 +51,9 @@ const SubscriptionContent = () => {
   }
 
   const mapSubscriptionData = (tier: any, item: Subscription) => {
-    if (item.name === tier.name && ((tier.tierId || '1') === (item.tierId || '1'))) {
-      tier = {...tier, ...item}
+    if (tier.id === item.tierId) {
+      const {id, ...rest} = item;
+      tier = {...tier, ...rest}
       return tier;
     } else {
       tier['enabled'] = false
@@ -112,7 +73,18 @@ const SubscriptionContent = () => {
     setAuditorTierSet(auditorTiers)
   }
 
+  const loadNoData = () => {
+    return <span className="empty-card"><Alert severity="warning">Unable to load data. Please try again later.</Alert></span>;
+  }
+
   return (
+    <>
+    <div className="head-section">
+      <span id="view-subscription-history" onClick={() => navigate('/subscription/history')}>
+        <img src="images/list.svg" alt="grid" />
+        <span>View History</span>
+      </span>
+    </div>
     <div className="pricing-container">
     <div className="subscription-content">
       Welcome to our subscription offering page for our SaaS tool! We offer
@@ -128,7 +100,9 @@ const SubscriptionContent = () => {
         standards. Here are the three tiers we offer:
       </p>
       <div className="pricing-card-container">
-        {developerTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Developer Subscription"/>) : null)}
+        {developerTierSet.length ? 
+          developerTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Developer Subscription"/>) : null)
+        : loadNoData()}
       </div>
     </div>
     <div className="tier-container">
@@ -139,7 +113,9 @@ const SubscriptionContent = () => {
         standards. Here are the two tiers we offer:
       </p>
       <div className="pricing-card-container">
-        {auditorTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Auditor Subscription" />) : null)}
+        {auditorTierSet.length ? 
+          auditorTierSet.map((item: any, id) => item ? (<PricingCard key={id} {...item} type="Auditor Subscription" />) : null)
+        : loadNoData()}
       </div>
     </div>
     <div className="subscription-content">Our pricing varies depending on the tier you choose. Please contact us for more information.</div>
@@ -147,6 +123,7 @@ const SubscriptionContent = () => {
     Thank you for considering our subscription offering for our SaaS tool. We are confident that our tools and professional services will help you ensure that your software is secure and compliant with industry standards. If you have any questions or would like to sign up for a subscription, please contact us.
     </div>
   </div>
+  </>
   )
 }
 
