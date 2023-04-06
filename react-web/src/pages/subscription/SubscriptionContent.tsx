@@ -80,10 +80,12 @@ const SubscriptionContent = () => {
   return (
     <>
     <div className="head-section">
-      <span id="view-subscription-history" onClick={() => navigate('/subscription/history')}>
-        <img src="images/list.svg" alt="grid" />
-        <span>View History</span>
-      </span>
+      <label id="view-subscription-history">
+        <Button 
+          displayStyle="primary" 
+          onClick={() => navigate('/subscription/history')}
+          iconUrl="images/svg-edited.svg" buttonLabel={"View History"}></Button>
+      </label>
     </div>
     <div className="pricing-container">
     <div className="subscription-content">
