@@ -86,16 +86,23 @@ function Payment() {
     <div className="payment-container">
       <div className="content">
         <h4>{state.type}</h4>
-        <h3>{state.tier_name}</h3>
-        <h5>{state.featureSet}</h5>
+        <h3>{state.name}</h3>
+        <h5>{state.subtitle}</h5>
         <p>{state.description}</p>
       </div>
       <div className="btn-layout">
         <Button buttonLabel={"Cancel"} onClick={() => navigate(-1)} className="cancel" displayStyle="primary-outline"></Button>
         <Button buttonLabel={"Pay $" + state.usdPrice} onClick={() => triggerPayment()} className="pay" displayStyle="primary"></Button>
       </div>
-      <Modal open={openModal} title="Subscription Requested" onCloseModal={onCloseModal}>
-        <p style={{marginBottom: '2rem'}}>Successfully initiated subscription of {state.tier_name}</p>
+      <Modal
+        open={openModal}
+        title="Subscription Requested"
+        onCloseModal={onCloseModal}
+        modalId="subscriptionSuccessModal"
+      >
+        <p style={{ marginBottom: "2rem" }}>
+          Successfully initiated subscription of {state.name}
+        </p>
         <span>
             View your performed payment transaction&nbsp;
             <a target="_blank" rel="noreferrer" href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}>here</a>!

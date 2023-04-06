@@ -20,7 +20,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
   const [contactFormSubmitted, setContactFormSubmitted] = useState(false)
   const contactUs = () => {
     //do the contact us logic here
-    form.setValue("subject", "Subscribe to " + props.name + " Subscription - " + props.tier_name)
+    form.setValue("subject", "Subscribe to " + props.name + " Subscription - " + props.name)
     setShowContactUs(true)
   }
   const onCloseModal = () => {
@@ -42,7 +42,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
         <div className="card_head_content clearfix">
           <div className="head_bg"></div>
           <div className="head">
-            <span>{props.tier_name}</span>
+            <span>{props.name}</span>
           </div>
         </div>
 
@@ -59,10 +59,8 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
 
       <div className="card_feature_list">
         <ul>
-          <li>{props.featureSet}</li>
-          {/* <li>
-            <span>150GB</span> Storage
-          </li> */}
+          <li>{props.subtitle}</li>
+          {/* <li><span>150GB</span> Storage</li> */}
         </ul>
       </div>
 
