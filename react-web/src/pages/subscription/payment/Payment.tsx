@@ -103,10 +103,17 @@ function Payment() {
         <p style={{ marginBottom: "2rem" }}>
           Successfully initiated subscription of {state.name}
         </p>
-        <span>
-            View your performed payment transaction&nbsp;
-            <a target="_blank" rel="noreferrer" href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}>here</a>!
-        </span>
+        {transactionId ? (<span>
+          View your performed payment transaction&nbsp;
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href={`https://preprod.cardanoscan.io/transaction/${transactionId}`}
+          >
+            here
+          </a>
+          !
+        </span>) : null}
       </Modal>
       {showError ? <Toast message={showError} /> : null}
     </div>
