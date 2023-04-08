@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAppSelector } from "store/store";
 import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import tz from "dayjs/plugin/timezone";
@@ -16,6 +17,7 @@ dayjs.extend(tz)
 
 const SubscriptionHistory = () => {
     const dispatch = useDispatch()
+    const navigate = useNavigate();
     const {adaUsdPrice} = useAppSelector((state) => state.auth);
     const [data, setData] = useState<Array<Subscription>>([]);
     const [skipPageReset, setSkipPageReset] = useState(false);
@@ -117,6 +119,18 @@ const SubscriptionHistory = () => {
     ], []);
 
     return (<>
+      <button
+        className="back-btn"
+        onClick={(e) => {
+          navigate(-1)
+        }}
+      >
+        {" "}
+        <img
+          src="/images/back.png"
+          alt="back_btn"
+        />
+      </button> 
       <div id="testHistory">
         <TableComponent dataSet={data} columns={columns}
           updateMyData={updateMyData}
