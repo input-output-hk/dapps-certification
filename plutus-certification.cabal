@@ -51,6 +51,7 @@ library
     jwt ^>=0.11.0,
     unordered-containers,
     regex-compat,
+    vector,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -76,7 +77,7 @@ library
     Plutus.Certification.Web3StorageClient
     Plutus.Certification.Internal
     Plutus.Certification.WalletClient.Transaction
-    Plutus.Certification.TransactionBroadcaster
+    Plutus.Certification.CertificationBroadcaster
     Plutus.Certification.Server.Internal
     Plutus.Certification.Server.Instance
   autogen-modules: Paths_plutus_certification

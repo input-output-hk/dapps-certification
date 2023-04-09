@@ -65,6 +65,7 @@
           (hsPkgs."jwt" or (errorHandler.buildDepError "jwt"))
           (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
           (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
+          (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
           (hsPkgs."dapps-certification-signature-verification" or (errorHandler.buildDepError "dapps-certification-signature-verification"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
@@ -78,7 +79,7 @@
           "Plutus/Certification/Web3StorageClient"
           "Plutus/Certification/Internal"
           "Plutus/Certification/WalletClient/Transaction"
-          "Plutus/Certification/TransactionBroadcaster"
+          "Plutus/Certification/CertificationBroadcaster"
           "Plutus/Certification/Server/Internal"
           "Plutus/Certification/Server/Instance"
           "Plutus/Certification/API"
@@ -91,6 +92,7 @@
           "Plutus/Certification/JWT"
           "Plutus/Certification/WalletClient"
           "Plutus/Certification/Synchronizer"
+          "Plutus/Certification/ProfileWallet"
           ];
         hsSourceDirs = [ "src" ];
         };

@@ -25,7 +25,7 @@ import Control.Monad.Catch (MonadMask)
 import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
 import Data.Aeson
-import Plutus.Certification.TransactionBroadcaster
+import Plutus.Certification.CertificationBroadcaster
 import Observe.Event.Render.JSON
 import Control.Exception
 
@@ -87,9 +87,8 @@ walletTxStatusToDbStatus Submitted = DB.Submitted
 synchronizeDbTransactions :: (MonadIO m, MonadMask m) => [WalletTransaction] -> m ()
 synchronizeDbTransactions transactions = do
   -- filter out the outgoing transactions and sync them with the database
-  DB.withDb $ forM_ incomingTransactions storeTransaction
+  DB.withDb $ forM_ transactions storeTransaction
   where
-  incomingTransactions = filter ((Incoming ==) . walletTxDirection . walletTxData) transactions
   storeTransaction tx@WalletTransaction{..} = void $
       case getTimeFromTx tx of
         -- if the transaction does not have a time, is submitted
@@ -99,7 +98,9 @@ synchronizeDbTransactions transactions = do
           let dbTx  = DB.Transaction
                     { DB.wtxId         = undefined
                     , DB.wtxExternalId = walletTxData.walletTxId.txId
-                    , DB.wtxAmount = walletTxData.walletTxAmount.quantity
+                    -- IMPORTANT: based on the direction of the transaction
+                    -- we set the amount to be positive or negative
+                    , DB.wtxAmount = amountDirection * fromIntegral ( walletTxData.walletTxAmount.quantity )
                     , DB.wtxTime = time
                     , DB.wtxDepth = maybe (-1) quantity (walletTxData.walletTxDepth)
                     , DB.wtxStatus = walletTxStatusToDbStatus walletTxStatus
@@ -107,6 +108,7 @@ synchronizeDbTransactions transactions = do
                         Nothing -> ""
                         Just val -> decodeUtf8 . toStrict . encode $ val
                     }
+              amountDirection = if walletTxData.walletTxDirection == Incoming then 1 else (-1)
               inputEntries = fromInputsToDbInputs walletTxData.walletTxInputs
               outputEntries = fromOutputsToDbOutputs walletTxData.walletTxOutputs
           -- store the transaction in the database
@@ -122,7 +124,8 @@ fromOutputToDbOutput TxOutput{..} = Just $ DB.TransactionEntry
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
-  , DB.txEntryAmount = txOutputAmount.quantity
+  --TODO: remove conversion after merging with feat/subscription
+  , DB.txEntryAmount = fromIntegral txOutputAmount.quantity
   , DB.txEntryIndex = Nothing
   , DB.txEntryInput = False
   }
@@ -138,7 +141,8 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..})) = Just $ DB.Transaction
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
-  , DB.txEntryAmount = txOutputAmount.quantity
+  --TODO: remove conversion after merging with feat/subscription
+  , DB.txEntryAmount = fromIntegral txOutputAmount.quantity
   , DB.txEntryIndex = Just index
   , DB.txEntryInput = True
   }
@@ -203,7 +207,7 @@ certifyProfileRuns certificationProcess runs =
   certifyRuns' [] _ = return ()
   certifyRuns' (run:rs) creditsAvailable = do
     -- calculate the cost of the run
-    let cost = run.certificationPrice
+    let cost = fromIntegral run.certificationPrice
     -- if we have enough credits, certify the run
     when (creditsAvailable >= cost) $ void (certificationProcess pid (run.runId))
     -- recursively certify the next runs
@@ -223,7 +227,7 @@ startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynch
   addField ev $ WalletArgsField args
   addField ev $ DelayField delayInSeconds
   -- TODO maybe a forkIO here will be better than into the calling function
-  -- hence, now, the parent instrumentation event will never terminate 
+  -- hence, now, the parent instrumentation event will never terminate
   forever $ do
     monitorWalletTransactions (subEventBackend ev) args
     liftIO $ threadDelay delayInMicroseconds

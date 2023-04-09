@@ -1,24 +1,29 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds                 #-}
+{-# LANGUAGE BlockArguments            #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE TypeOperators             #-}
+{-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE InstanceSigs              #-}
 {-# LANGUAGE OverloadedRecordDot       #-}
 {-# LANGUAGE QuasiQuotes               #-}
 {-# LANGUAGE RecordWildCards           #-}
+{-# LANGUAGE LambdaCase                #-}
 
 module Plutus.Certification.WalletClient
   ( TxResponse(..)
+  , TxId
   , Amount(..)
   , WalletArgs(..)
   , broadcastTransaction
   , getTransactionList
+  , getWalletAddresses
   , CertificationMetadata(..)
   , WalletAddress
   , WalletTransaction(..)
   , Direction(..)
+  , AddressState(..)
+  , WalletAddressInfo(..)
   ) where
 
 import           Control.Monad.IO.Class
@@ -32,8 +37,11 @@ import           IOHK.Certification.Persistence
 import           Network.HTTP.Client                           hiding (Proxy)
 import           Network.HTTP.Client.TLS
 import           Plutus.Certification.WalletClient.Transaction
+import           Plutus.Certification.Internal
 import           Servant.API
 import           Servant.Client
+import           Data.Maybe
+
 
 data TxBody = forall a . (ToJSON a) => TxBody
   { passphrase :: !Text
@@ -83,11 +91,27 @@ instance ToJSON TxResponse where
 
 type API = "v2" :> "wallets"
          :> Capture "wallet-id" Text
-         :> "transactions"
-         :>( ReqBody '[JSON] TxBody :> Verb 'POST 202 '[JSON] TxResponse
+         :> ( TransactionsAPI :<|> AddressesAPI )
+
+type TransactionsAPI = "transactions"
+         :> ( ReqBody '[JSON] TxBody :> Verb 'POST 202 '[JSON] TxResponse
            :<|> Get '[JSON] [WalletTransaction]
            )
+data AddressState = Used | Unused deriving Show
 
+instance FromJSON AddressState where
+  parseJSON = withText "AddressState" \case
+    "used" -> pure Used
+    "unused" -> pure Unused
+    _ -> fail "Invalid AddressState"
+type AddressesAPI = "addresses" :> QueryParam "state" AddressState :> Get '[JSON] [WalletAddressInfo]
+
+instance ToHttpApiData AddressState where
+  toUrlPiece :: AddressState -> Text
+  toUrlPiece Used = "used"
+  toUrlPiece Unused = "unused"
+
+--http://localhost:8090/v2/wallets/73857344a0cf884fe044abfe85660cc9a81f6366/addresses?state=used
 type WalletAddress = Text
 data WalletArgs = WalletArgs
   { walletId         :: !Text
@@ -108,16 +132,6 @@ data CertificationMetadata = CertificationMetadata
   , crtmVersion      :: !Text
   } deriving Generic
 
-splitString :: Int -> Text -> Value
-splitString maxChars = toValue . chunksOf maxChars
-    where
-    toValue []  = toJSON ("" :: Text)
-    toValue [x] = toJSON x
-    toValue xs  = toJSON xs
-
-split64 :: Text -> Value
-split64 = splitString 64
-
 instance ToJSON CertificationMetadata where
   toJSON CertificationMetadata{..} =  object $
     [ "id" .= crtmId
@@ -128,7 +142,8 @@ instance ToJSON CertificationMetadata where
     ] ++ maybe [] (\x -> [ "twitter" .= split64 x]) crtmTwitter
       ++ maybe [] (\x -> [ "link" .= (split64 . pack . showBaseUrl $ x )]) crtmLink
 
-mkClient :: Text -> (TxBody -> ClientM TxResponse) :<|> ClientM [WalletTransaction]
+mkClient :: Text -> ((TxBody -> ClientM TxResponse) :<|> ClientM [WalletTransaction])
+                    :<|> (Maybe AddressState -> ClientM [WalletAddressInfo])
 mkClient = client (Proxy :: Proxy API)
 
 mkSettings :: MonadIO m => BaseUrl -> m ClientEnv
@@ -138,12 +153,14 @@ mkSettings walletAPIAddress = liftIO $ do
 
 broadcastTransaction :: (MonadIO m, ToJSON metadata)
                      => WalletArgs
+                     -> Maybe WalletAddress
                      -> metadata
                      -> m (Either ClientError TxResponse)
-broadcastTransaction WalletArgs{..} metadata = liftIO $ do
+broadcastTransaction WalletArgs{..} destAddr metadata = liftIO $ do
   settings <- mkSettings walletAPIAddress
-  let broadcastTx :<|> _ = mkClient walletId
-  let body = TxBody walletPassphrase walletAddress [aesonQQ| { "0": #{ metadata }} |]
+  let (broadcastTx :<|> _) :<|> _ = mkClient walletId
+  let body = TxBody walletPassphrase (fromMaybe walletAddress destAddr ) [aesonQQ| { "0": #{ metadata }} |]
+
   runClientM (broadcastTx body ) settings
 
 getTransactionList :: (MonadIO m)
@@ -151,5 +168,25 @@ getTransactionList :: (MonadIO m)
                    -> m (Either ClientError [WalletTransaction])
 getTransactionList WalletArgs{..} = liftIO $ do
   settings <- mkSettings walletAPIAddress
-  let _ :<|> getList = mkClient walletId
+  let (_ :<|> getList) :<|> _ = mkClient walletId
   runClientM getList settings
+
+data WalletAddressInfo = WalletAddressInfo
+  { derivationPath :: [Text]
+  , addressId :: WalletAddress
+  , addressState :: AddressState
+  } deriving Show
+
+instance FromJSON WalletAddressInfo where
+  parseJSON = withObject "WalletAddressInfo" \o -> WalletAddressInfo
+    <$> o .: "derivation_path"
+    <*> o .: "id"
+    <*> o .: "state"
+getWalletAddresses :: (MonadIO m)
+                   => WalletArgs
+                   -> Maybe AddressState
+                   -> m (Either ClientError [WalletAddressInfo])
+getWalletAddresses WalletArgs{..} state = liftIO $ do
+  settings <- mkSettings walletAPIAddress
+  let (_ :<|> _) :<|> getAddressList = mkClient walletId
+  runClientM (getAddressList state) settings

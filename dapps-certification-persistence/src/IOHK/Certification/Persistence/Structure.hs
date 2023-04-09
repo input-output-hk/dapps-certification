@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE LambdaCase                 #-}
 
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
@@ -21,7 +22,11 @@ import           Data.Aeson.Types
 import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
+import           Database.Selda.SqlType as Selda
+import           Control.Exception ( throw)
 import           GHC.OverloadedLabels
+import           Data.Char as Char
+import           Data.Int (Int64)
 
 import qualified Data.Text            as Text
 
@@ -44,6 +49,18 @@ data Profile = Profile
   } deriving (Generic, Show)
 
 type ProfileId = ID Profile
+
+instance ToJSON ProfileId where
+   toJSON = toJSON . show . fromId
+
+instance ToJSON (ID ProfileId) where
+   toJSON = toJSON . show . fromId
+
+instance FromJSON ProfileId where
+   parseJSON = withText "ID Profile" $ \t -> pure $ toId $ read $ Text.unpack t
+
+instance ToSchema ProfileId where
+   declareNamedSchema _ = declareNamedSchema (Proxy :: Proxy Int64)
 
 instance FromJSON Profile where
     parseJSON = withObject "Profile" $ \v -> Profile def
@@ -88,6 +105,64 @@ profileJSONPairs Profile{..} =
   , "contacts" .= contacts
   ]
 instance SqlRow Profile
+
+data WalletAddressStatus = Reserved | Overlapping
+  deriving (Generic, Show, Eq)
+
+instance FromJSON WalletAddressStatus where
+  parseJSON = withText "WalletAddressStatus" $ \case
+    "reserved" -> pure Reserved
+    "overlapping" -> pure Overlapping
+    _ -> fail "WalletAddressStatus must be one of: reserved, overlapping"
+
+instance ToJSON WalletAddressStatus where
+  toJSON = \case
+     Overlapping -> "overlapping"
+     Reserved -> "reserved"
+
+instance ToSchema WalletAddressStatus where
+  declareNamedSchema _ = do
+    let values = [ "reserved", "overlapping" ] :: [Value]
+    return $ NamedSchema (Just "WalletAddressStatus") $ mempty
+      & type_ ?~ SwaggerString
+      & enum_ ?~ values
+
+instance SqlType WalletAddressStatus where
+   mkLit n = LCustom TInt64 (LInt64 (toInt64 n))
+     where
+     toInt64 = \case
+       Overlapping -> 0
+       Reserved -> 1
+   sqlType _ = TInt64
+   fromSql (SqlInt64 0) = Overlapping
+   fromSql (SqlInt64 1) = Reserved
+   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
+   defaultValue = mkLit Overlapping
+
+data ProfileWallet = ProfileWallet
+  { profileWalletId :: ID Profile
+  , profileWalletAddress :: Text
+  , profileWalletStatus :: WalletAddressStatus
+  , profileWalletCredits :: Int64
+  } deriving (Generic, Show, Eq)
+
+instance SqlRow ProfileWallet
+
+dropAndLowerFirst :: Int -> String ->  String
+dropAndLowerFirst n = toLowerFirst . drop n
+  where
+  toLowerFirst :: String -> String
+  toLowerFirst [] = []
+  toLowerFirst (x:xs) = Char.toLower x : xs
+
+instance ToJSON ProfileWallet where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 14 }
+
+instance FromJSON ProfileWallet where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 14 }
+
+instance ToSchema ProfileWallet where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 14 }
 
 data Certification = Certification
   { certRunId           :: UUID
@@ -306,7 +381,7 @@ instance SqlEnum TxStatus where
 data Transaction = Transaction
     { wtxId         :: ID Transaction
     , wtxExternalId :: Text
-    , wtxAmount     :: Int
+    , wtxAmount     :: Int64
     , wtxTime       :: UTCTime
     , wtxDepth      :: Int
     , wtxStatus     :: !TxStatus
@@ -320,7 +395,7 @@ data TransactionEntry = TransactionEntry
     { txEntryId      :: ID TransactionEntry
     , txEntryIndex   :: Maybe Int
     , txEntryAddress :: Text
-    , txEntryAmount  :: Int
+    , txEntryAmount  :: Int64
     , txEntryInput   :: Bool
     , txEntryTxId    :: ID Transaction
     } deriving (Generic,Show)
@@ -338,7 +413,7 @@ transactions = table "transaction"
   ]
 
 transactionEntries :: Table TransactionEntry
-transactionEntries = table "entry"
+transactionEntries = table "transaction_entry"
   [ #txEntryId :- autoPrimary
   , #txEntryTxId :- foreignKey transactions #wtxId
   ]
@@ -347,6 +422,12 @@ profiles = table "profile"
   [ #profileId :- autoPrimary
   , #ownerAddress :- unique
   , #ownerAddress :- index
+  ]
+
+profileWallets :: Table ProfileWallet
+profileWallets = table "profile_wallet"
+  [ #profileWalletId :- primary
+  , #profileWalletId :- foreignKey profiles #profileId
   ]
 
 runs :: Table Run
@@ -372,6 +453,7 @@ createTables :: MonadSelda m => m ()
 createTables = do
   createTable certifications
   createTable profiles
+  createTable profileWallets
   createTable dapps
   createTable runs
   createTable transactions

@@ -18,9 +18,13 @@ import IOHK.Certification.Persistence.Structure as X
   , Transaction(..)
   , TxStatus(..)
   , TransactionEntry(..)
+  , ProfileWallet(..)
+  , WalletAddressStatus(..)
   )
 import IOHK.Certification.Persistence.API as X
-  ( upsertProfile
+  ( MinimalTransaction(..)
+  , MinimalTransactionEntry(..)
+  , upsertProfile
   , upsertTransaction
   , getProfile
   , getProfileDApp
@@ -43,4 +47,7 @@ import IOHK.Certification.Persistence.API as X
   , getRunsToCertify
   , getAllAmountsForAddress
   , getProfileBalance
+  , getAllTransactions
+  , getProfileWallets
+  , upsertProfileWallet
   )

@@ -11,7 +11,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Plutus.Certification.TransactionBroadcaster
+module Plutus.Certification.CertificationBroadcaster
   ( createCertification
   , renderTxBroadcasterSelector
   , TxBroadcasterSelector(..)
@@ -75,7 +75,7 @@ createCertification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertif
                     (profile.twitter) uri dappVersion
 
   -- broadcast the certification
-  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs certificate
+  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs Nothing certificate
     >>= eitherToError show
   addField ev (CreateCertificationTxResponse tx)
 

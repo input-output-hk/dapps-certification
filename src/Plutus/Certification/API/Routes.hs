@@ -45,6 +45,7 @@ import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
 import Data.Char (isAlphaNum)
 import Text.Regex
+import Data.Int
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -130,7 +131,7 @@ type GetBalanceRoute (auth :: Symbol) = "profile"
   :> "current"
   :> "balance"
   :> AuthProtect auth
-  :> Get '[JSON] Int
+  :> Get '[JSON] Int64
 
 type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"

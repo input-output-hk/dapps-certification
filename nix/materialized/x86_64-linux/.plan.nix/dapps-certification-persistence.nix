@@ -46,6 +46,7 @@
           (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
           (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
+          (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
           ];
         buildable = true;
         modules = [

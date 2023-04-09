@@ -8,6 +8,7 @@ module IOHK.Certification.SignatureVerification
   , COSESign1
   , encodeHex
   , decodeHex
+  , bech32AddressHash
   ) where
 
 import IOHK.Certification.SignatureVerification.CBOR as CBOR
