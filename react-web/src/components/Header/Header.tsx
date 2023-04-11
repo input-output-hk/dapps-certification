@@ -32,6 +32,9 @@ const Header = () => {
           })
           const features = await fetchData.get("/profile/current/subscriptions/active-features")
           dispatch(setSubscribedFeatures(features.data))
+          if (!features.data?.length) {
+            navigate('/subscription')
+          }
         } catch(e) {
           console.log(e)
         }

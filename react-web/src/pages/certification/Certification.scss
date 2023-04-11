@@ -40,7 +40,13 @@
     text-align: center;
   }
 }
-
+#searchContainerEmpty {
+  p {
+    line-height: 36px;
+    text-align: center;
+    font-size: 18px;
+  }
+}
 #coverageIndicator {
   margin: 70px 0 60px;
   & > div {

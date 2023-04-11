@@ -33,6 +33,7 @@ import { clearUuid, setUuid } from "./slices/certification.slice";
 import { clearStates } from "./slices/logRunTime.slice";
 import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
 import { useConfirm } from "material-ui-confirm";
+import { Link } from "react-router-dom";
 
 const TIMEOFFSET = 1000;
 
@@ -43,7 +44,7 @@ const Certification = () => {
   });
 
   const { uuid } = useAppSelector((state) => state.certification);
-  const { userDetails } = useAppSelector((state) => state.auth);
+  const { userDetails, subscribedFeatures } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
   const [submitting, setSubmitting] = useState(false);
@@ -248,8 +249,11 @@ const Certification = () => {
 
   return (
     <>
-      <div
-        id="searchContainer"
+      {!subscribedFeatures?.length || subscribedFeatures?.indexOf("l1-run") === -1 ? <div id="searchContainer">
+        <p>You do not have enough subscriptions to perform the test run. <br/> <Link to="/subscription">Click here</Link> to review our packages and pick one to proceed.</p>
+      </div>
+      : <div
+        id="searchContainerEmpty"
         className={runStatus === "finished" ? "hidden" : ""}
       >
         <h2>
@@ -288,7 +292,7 @@ const Certification = () => {
           </Form>
         </div>
       </div>
-
+      }
       {formSubmitted && (
         <>
           <div id="resultContainer">
@@ -355,7 +359,7 @@ const Certification = () => {
 
       {errorToast ? <Toast /> : null}
     </>
-  );
+  )
 };
 
 export default Certification;
