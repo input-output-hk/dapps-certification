@@ -92,6 +92,7 @@ const UserProfile = () => {
     if (isOwnerRepoValidationError()) {
       return;
     }
+    const {authors, contacts, linkedin, twitter, vendor, website, ...rest} = formData
     const submitProfile = async () => {
       const reqData: IUserProfile = {
         "authors": formData.authors,
@@ -102,12 +103,14 @@ const UserProfile = () => {
           "repo": repo,
           "version": formData.version,
           "githubToken": accessToken || null
-        },
-        "linkedin": formData.linkedin,
-        "twitter": formData.twitter,
-        "vendor": formData.vendor,
-        "website": formData.website
+        }
       }
+      if (authors) { reqData['authors'] = authors }
+      if (contacts) { reqData['contacts'] = contacts }
+      if (linkedin) { reqData['linkedin'] = linkedin }
+      if (twitter) { reqData['twitter'] = twitter }
+      if (vendor) { reqData['vendor'] = vendor }
+      if (website) { reqData['website'] = website }
 
       fetchData.put("/profile/current", reqData).then(async (res) => {
       /** For mock */
