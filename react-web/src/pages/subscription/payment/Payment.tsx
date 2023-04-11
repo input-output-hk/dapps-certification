@@ -9,6 +9,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { payFromWallet } from "store/slices/walletTransaction.slice";
 import { useAppSelector } from "store/store";
 import "./Payment.scss";
+import dayjs from "dayjs";
+import { Subscription } from "../Subscription.interface";
 
 
 function Payment() {
@@ -16,10 +18,13 @@ function Payment() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { address, wallet } = useAppSelector((state) => state.auth);
-  const { error } = useAppSelector(state => state.walletTransaction);
-  const [transactionId, setTransactionId] = useState("")
-  const [ showError, setShowError ] = useState("");
-  const [ openModal, setOpenModal ] = useState(false);
+  const { error } = useAppSelector((state) => state.walletTransaction);
+  const [transactionId, setTransactionId] = useState("");
+  const [showError, setShowError] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  let currentTierPrice: any = 0;
+  let currentSubscriptionId: string = '';
 
   const onCloseModal = () => { 
     setOpenModal(false)
@@ -53,34 +58,70 @@ function Payment() {
   }, [error])
 
   const triggerPayment = async () => {
-    setShowError("")
-    fetchData.get('/profile/current/balance').then(response => {
-      const availableProfileBalance: number = response.data
-      // fetchData.get().then(res => {
-          // const runDetails: Run = res.data
-          if ((availableProfileBalance - state.lovelace_price) < 0) {
-              triggerTransactionFromWallet(state.lovelace_price)
-          } else {
-              initiatePurchase()
-          }
-      // })
-    })
-  }
-  
+    setShowError("");
+    setProcessing(true);
+    fetchData.get("/profile/current/balance").then((response) => {
+      const availableProfileBalance: number = response.data;
+      if (availableProfileBalance - currentTierPrice < 0) {
+        const min_fee = 1000000; // 1 ADA in lovelaces - min req for cardano wallet txn
+        const fee: BigNum = currentTierPrice > min_fee ? currentTierPrice : min_fee;
+        triggerTransactionFromWallet(fee);
+      } else {
+        fetchCurrentSubscription()
+      }
+    });
+  };
+
   const triggerTransactionFromWallet = async (fee_in_lovelace: BigNum) => {
     const response = await dispatch(payFromWallet({fee: fee_in_lovelace, wallet: wallet, address: address}))
     if (response.payload) {
-      setTransactionId(response.payload)
-      initiatePurchase()
+      setTransactionId(response.payload);
+      fetchCurrentSubscription(true)
+    } else if (response?.error?.message) {
+      handleError(response.error.message);
     }
   }
 
-  const initiatePurchase = () => {
-    fetchData.post('/profile/current/subscriptions/' + state.tierId)
-      .then((response: any) => {
-        setOpenModal(true);
-      }).catch(handleError)
+  const fetchCurrentSubscription = (isAfterPayment?: boolean) => {
+    fetchData.get("/profile/current/subscriptions").then((response: any) => {
+      const current = response.data.find((item: Subscription) => item.id === currentSubscriptionId)
+      if (current.tierId === state.id) {
+        if (current.status === 'pending') {
+          if (isAfterPayment) {
+            // keep calling this GET in a 1 sec delay to check the status
+            const timeout = setTimeout(() => {
+              clearTimeout(timeout)
+              fetchCurrentSubscription(isAfterPayment)
+            }, 1000)
+          } else {
+            currentTierPrice = current.price;
+            triggerPayment()
+          }
+        } else if (current.status === 'active' && !dayjs().isAfter(dayjs(current.endDate))) {
+          // payment retrieved from balance
+          setProcessing(false);
+          setOpenModal(true);
+        } 
+      }
+    }).catch(handleError);
   }
+
+  const postSubscription = () => {
+    setShowError("");
+    setProcessing(true);
+    fetchData
+      .post("/profile/current/subscriptions/" + state.id)
+      .then((response: any) => {
+        currentSubscriptionId = response.data.id
+        fetchCurrentSubscription()
+      }).catch(handleError);
+  }
+
+  useEffect(() => {
+    if (!state) {
+      navigate(-1)
+    }
+  })
 
   return (
     <div className="payment-container">
@@ -91,8 +132,20 @@ function Payment() {
         <p>{state.description}</p>
       </div>
       <div className="btn-layout">
-        <Button buttonLabel={"Cancel"} onClick={() => navigate(-1)} className="cancel" displayStyle="primary-outline"></Button>
-        <Button buttonLabel={"Pay $" + state.usdPrice} onClick={() => triggerPayment()} className="pay" displayStyle="primary"></Button>
+        <Button
+          buttonLabel={"Cancel"}
+          onClick={() => navigate(-1)}
+          className="cancel"
+          displayStyle="primary-outline"
+          disabled={processing}
+        ></Button>
+        <Button
+          buttonLabel={"Pay $" + state.usdPrice}
+          onClick={() => postSubscription()}
+          className="pay"
+          displayStyle="primary"
+          showLoader={processing}
+        ></Button>
       </div>
       <Modal
         open={openModal}
