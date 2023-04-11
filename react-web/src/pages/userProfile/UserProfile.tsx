@@ -52,8 +52,6 @@ const UserProfile = () => {
   const formHandler = (formData: any) => {
     const submitProfile = async () => {
       const reqData: IUserProfile = {
-        "authors": formData.authors,
-        "contacts": formData.contacts,
         "dapp": {
           "name": formData.name,
           "owner": formData.owner,

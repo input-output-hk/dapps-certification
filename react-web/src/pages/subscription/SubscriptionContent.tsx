@@ -7,49 +7,10 @@ import { Subscription, Tier } from './Subscription.interface';
 import { getCurrentAdaUsdPrice } from 'store/slices/auth.slice';
 import { useAppSelector } from 'store/store';
 import { useNavigate } from 'react-router-dom';
+import Button from 'components/Button/Button';
 
 const SubscriptionContent = () => {
-  let developerTiers: any = [
-      {
-        id: "1",
-        tier_name: "Tier I",
-        title: "Minimal Features to get L1 certificate",
-        description:
-          "This tier is perfect for developers who are just starting out with securing their software. With this tier, you will have access to our basic features, which will help you get a L1 certificate.",
-      },
-      {
-        id: "3",
-        tier_name: "Tier II",
-        title: "All Features and customizations",
-        description:
-          "This tier is perfect for developers who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your software is fully compliant with industry standards.",
-      },
-      {
-        id: "4",
-        tier_name: "Tier III ",
-        title: "All Features and customizations + IOG's Professional Services",
-        price: '',
-        description:
-          "This tier is perfect for developers who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your software is fully compliant and secure.",
-      }
-  ];
-  let auditorTiers: any = [
-    {
-      id: "2",
-      tier_name: "Tier I",
-      title: "All Features and customizations + upload of a report on chain",
-      description:
-        "This tier is perfect for auditors who want full access to all of our features. With this tier, you will have access to our full suite of tools, which will help you ensure that your clients' software is fully compliant with industry standards.",
-    },
-    {
-      id: "5",
-      tier_name: "Tier II",
-      title: "All Features and customizations + upload of a report on chain + IOG's Professional Services",
-      description:
-        "This tier is perfect for auditors who want a fully customized experience. With this tier, you will have access to all of our features, as well as our team of professional services experts who can help you ensure that your clients' software is fully compliant and secure.",
-    },
-  ];
-
+  let developerTiers: any = [], auditorTiers: any = [];
   const dispatch = useDispatch()
   const navigate = useNavigate();
   const {adaUsdPrice} = useAppSelector((state) => state.auth);
@@ -65,15 +26,10 @@ const SubscriptionContent = () => {
     })()
   }, []);
 
-  const modifyTierData = (tier: any, item: Tier) => {
-    if (tier.id === item.id) {
-      tier = {...tier, ...item}
+  const modifyTierData = (tier: any) => {
       tier['ada_price'] = tier.usdPrice * adaUsdPrice
       tier['lovelace_price'] = tier.ada_price * 1000000
       return tier
-    } else {
-      return null
-    }
   }
 
   const fetchAllTiers = async () => {
@@ -82,10 +38,11 @@ const SubscriptionContent = () => {
     if (result.length) {
       // merge with our dev/auditor data set
       result.forEach((item: Tier, idx: number) => {
-        if (item.name === 'Developer') {
-          developerTiers = developerTiers.map((tier: any) => tier && modifyTierData(tier, item)).filter((tier: any) => tier)
-        } else if (item.name === 'Auditor') {
-          auditorTiers = auditorTiers.map((tier: any) => tier && modifyTierData(tier,item)).filter((tier: any) => tier)
+        item = modifyTierData(item)
+        if (item.type === 'developer') {
+          developerTiers.push(item)
+        } else if (item.type === 'auditor') {
+          auditorTiers.push(item)
         }
       })
       setDeveloperTierSet(developerTiers)

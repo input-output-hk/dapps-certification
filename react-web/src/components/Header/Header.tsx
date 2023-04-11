@@ -32,6 +32,9 @@ const Header = () => {
           })
           const features = await fetchData.get("/profile/current/subscriptions/active-features")
           dispatch(setSubscribedFeatures(features.data))
+          if (!features.data?.length) {
+            navigate('/subscription')
+          }
         } catch(e) {
           console.log(e)
         }
@@ -163,7 +166,7 @@ const Header = () => {
     <header className="header">
       <Link to="/" state={{insideNavigation: true}}>
         <img
-          src="images/logo.png"
+          src="/images/logo.png"
           alt="IOHK logo"
           style={{ width: "82px", padding: "10px" }}
         />
