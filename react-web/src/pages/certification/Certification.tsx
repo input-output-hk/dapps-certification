@@ -249,11 +249,12 @@ const Certification = () => {
 
   return (
     <>
-      {!subscribedFeatures?.length || subscribedFeatures?.indexOf("l1-run") === -1 ? <div id="searchContainer">
+      {!subscribedFeatures?.length || subscribedFeatures?.indexOf("l1-run") === -1 ? 
+      <div id="searchContainerEmpty">
         <p>You do not have enough subscriptions to perform the test run. <br/> <Link to="/subscription">Click here</Link> to review our packages and pick one to proceed.</p>
       </div>
       : <div
-        id="searchContainerEmpty"
+        id="searchContainer"
         className={runStatus === "finished" ? "hidden" : ""}
       >
         <h2>
