@@ -23,18 +23,15 @@ const initialState: {loading: boolean; error: any;} = {
 export const payFromWallet: any = createAsyncThunk("payFromWallet", (data: any, { rejectWithValue }) => {
     return new Promise(async (resolve: any, reject) => {
         const throwError = (errorObj: any) => {
-            reject(errorObj)
+            rejectWithValue(errorObj.info)
+            reject(errorObj.info)
         }
         try {
             const cert_fee_in_lovelaces = data.fee
             const walletAddressRes: any = await fetchData.get('/wallet-address').catch(throwError)
             const applicationWallet_receiveAddr = walletAddressRes.data;
             const cert_fee_lovelace: BigNum = BigNum.from_str(cert_fee_in_lovelaces.toString())
-            /** For mock */
-            // const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
-            // const cert_fee_ada = 3
-            // const cert_fee_lovelace = convertAdaToLovelace(cert_fee_ada)
-
+            
             const protocolParams: any = {
                 linearFee: {
                     minFeeA: "440",

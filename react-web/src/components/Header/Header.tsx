@@ -163,7 +163,7 @@ const Header = () => {
     <header className="header">
       <Link to="/" state={{insideNavigation: true}}>
         <img
-          src="images/logo.png"
+          src="/images/logo.png"
           alt="IOHK logo"
           style={{ width: "82px", padding: "10px" }}
         />

@@ -24,4 +24,6 @@ export interface Tier {
     "name": "Developer" | "Auditor";
     "type": "developer" | "auditor";
     "usdPrice": number;
+    "description": string;
+    "subtitle": string;
 }

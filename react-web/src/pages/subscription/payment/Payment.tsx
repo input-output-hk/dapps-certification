@@ -9,6 +9,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { payFromWallet } from "store/slices/walletTransaction.slice";
 import { useAppSelector } from "store/store";
 import "./Payment.scss";
+import dayjs from "dayjs";
+import { Subscription } from "../Subscription.interface";
 
 function Payment() {
   const { state } = useLocation();
@@ -20,6 +22,8 @@ function Payment() {
   const [showError, setShowError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [processing, setProcessing] = useState(false);
+  let currentTierPrice: any = 0;
+  let currentSubscriptionId: string = '';
 
   const onCloseModal = () => {
     setOpenModal(false);
@@ -58,12 +62,12 @@ function Payment() {
     setProcessing(true);
     fetchData.get("/profile/current/balance").then((response) => {
       const availableProfileBalance: number = response.data;
-      if (availableProfileBalance - state.lovelace_price < 0) {
+      if (availableProfileBalance - currentTierPrice < 0) {
         const min_fee = 1000000; // 1 ADA in lovelaces - min req for cardano wallet txn
-        const fee: BigNum = state.lovelace_price > min_fee ? state.lovelace_price : min_fee;
+        const fee: BigNum = currentTierPrice > min_fee ? currentTierPrice : min_fee;
         triggerTransactionFromWallet(fee);
       } else {
-        initiatePurchase();
+        fetchCurrentSubscription()
       }
     });
   };
@@ -74,28 +78,59 @@ function Payment() {
     );
     if (response.payload) {
       setTransactionId(response.payload);
-      initiatePurchase();
+      fetchCurrentSubscription(true)
     } else if (response?.error?.message) {
       handleError(response.error.message);
     }
   };
 
-  const initiatePurchase = () => {
+  const fetchCurrentSubscription = (isAfterPayment?: boolean) => {
+    fetchData.get("/profile/current/subscriptions").then((response: any) => {
+      const current = response.data.find((item: Subscription) => item.id === currentSubscriptionId)
+      if (current.tierId === state.id) {
+        if (current.status === 'pending') {
+          if (isAfterPayment) {
+            // keep calling this GET in a 1 sec delay to check the status
+            const timeout = setTimeout(() => {
+              clearTimeout(timeout)
+              fetchCurrentSubscription(isAfterPayment)
+            }, 1000)
+          } else {
+            currentTierPrice = current.price;
+            triggerPayment()
+          }
+        } else if (current.status === 'active' && !dayjs().isAfter(dayjs(current.endDate))) {
+          // payment retrieved from balance
+          setProcessing(false);
+          setOpenModal(true);
+        } 
+      }
+    }).catch(handleError);
+  }
+
+  const postSubscription = () => {
+    setShowError("");
+    setProcessing(true);
     fetchData
       .post("/profile/current/subscriptions/" + state.id)
       .then((response: any) => {
-        setProcessing(false);
-        setOpenModal(true);
-      })
-      .catch(handleError);
-  };
+        currentSubscriptionId = response.data.id
+        fetchCurrentSubscription()
+      }).catch(handleError);
+  }
+
+  useEffect(() => {
+    if (!state) {
+      navigate(-1)
+    }
+  })
 
   return (
     <div className="payment-container">
       <div className="content">
         <h4>{state.type}</h4>
-        <h3>{state.tier_name}</h3>
-        <h5>{state.title}</h5>
+        <h3>{state.name}</h3>
+        <h5>{state.subtitle}</h5>
         <p>{state.description}</p>
       </div>
       <div className="btn-layout">
@@ -104,10 +139,11 @@ function Payment() {
           onClick={() => navigate(-1)}
           className="cancel"
           displayStyle="primary-outline"
+          disabled={processing}
         ></Button>
         <Button
           buttonLabel={"Pay $" + state.usdPrice}
-          onClick={() => triggerPayment()}
+          onClick={() => postSubscription()}
           className="pay"
           displayStyle="primary"
           showLoader={processing}
@@ -117,11 +153,12 @@ function Payment() {
         open={openModal}
         title="Subscription Requested"
         onCloseModal={onCloseModal}
+        modalId="subscriptionSuccessModal"
       >
         <p style={{ marginBottom: "2rem" }}>
-          Successfully initiated subscription of {state.tier_name}
+          Successfully initiated subscription of {state.name}
         </p>
-        <span>
+        {transactionId ? (<span>
           View your performed payment transaction&nbsp;
           <a
             target="_blank"
@@ -131,7 +168,7 @@ function Payment() {
             here
           </a>
           !
-        </span>
+        </span>) : null}
       </Modal>
       {showError ? <Toast message={showError} /> : null}
     </div>
