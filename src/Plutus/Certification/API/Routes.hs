@@ -137,6 +137,13 @@ type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
   :> Get '[JSON] WalletAddress
 
+type GetProfileWalletAddressRoute (auth :: Symbol) = "profile"
+  :> Description "Get the wallet address of the profile"
+  :> "current"
+  :> "wallet-address"
+  :> AuthProtect auth
+  :> Get '[JSON] (Maybe (DB.WalletAddressStatus,WalletAddress))
+
 type GitHubRoute = "repo"
   :> Description "Get the github repo information"
   :> Capture "owner" Text
@@ -231,6 +238,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
   , createCertification :: mode :- CreateCertificationRoute auth
   , getCertification :: mode :- GetCertificateRoute
+  , getProfileWalletAddress :: mode :- GetProfileWalletAddressRoute auth
   , walletAddress :: mode :- WalletAddressRoute
   , getProfileBalance :: mode :- GetBalanceRoute auth
   , getRunDetails :: mode :- GetRunDetailsRoute

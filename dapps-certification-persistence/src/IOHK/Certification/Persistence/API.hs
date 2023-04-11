@@ -14,8 +14,9 @@ import           IOHK.Certification.Persistence.Structure
 import           Data.Int
 import           Data.Bifunctor
 
-import qualified Data.Map as Map
+import           Data.Functor
 
+import qualified Data.Map as Map
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -79,16 +80,22 @@ getProfileBalance address = do
   profileIdM <- getProfileId address
   case profileIdM of
     Nothing -> pure Nothing
-    Just _ -> do
+    Just pid -> do
       -- get all certified runs
       certifiedRuns <- getAllCertifiedRunsForAddress address
       -- get all the amounts coming from this address
-      amountsFromAddress <- sum <$> getAllAmountsForAddress address
+      walletIncomingCredits <- getProfileWallet pid <&> getWalletCredits
       -- sum all the costs of the certified runs
       let certifiedCosts = sum $ map certificationPrice certifiedRuns
           -- calculate the amount of credits available
-          creditsAvailable = amountsFromAddress - fromIntegral certifiedCosts
+          creditsAvailable = walletIncomingCredits - fromIntegral certifiedCosts
       pure $ Just creditsAvailable
+  where
+  getWalletCredits :: Maybe (Profile, Maybe ProfileWallet) -> Int64
+  getWalletCredits Nothing = 0
+  getWalletCredits (Just (_, Nothing)) = 0
+  getWalletCredits (Just (_, Just ProfileWallet{..})) = profileWalletCredits
+
 
 upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
 upsertProfile profile@Profile{..} dappM = do
@@ -147,6 +154,19 @@ getProfileDAppQ pid = do
   restrict (dapp ! #dappId .== literal pid)
   pure dapp
 
+getProfileWalletQ :: ProfileId -> Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
+getProfileWalletQ profileId = do
+  p <- select profiles
+  restrict (p ! #profileId .== literal profileId)
+  profileWallet <- leftJoin  (\pw -> pw ! #profileWalletId .== p ! #profileId) (select profileWallets)
+  pure (p :*: profileWallet)
+
+getProfileWallet :: MonadSelda f => ProfileId -> f (Maybe (Profile , Maybe ProfileWallet))
+getProfileWallet profileId = fmap toTuple . listToMaybe <$> query (getProfileWalletQ profileId)
+
+toTuple ::  a :*: b -> (a, b)
+toTuple (p :*: pw) = (p,pw)
+
 getProfileWalletsQ :: Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
 getProfileWalletsQ = do
   p <- select profiles
@@ -154,10 +174,7 @@ getProfileWalletsQ = do
   pure (p :*: profileWallet)
 
 getProfileWallets :: MonadSelda m => m [(Profile, Maybe ProfileWallet)]
-getProfileWallets = toTuple <$> query getProfileWalletsQ
-  where
-  toTuple ::  [Profile :*: Maybe ProfileWallet] -> [(Profile, Maybe ProfileWallet)]
-  toTuple = map (\(p :*: pw) -> (p,pw))
+getProfileWallets = map toTuple <$> query getProfileWalletsQ
 
 upsertProfileWallet :: (MonadSelda m,MonadMask m) => ProfileWallet -> m ()
 upsertProfileWallet ProfileWallet{..} = do
@@ -215,14 +232,6 @@ getRunOwnerQ runId = do
     p <- select runs
     restrict (p ! #runId .== literal runId )
     pure (p ! #profileId)
-
-getAllAmountsForAddress :: MonadSelda m => Text -> m [Int64]
-getAllAmountsForAddress address = query $ do
-  input <- select transactionEntries
-  restrict (input ! #txEntryAddress .== literal address .&& input ! #txEntryInput .== literal True)
-  t <- innerJoin (\t -> (t ! #wtxId .== (input ! #txEntryTxId))
-      .&& (t ! #wtxStatus .== literal InLedger)) (select transactions)
-  pure (t ! #wtxAmount)
 
 getRunOwner :: MonadSelda m => UUID -> m (Maybe (ID Profile))
 getRunOwner = fmap listToMaybe . query . getRunOwnerQ

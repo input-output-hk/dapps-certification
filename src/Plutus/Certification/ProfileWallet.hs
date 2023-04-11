@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE BlockArguments       #-}
 {-# LANGUAGE LambdaCase           #-}
@@ -9,6 +10,14 @@
 module Plutus.Certification.ProfileWallet
   ( resyncWallets
   , renderProfileWalletSyncSelector
+  , ProfileWalletSyncSelector
+  , PrevAssignments
+  , AddressReservation(..)
+  , getTemporarilyWalletAddress
+  , AddressRotation(..)
+  , emptyAddressRotation
+  , WalletAddress(..)
+  , ProfileAddress(..)
   ) where
 
 import Prelude as P
@@ -16,6 +25,7 @@ import Prelude as P
 import Servant.Client.Core
 import Data.Aeson
 import Data.Aeson.Types
+import Data.List
 import Control.Monad as M
 import Control.Lens.Internal.CTypes (Word64)
 import Data.Text (Text)
@@ -30,6 +40,7 @@ import Plutus.Certification.WalletClient (WalletArgs)
 import Data.Either
 import Observe.Event.Render.JSON
 import Observe.Event
+import Data.Function
 
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
@@ -40,7 +51,6 @@ import qualified Data.Map as Map
 
 --------------------------------------------------------------------------------
 -- | Basic types for the profile wallet
-
 
 newtype WalletAddress = WalletAddress { unWalletAddress :: Text }
                       deriving (Eq,Show,Ord)
@@ -136,12 +146,14 @@ parseMetaData label keyName = withObject label $ \o -> do
 --------------------------------------------------------------------------------
 -- | Events
 
-data ResyncWalletsArgs = TransactionMappingErrors [String]
-                       | ExtraMoney ExtraMoney
+data ResyncWalletsArgs = TransactionMappingErrors !Int
+                       | ExtraMoney !ExtraMoney
+                       | TransactionMappingCounts !(Int,Int,Int)
+
 data AssignAddressArgs
-  = AssignAddressInputs (ProfileAddress, WalletAddress, OverlappingAddress)
-  | AssignAddressError String
-  | AssignAddressTxResp Wallet.TxResponse
+  = AssignAddressInputs !(ProfileAddress, WalletAddress, OverlappingAddress)
+  | AssignAddressError !String
+  | AssignAddressTxResp !Wallet.TxResponse
 
 data ProfileWalletSyncSelector f where
   ResyncWallets :: ProfileWalletSyncSelector ResyncWalletsArgs
@@ -156,6 +168,13 @@ renderProfileWalletSyncSelector ResyncWallets =
   ("resync-wallets", \case
     TransactionMappingErrors errors -> ("transaction-mapping-errors", toJSON errors)
     ExtraMoney extraMoney -> ("extra-money", toJSON extraMoney)
+    TransactionMappingCounts (simple,designated,assignments) ->
+      ("transaction-mapping-count", toJSON [aesonQQ|
+          { "simplePayments" : #{simple}
+          , "designatedPayments" : #{designated}
+          , "addressAssignments" : #{assignments}
+          } |]
+      )
   )
 renderProfileWalletSyncSelector AssignAddress = ("assign-address", \case
   AssignAddressInputs (ProfileAddress{..}, WalletAddress{..}, overlappingAddress) ->
@@ -188,7 +207,8 @@ resyncWallets eb wargs prevAssignments = withEvent eb ResyncWallets \ev -> do
   -- fetch the db transactions and create wallets
   (errors,trans) <- DB.withDb ( DB.getAllTransactions False )
     <&> (lefts &&& rights) . fmap fromDbTransaction'
-  addField ev $ TransactionMappingErrors errors
+  addField ev $ TransactionMappingErrors (length errors)
+  addField ev $ TransactionMappingCounts (countTransactions trans)
 
   let (profileWallets,extraMoney) = createProfileWallets trans
   addField ev $ ExtraMoney extraMoney
@@ -204,7 +224,11 @@ resyncWallets eb wargs prevAssignments = withEvent eb ResyncWallets \ev -> do
   mainHash = hash wargs.walletAddress
   hash = Sig.bech32AddressHash . Sig.Bech32Address
   isOurAddress = (== mainHash) . hash
-
+  countTransactions = foldl' (\(a,b,c) -> \case
+    SimplePayment{} -> (a+1,b,c)
+    DesignatedPayment{} -> (a,b+1,c)
+    WalletAddressAssignment{} -> (a,b,c+1)
+    ) (0,0,0)
 --------------------------------------------------------------------------------
 -- | ADDRESS ASSIGNMENT DISSEMINATION
 
@@ -393,6 +417,49 @@ syncDbProfileWallets eb wallets = do
           Reserved -> DB.Reserved
           Overlapping -> DB.Overlapping
       }
+--------------------------------------------------------------------------------
+-- | ADDRESS ROTATION
+
+data AddressRotation = AddressRotation
+  { byAddress :: Map WalletAddress [DB.ProfileId]
+  , byProfile :: Map DB.ProfileId WalletAddress
+  } deriving (Show,Eq)
+
+emptyAddressRotation :: AddressRotation
+emptyAddressRotation = AddressRotation
+  { byAddress = Map.empty
+  , byProfile = Map.empty
+  }
+
+getTemporarilyWalletAddress :: [WalletAddress]
+                            -> DB.ProfileId
+                            -> AddressRotation
+                            ->  (Maybe WalletAddress,AddressRotation)
+getTemporarilyWalletAddress addresses profileId rotation =
+  case (profileAddress,nextAddress) of
+    (Just address,_) -> (Just address,rotation)
+    (Nothing,Just address) -> (Just address,AddressRotation
+      { byAddress = Map.insertWith (++) address [profileId] (byAddress rotation)
+      , byProfile = Map.insert profileId address (byProfile rotation)
+      })
+    (Nothing,Nothing) -> (Nothing,rotation)
+
+  where
+  nextAddress :: Maybe WalletAddress
+  nextAddress = case sortedAddress of
+    [] -> Nothing
+    ((address,_):_) -> Just address
+
+  profileAddress :: Maybe WalletAddress
+  profileAddress = Map.lookup profileId (byProfile rotation)
+
+  sortedAddress :: [(WalletAddress,Int)]
+  sortedAddress  = sortBy (compare `on` snd) $
+    map (\address -> (address,Map.findWithDefault 0 address byAddressWithWeight)) addresses
+
+  byAddressWithWeight :: Map WalletAddress Int
+  byAddressWithWeight = Map.fromListWith (+) (map (second length) (Map.toList (byAddress rotation)))
+
 --------------------------------------------------------------------------------
 -- | ProfileWallets related functions
 

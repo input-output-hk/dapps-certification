@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
@@ -32,7 +33,6 @@ import Control.Exception hiding (Handler)
 import Plutus.Certification.WalletClient (WalletAddress)
 
 import qualified IOHK.Certification.Persistence as DB
-import Control.Lens (only)
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -72,6 +72,8 @@ data ServerEventSelector f where
   StartCertification :: ServerEventSelector StartCertificationField
   Login :: ServerEventSelector WalletAddress
   ServerTimestamp :: ServerEventSelector Void
+  GetProfileWalletAddress :: ServerEventSelector DB.ProfileId
+  InternalError :: forall a. ToJSON a => ServerEventSelector a
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -84,6 +86,7 @@ renderServerEventSelector GetProfileBalance = ("get-profile-balance", renderProf
 renderServerEventSelector GetCertification = ("get-certification", renderRunIDV1)
 renderServerEventSelector Login = ("login", \address' -> ("user-address", toJSON address'))
 renderServerEventSelector ServerTimestamp = ("server-timestamp", absurd)
+renderServerEventSelector GetProfileWalletAddress = ("get-profile-wallet-address", renderProfileId)
 
 renderServerEventSelector CreateRun = ("create-run", \case
     CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")
@@ -99,6 +102,9 @@ renderServerEventSelector GetRepoInfo = ("get-repo-info", \case
     GetRepoInfoOwner owner -> ("owner", toJSON owner)
     GetRepoInfoRepo repo -> ("repo", toJSON repo)
   )
+renderServerEventSelector InternalError =
+  ("internal-error", ("something-went-wrong",) . toJSON )
+
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

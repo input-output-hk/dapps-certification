@@ -45,9 +45,9 @@ import IOHK.Certification.Persistence.API as X
   , markAsReadyForCertification
   , getAllCertifiedRunsForAddress
   , getRunsToCertify
-  , getAllAmountsForAddress
   , getProfileBalance
   , getAllTransactions
   , getProfileWallets
+  , getProfileWallet
   , upsertProfileWallet
   )

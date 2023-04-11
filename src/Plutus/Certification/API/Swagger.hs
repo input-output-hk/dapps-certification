@@ -40,6 +40,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute
+  :<|> GetProfileWalletAddressRoute auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

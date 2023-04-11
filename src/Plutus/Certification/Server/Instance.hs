@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -34,7 +35,7 @@ import Data.Text as Text hiding (elem,replicate, last,words,replicate)
 import Data.Text.Encoding
 import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
 import IOHK.Certification.Interface hiding (Status)
-import Plutus.Certification.Server.Internal
+import Plutus.Certification.Server.Internal as I
 
 import Servant.Server.Experimental.Auth (AuthServerData)
 import Data.Time (addUTCTime)
@@ -43,12 +44,15 @@ import IOHK.Certification.SignatureVerification as SV
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
 import Data.HashSet as HashSet
+import Plutus.Certification.ProfileWallet as PW
+import Data.Functor
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
+import Control.Concurrent (MVar, takeMVar, putMVar)
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -64,11 +68,12 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
 data ServerArgs m r = ServerArgs
   { serverCaps :: ServerCaps m r
   , serverWalletArgs :: Wallet.WalletArgs
-  , githubToken :: Maybe GitHubAccessToken
+  , serverGithubToken :: Maybe GitHubAccessToken
   , serverJWTArgs :: Maybe JWTArgs
   , serverEventBackend :: EventBackend m r ServerEventSelector
   , serverSigningTimeout :: Seconds
   , serverWhitelist :: Maybe Whitelist
+  , serverAddressRotation :: MVar AddressRotation
   }
 
 type Whitelist = HashSet Text
@@ -96,10 +101,10 @@ server :: ( MonadMask m
 server ServerArgs{..} = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , walletAddress = withEvent eb WalletAddress . const $ pure serverWalletArgs.walletAddress
+  , walletAddress = withEvent eb I.WalletAddress . const $ pure serverWalletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
-      let githubToken' =  profileAccessToken <|> githubToken
+      let githubToken' =  profileAccessToken <|> serverGithubToken
       -- ensure the ref is in the right format before start the job
       (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
       addField ev $ CreateRunRef fref
@@ -214,7 +219,7 @@ server ServerArgs{..} = NamedAPI
     let ghAccessTokenM = unApiGitHubAccessToken <$> apiGhAccessTokenM
         -- if there is no github access token, we use the default one
         -- provided from arguments
-        ghAccessTokenM' =  ghAccessTokenM <|> githubToken
+        ghAccessTokenM' =  ghAccessTokenM <|> serverGithubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
   , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
       addField ev address
@@ -236,6 +241,28 @@ server ServerArgs{..} = NamedAPI
       -- encode jwt with with expiration time
       pure $ jwtEncode jwtSecret expiresAt (DB.fromId pid, userAddress)
   , serverTimestamp = withEvent eb Version (const $ round . utcTimeToPOSIXSeconds <$> getNow)
+  , getProfileWalletAddress = \(profileId,_) -> withEvent eb GetProfileWalletAddress \ev -> do
+      addField ev profileId
+      -- first check the db
+      walletM <- (id <=< fmap snd) <$> DB.withDb ( DB.getProfileWallet profileId )
+
+      -- second, if there is nothing in the db try to get
+      case walletM of
+        Just (DB.ProfileWallet _ address status _) ->
+          pure $ Just (status, address)
+        Nothing -> do
+          resp <- Wallet.getWalletAddresses serverWalletArgs (Just Wallet.Unused)
+          case resp of
+            Right unusedAddressesInfo -> do
+              let unusedAddresses = fmap (PW.WalletAddress . (.addressId)) unusedAddressesInfo
+              (walletAddressM,newRotation) <- liftIO (takeMVar serverAddressRotation)
+                <&> getTemporarilyWalletAddress unusedAddresses profileId
+              liftIO $ putMVar serverAddressRotation newRotation
+              pure $ fmap ((DB.Overlapping,) . unWalletAddress) walletAddressM
+            Left err -> withEvent eb InternalError $ \ev' -> do
+              addField ev' (show err)
+              throwError $ err500 {errBody = LSB.pack $ show resp}
+
   }
   where
     fromClientResponse = \case

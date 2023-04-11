@@ -59,6 +59,7 @@ import IOHK.Certification.Actions
 import Plutus.Certification.JWT
 import Data.Int
 import IOHK.Certification.Persistence (toId)
+import Plutus.Certification.ProfileWallet
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Data.HashSet as HashSet
@@ -357,17 +358,20 @@ main = do
       -- get the whitelisted addresses from $WLIST env var
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
+      addressRotation <- liftIO $ newMVar emptyAddressRotation
       _ <- initDb
       _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist args.auth) .
-        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb whitelist))
+        (\r -> swaggerSchemaUIServer (documentation args.auth)
+          :<|> server (serverArgs args caps r eb whitelist addressRotation))
   exitFailure
   where
   serverArgs args caps r eb = ServerArgs
     caps (args.wallet) args.githubToken (jwtArgs args.auth) (be r eb) (args.signatureTimeout)
+
   jwtArgs PlainAddressAuth = Nothing
   jwtArgs (JWTAuth args) = Just args
   documentation PlainAddressAuth = swaggerJson

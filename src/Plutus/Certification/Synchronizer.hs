@@ -37,6 +37,8 @@ import Control.Monad.Except (MonadError)
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
+import Plutus.Certification.ProfileWallet
+import Data.IORef
 
 data InitializingField
   = WalletArgsField WalletArgs
@@ -45,6 +47,7 @@ data InitializingField
 data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
+  InjectProfileWalletSync :: forall f . !(ProfileWalletSyncSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
 
 newtype TransactionsCount = TransactionsCount Int
@@ -64,6 +67,7 @@ renderSynchronizerSelector InitializingSynchronizer =
   )
 renderSynchronizerSelector (InjectTxBroadcaster selector) = renderTxBroadcasterSelector selector
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
+renderSynchronizerSelector (InjectProfileWalletSync selector) = renderProfileWalletSyncSelector selector
 
 renderTransactionsCount :: RenderFieldJSON TransactionsCount
 renderTransactionsCount (TransactionsCount count) = ("transactions-count",toJSON count)
@@ -150,14 +154,21 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..})) = Just $ DB.Transaction
 monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m)
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
+                          -> IORef PrevAssignments
                           -> m ()
-monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
+monitorWalletTransactions eb args refAssignments = withEvent eb MonitorTransactions $ \ev -> do
   -- fetch the list of transactions from the wallet
   -- TODO: fetch only the transactions that are not in the database
   -- or starting from the first pending transaction
   transactions <- getTransactionList args >>= handleResponse
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions transactions
+  -- synchronize wallets
+  liftIO (readIORef refAssignments)
+    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) args
+    >>= liftIO . writeIORef refAssignments
+
+
   certifyRuns (subEventBackend ev) args
   where
     -- handle the response from the wallet
@@ -228,8 +239,9 @@ startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynch
   addField ev $ DelayField delayInSeconds
   -- TODO maybe a forkIO here will be better than into the calling function
   -- hence, now, the parent instrumentation event will never terminate
+  ref <- liftIO $ newIORef []
   forever $ do
-    monitorWalletTransactions (subEventBackend ev) args
+    monitorWalletTransactions (subEventBackend ev) args ref
     liftIO $ threadDelay delayInMicroseconds
   where
     delayInMicroseconds = delayInSeconds * 1000000
