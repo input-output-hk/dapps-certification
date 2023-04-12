@@ -82,6 +82,11 @@ const UserProfile = () => {
     dispatch(clearStates())
   }, [userDetails, form]);
 
+  const clearOwnerRepoError = () => {
+    setOwnerErr(false)
+    setRepoErr(false)
+  }
+
   const isOwnerRepoValidationError = () => {
     !owner.length ? setOwnerErr(true) : setOwnerErr(false);
     !repo.length ? setRepoErr(true) : setRepoErr(false);
@@ -136,10 +141,13 @@ const UserProfile = () => {
       }
       const newTimer = setTimeout(() => {
         if (owner.length && repo.length) {
+          clearOwnerRepoError()
           setCanShowConnectModal(true)
           dispatch(verifyRepoAccess({owner: owner, repo: repo}));
+        } else {
+          isOwnerRepoValidationError()
         }
-      }, 1000)
+      }, 600)
       setTimer(newTimer)
     }
   }, [owner, repo])
@@ -403,7 +411,7 @@ const UserProfile = () => {
                     }}
                   />
                   <Button
-                    disabled={!form.formState.isValid || !accessible || ownerErr || repoErr}
+                    disabled={!form.formState.isValid || verifying || (!accessible && canShowConnectModal) || ownerErr || repoErr}
                     type="submit"
                     buttonLabel={"Save"}
                     onClick={() => {}}
