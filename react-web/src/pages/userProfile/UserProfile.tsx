@@ -16,6 +16,7 @@ import { clearStates,
   getUserAccessToken, 
   verifyRepoAccess, 
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
+import Toast from "components/Toast/Toast";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -33,6 +34,7 @@ const UserProfile = () => {
   const [repoErr, setRepoErr] = useState(false);
   const [canShowConnectModal, setCanShowConnectModal] = useState(false)
   const [focussedOwnerRepo, setFocussedOwnerRepo] = useState(false)
+  const [showError, setShowError] = useState("")
 
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
@@ -100,8 +102,6 @@ const UserProfile = () => {
     const {authors, contacts, linkedin, twitter, vendor, website, ...rest} = formData
     const submitProfile = async () => {
       const reqData: IUserProfile = {
-        "authors": formData.authors,
-        "contacts": formData.contacts,
         "dapp": {
           "name": formData.name,
           "owner": owner,
@@ -127,6 +127,14 @@ const UserProfile = () => {
         );
         dispatch(clearAccessToken())
         navigate('/')
+      }).catch((errorObj) => {
+        let errorMsg = 'Something went wrong. Please try again.'
+        if (errorObj?.response?.data) {
+          errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
+        }
+        setShowError(errorMsg);
+        const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
+        
       })
     };
     submitProfile();
@@ -422,6 +430,7 @@ const UserProfile = () => {
           </Form>
         </div>
       </div>
+      {showError ? <Toast message={showError} /> : null}
       {showConfirmConnection && isEdit && canShowConnectModal ? confirmConnectModal() : null}
     </>
   );
