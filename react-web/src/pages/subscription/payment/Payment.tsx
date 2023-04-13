@@ -23,7 +23,7 @@ function Payment() {
   const [showError, setShowError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [processing, setProcessing] = useState(false);
-  let currentTierPrice: any = 0;
+  let currentTierPrice: BigNum | any = 0;
   let currentSubscriptionId: string = '';
 
   const onCloseModal = () => { 
@@ -60,16 +60,15 @@ function Payment() {
   const triggerPayment = async () => {
     setShowError("");
     setProcessing(true);
-    fetchData.get("/profile/current/balance").then((response) => {
-      const availableProfileBalance: number = response.data;
-      if (availableProfileBalance - currentTierPrice < 0) {
-        const min_fee = 1000000; // 1 ADA in lovelaces - min req for cardano wallet txn
-        const fee: BigNum = currentTierPrice > min_fee ? currentTierPrice : min_fee;
-        triggerTransactionFromWallet(fee);
-      } else {
-        fetchCurrentSubscription()
-      }
-    });
+    const response: any = fetchData.get("/profile/current/balance")
+    const availableProfileBalance: BigNum | any = response.data;
+    if (availableProfileBalance - currentTierPrice < 0) {
+      const min_fee = 1000000; // 1 ADA in lovelaces - min req for cardano wallet txn
+      const fee: BigNum = currentTierPrice > min_fee ? currentTierPrice : min_fee;
+      triggerTransactionFromWallet(fee);
+    } else {
+      fetchCurrentSubscription()
+    }
   };
 
   const triggerTransactionFromWallet = async (fee_in_lovelace: BigNum) => {
@@ -83,9 +82,9 @@ function Payment() {
   }
 
   const fetchCurrentSubscription = (isAfterPayment?: boolean) => {
-    fetchData.get("/profile/current/subscriptions").then((response: any) => {
-      const current = response.data.find((item: Subscription) => item.id === currentSubscriptionId)
-      if (current.tierId === state.id) {
+    fetchData.get("/profile/current/subscriptions").then((response: {data: Subscription[]}) => {
+      const current: Subscription | undefined = response.data.find((item: Subscription) => item.id === currentSubscriptionId) 
+      if (current && current.tierId === state.id) {
         if (current.status === 'pending') {
           if (isAfterPayment) {
             // keep calling this GET in a 1 sec delay to check the status
@@ -117,13 +116,8 @@ function Payment() {
       }).catch(handleError);
   }
 
-  useEffect(() => {
-    if (!state) {
-      navigate(-1)
-    }
-  })
-
-  return (
+  const renderPage = () => {
+    return (
     <div className="payment-container">
       <div className="content">
         <h4>{state.type}</h4>
@@ -170,7 +164,10 @@ function Payment() {
       </Modal>
       {showError ? <Toast message={showError} /> : null}
     </div>
-  );
+    );
+  }
+
+  return state ? renderPage() : null
 }
 
 export default Payment;
