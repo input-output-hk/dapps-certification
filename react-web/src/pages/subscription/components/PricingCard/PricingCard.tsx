@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./PricingCard.scss";
 import { useNavigate } from "react-router-dom";
 import Button from "components/Button/Button";
@@ -8,11 +8,17 @@ import { Form } from "compositions/Form/Form";
 import { contactFormSchema } from "./contactForm.schema";
 import { useForm } from "hooks/useForm";
 import { postExternal } from "api/api";
+import { Tier,SubscriptionStatus } from '../../Subscription.interface'
 
 
-const PricingCard: React.FC<any> = ( {...props} ) => {
+export type PriceCardProps = Tier & {
+    enabled: boolean;
+    status?: SubscriptionStatus;
+}
+
+const PricingCard: React.FC<PriceCardProps> = ( {...props} ) => {
   const navigate = useNavigate();
-  const onPayment = (e: any) => {
+  const onPayment = (_: any) => {
     navigate("/subscription/payment", { state: { ...props } });
   };
 
@@ -31,7 +37,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
     mode: "onChange",
   });
   const formHandler = (formData: any) => {
-    postExternal.post('https://iog-io-contact-form.vercel.app/api/contact', formData).then(res => {
+    postExternal.post('https://iog-io-contact-form.vercel.app/api/contact', formData).then(() => {
         setContactFormSubmitted(true)
     })
   }
@@ -70,7 +76,7 @@ const PricingCard: React.FC<any> = ( {...props} ) => {
             <Button displayStyle="primary-outline" buttonLabel={props.status.toUpperCase()} disabled></Button>
           :
             <button className="button-pay" onClick={(e) => {onPayment(e);}}>Next</button> 
-        : <button className="button-pay" onClick={(e) => {contactUs()}}>Contact Us</button>
+        : <button className="button-pay" onClick={() => {contactUs()}}>Contact Us</button>
         }
       </div>
     </div>
