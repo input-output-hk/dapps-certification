@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "hooks/useForm";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useConfirm } from "material-ui-confirm";
@@ -82,6 +82,7 @@ const UserProfile = () => {
   useEffect(() => {
     initializeFormState()
     dispatch(clearStates())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userDetails, form]);
 
   const clearOwnerRepoError = () => {
@@ -99,7 +100,7 @@ const UserProfile = () => {
     if (isOwnerRepoValidationError()) {
       return;
     }
-    const {authors, contacts, linkedin, twitter, vendor, website, ...rest} = formData
+    const {authors, contacts, linkedin, twitter, vendor, website} = formData
     const submitProfile = async () => {
       const reqData: IUserProfile = {
         "dapp": {
@@ -117,10 +118,10 @@ const UserProfile = () => {
       if (vendor) { reqData['vendor'] = vendor }
       if (website) { reqData['website'] = website }
 
-      fetchData.put("/profile/current", reqData).then(async (res) => {
+      fetchData.put("/profile/current", reqData).then(async () => {
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
-        const response = await dispatch(
+        await dispatch(
           getProfileDetails({address: address, wallet: wallet, walletName: walletName})
           /** For mock */
           // getProfileDetails({url: "static/data/new-profile.json"})
@@ -158,6 +159,7 @@ const UserProfile = () => {
       }, 600)
       setTimer(newTimer)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, repo])
 
   const inputChanged = (e: any,type:string) => {
@@ -172,7 +174,7 @@ const UserProfile = () => {
     dispatch(hideConfirmConnection());
   }
 
-  const inputBlurred = (e: any, type: string) => {
+  const inputBlurred = () => {
     setFocussedOwnerRepo(false)
     setCanShowConnectModal(false)
   }
@@ -211,6 +213,7 @@ const UserProfile = () => {
       setCanShowConnectModal(false)
       localStorage.removeItem('profile')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const connectToGithub = () => {
@@ -237,6 +240,8 @@ const UserProfile = () => {
     }, 0)
   }
 
+  const ownerRef = useRef<HTMLInputElement>(null);
+  const repoRef = useRef<HTMLInputElement>(null);
   return (
     <>
       <div id="profileContainer">
@@ -259,16 +264,17 @@ const UserProfile = () => {
                 onClick={(_) => {
                   setActiveOwner(true);
                   setFocussedOwnerRepo(true)
-                  document.getElementById("owner" || "")?.focus();
+                  ownerRef.current?.focus();
                 }}
               >
                 <label>dApp Owner<span style={{color: 'red'}}>*</span></label>
                 <input
                   id="owner"
+                  ref={ownerRef}
                   value={owner}
                   type="text"
                   onChange={(e) => inputChanged(e, "owner")}
-                  onBlur={(e) => inputBlurred(e, "owner")}
+                  onBlur={inputBlurred}
                 />
               </div>
               {ownerErr? <span className="danger error-msg">This field is required</span> : ''}
@@ -277,46 +283,40 @@ const UserProfile = () => {
               {isEdit ? (
                 <>
                   {verifying ? (
-                    <>
-                      <label className="info">
-                        <img
-                          className="image anim-rotate"
-                          data-testid="running"
-                          src="images/running.svg"
-                          alt="running"
-                        />
-                        <span style={{ color: "#DBAB0A" }}>Verifying</span>
-                      </label>
-                    </>
+                    <label className="info">
+                      <img
+                        className="image anim-rotate"
+                        data-testid="running"
+                        src="images/running.svg"
+                        alt="running"
+                      />
+                      <span style={{ color: "#DBAB0A" }}>Verifying</span>
+                    </label>
                   ) : null}
                   {accessible && !verifying ? (
-                    <>
-                      <label className="info">
-                        <img
-                          className="image"
-                          data-testid="passed"
-                          src="images/passed.svg"
-                          alt="passed"
-                        />
-                        <span style={{ color: "#009168" }}>Accessible</span>
-                      </label>
-                    </>
+                    <label className="info">
+                      <img
+                        className="image"
+                        data-testid="passed"
+                        src="images/passed.svg"
+                        alt="passed"
+                      />
+                      <span style={{ color: "#009168" }}>Accessible</span>
+                    </label>
                   ) : showConfirmConnection ? (
-                    <>
-                      <label
-                        className="info"
-                        onClick={confirmConnectModal}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <img
-                          className="image"
-                          data-testid="failed"
-                          src="images/failed.svg"
-                          alt="failed"
-                        />
-                        <span style={{ color: "#FF493D" }}>Not Accessible</span>
-                      </label>
-                    </>
+                    <label
+                      className="info"
+                      onClick={confirmConnectModal}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <img
+                        className="image"
+                        data-testid="failed"
+                        src="images/failed.svg"
+                        alt="failed"
+                      />
+                      <span style={{ color: "#FF493D" }}>Not Accessible</span>
+                    </label>
                   ) : null}
                 </>
               ) : null}
@@ -328,14 +328,16 @@ const UserProfile = () => {
                 onClick={(_) => {
                   setActiveRepo(true);
                   setFocussedOwnerRepo(true)
-                  document.getElementById("repo" || "")?.focus();
+                  repoRef.current?.focus();
                 }}>
                 <label>dApp Repository<span style={{color: 'red'}}>*</span></label>
                 <input
+                  id="repo"
+                  ref={repoRef}
                   value={repo}
                   type="text"
                   onChange={(e) => inputChanged(e, "repo")}
-                  onBlur={(e) => inputBlurred(e, "repo")}
+                  onBlur={inputBlurred}
                 />
               </div>
               {repoErr? <span className="danger error-msg">This field is required</span>: ''}
@@ -422,7 +424,6 @@ const UserProfile = () => {
                     disabled={!form.formState.isValid || verifying || (!accessible && canShowConnectModal) || ownerErr || repoErr}
                     type="submit"
                     buttonLabel={"Save"}
-                    onClick={() => {}}
                   />
                 </>
               )}
