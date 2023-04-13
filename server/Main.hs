@@ -63,10 +63,14 @@ import Plutus.Certification.ProfileWallet
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Data.HashSet as HashSet
+import Data.Word
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import System.Environment (lookupEnv)
+
+oneAda :: Word64
+oneAda = 1000000
 
 data Backend
   = Local
@@ -81,6 +85,7 @@ data Args = Args
   , auth :: !AuthMode
   , signatureTimeout :: !Seconds
   , useWhitelist :: !Bool
+  , minAmountForAddressAssessment :: !Word64
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -138,6 +143,13 @@ argsParser =  Args
       )
   <*> switch
       ( long "use-whitelist" <> help "use the whitelist for authentication" )
+  <*> option auto
+      ( long "min-amount-for-address-assessment"
+     <> metavar "MIN_AMOUNT"
+     <> help "the minimum amount of Lovelace required to perform an address assessment"
+     <> showDefault
+     <> Opts.value oneAda
+      )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -360,7 +372,9 @@ main = do
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       addressRotation <- liftIO $ newMVar emptyAddressRotation
       _ <- initDb
-      _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
+      _ <- forkIO $ startTransactionsMonitor
+             (narrowEventBackend InjectSynchronizer eb)
+             (args.wallet) 10 (args.minAmountForAddressAssessment)
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .

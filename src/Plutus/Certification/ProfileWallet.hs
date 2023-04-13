@@ -201,9 +201,10 @@ type WalletBackend m r = EventBackend m r ProfileWalletSyncSelector
 resyncWallets :: (MonadIO m,MonadMask m)
               => WalletBackend m r
               -> WalletArgs
+              -> Word64
               -> PrevAssignments
               -> m PrevAssignments
-resyncWallets eb wargs prevAssignments = withEvent eb ResyncWallets \ev -> do
+resyncWallets eb wargs minAmount prevAssignments = withEvent eb ResyncWallets \ev -> do
   -- fetch the db transactions and create wallets
   (errors,trans) <- DB.withDb ( DB.getAllTransactions False )
     <&> (lefts &&& rights) . fmap fromDbTransaction'
@@ -220,7 +221,7 @@ resyncWallets eb wargs prevAssignments = withEvent eb ResyncWallets \ev -> do
   reassignOverlappingAddresses eb wargs profileWallets prevAssignments
 
   where
-  fromDbTransaction' = uncurry (fromDbTransaction isOurAddress)
+  fromDbTransaction' = uncurry (fromDbTransaction isOurAddress minAmount)
   mainHash = hash wargs.walletAddress
   hash = Sig.bech32AddressHash . Sig.Bech32Address
   isOurAddress = (== mainHash) . hash
@@ -319,10 +320,10 @@ reassignOverlappingAddresses eb wargs profileWallets prevAssignments = do
       Right prevAddress -> return prevAddress
   isOverlappingAddress :: ProfileWallet -> Bool
   isOverlappingAddress (ProfileWallet (Overlapping,address) profileAddress _) =
-    let isAlreadyAssigned =
-          any (\Assignment{..} -> assgnOverlappingAddress == address
-                               && assgnProfileAddress == profileAddress
-              ) prevAssignments
+    let isAlreadyAssigned = any
+          (\Assignment{..} -> assgnOverlappingAddress == address
+                           && assgnProfileAddress == profileAddress
+          ) prevAssignments
     in not isAlreadyAssigned
   isOverlappingAddress _ = False
   wasAssignedBefore :: Wallet.WalletAddressInfo -> Bool
@@ -334,27 +335,30 @@ reassignOverlappingAddresses eb wargs profileWallets prevAssignments = do
 
 -- | Transform a transaction coming from the database into a `Transaction`
 fromDbTransaction :: (Text -> Bool)
+                  -> Word64
                   -> DB.MinimalTransaction
                   -> [DB.MinimalTransactionEntry]
                   -> Either String Transaction
-fromDbTransaction isOurAddress DB.MinimalTransaction{..} entries =
+fromDbTransaction isOurAddress minAmount DB.MinimalTransaction{..} entries =
   case (paymentMetadata,addressAssignmentMetadata,firstOutWalletAddress) of
     -- address assignment
     (_,Right (AddressAssignmentMetadata address),Just walletAddress)
       | mtxAmount < 0 && not (isOurAddress address)
-        -> Right $ WalletAddressAssignment (ProfileAddress address) walletAddress
-      | isOurAddress address -> Left "Address assignment should belong to our wallet"
-      | otherwise -> Left "Address assignment transaction must be a withdrawal"
+          -> Right $ WalletAddressAssignment (ProfileAddress address) walletAddress
+      | isOurAddress address
+          -> Left "Address assignment shouldn't belong to our wallet"
+      | otherwise
+          -> Left "Address assignment transaction must be a withdrawal"
 
     (_,Right (AddressAssignmentMetadata _),Nothing) ->
       Left "InternalError: no wallet address found for address assignment"
 
     (Right (PayerMetadata address),_,Just walletAddress)
-      | mtxAmount > 0 && not (isOurAddress address)
-        -> Right $ DesignatedPayment (ProfileAddress address)
+      | mtxAmount >= fromIntegral minAmount && not (isOurAddress address)
+          -> Right $ DesignatedPayment (ProfileAddress address)
             walletAddress (fromIntegral mtxAmount)
-      | isOurAddress address ->
-        Left "Payer address should not belong to our wallet"
+      | isOurAddress address
+          -> Left "Payer address should not belong to our wallet"
 
     (_,_,Just walletAddress)
       | mtxAmount > 0 -> Right $ SimplePayment walletAddress (fromIntegral mtxAmount)

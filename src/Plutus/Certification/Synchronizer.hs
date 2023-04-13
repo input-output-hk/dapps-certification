@@ -39,6 +39,7 @@ import Observe.Event.Backend
 import Observe.Event
 import Plutus.Certification.ProfileWallet
 import Data.IORef
+import Data.Word (Word64)
 
 data InitializingField
   = WalletArgsField WalletArgs
@@ -154,9 +155,10 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..})) = Just $ DB.Transaction
 monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m)
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
+                          -> Word64
                           -> IORef PrevAssignments
                           -> m ()
-monitorWalletTransactions eb args refAssignments = withEvent eb MonitorTransactions $ \ev -> do
+monitorWalletTransactions eb args minAssignmentAmount refAssignments = withEvent eb MonitorTransactions $ \ev -> do
   -- fetch the list of transactions from the wallet
   -- TODO: fetch only the transactions that are not in the database
   -- or starting from the first pending transaction
@@ -165,7 +167,7 @@ monitorWalletTransactions eb args refAssignments = withEvent eb MonitorTransacti
   synchronizeDbTransactions transactions
   -- synchronize wallets
   liftIO (readIORef refAssignments)
-    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) args
+    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) args minAssignmentAmount
     >>= liftIO . writeIORef refAssignments
 
 
@@ -233,15 +235,16 @@ startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
                          => EventBackend m r SynchronizerSelector
                          -> WalletArgs
                          -> Int
+                         -> Word64
                          -> m b
-startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynchronizer $ \ev -> do
+startTransactionsMonitor eb args delayInSeconds minAssignmentAmount = withEvent eb InitializingSynchronizer $ \ev -> do
   addField ev $ WalletArgsField args
   addField ev $ DelayField delayInSeconds
   -- TODO maybe a forkIO here will be better than into the calling function
   -- hence, now, the parent instrumentation event will never terminate
   ref <- liftIO $ newIORef []
   forever $ do
-    monitorWalletTransactions (subEventBackend ev) args ref
+    monitorWalletTransactions (subEventBackend ev) args minAssignmentAmount ref
     liftIO $ threadDelay delayInMicroseconds
   where
     delayInMicroseconds = delayInSeconds * 1000000
