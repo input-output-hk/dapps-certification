@@ -1,15 +1,9 @@
-import React from "react";
 import { Outlet } from 'react-router-dom';
 import "./Subscription.scss";
 
-
-
 const Subscription = () => {
   return (
-    <>
-      <Outlet />
-    </>
-    
+    <Outlet />
   );
 };
 
