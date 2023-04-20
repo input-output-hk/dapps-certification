@@ -23,7 +23,8 @@ function Payment() {
   const [showError, setShowError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [processing, setProcessing] = useState(false);
-  let currentTierPrice: BigNum | any = 0;
+  const zeroVal: number = 0;
+  let currentTierPrice: BigNum = BigNum.from_str(zeroVal.toString());
   let currentSubscriptionId: string = '';
 
   const onCloseModal = () => { 
@@ -45,6 +46,7 @@ function Payment() {
       errorMsg = 'Something wrong occurred. Please try again later.'
     }
     setShowError(errorMsg);
+    setProcessing(false)
     const timeout = setTimeout(() => { 
       clearTimeout(timeout); 
       setShowError("") 
@@ -60,14 +62,31 @@ function Payment() {
   const triggerPayment = async () => {
     setShowError("");
     setProcessing(true);
-    const response: any = fetchData.get("/profile/current/balance")
-    const availableProfileBalance: BigNum | any = response.data;
-    if (availableProfileBalance - currentTierPrice < 0) {
-      const min_fee = 1000000; // 1 ADA in lovelaces - min req for cardano wallet txn
-      const fee: BigNum = currentTierPrice > min_fee ? currentTierPrice : min_fee;
-      triggerTransactionFromWallet(fee);
-    } else {
-      fetchCurrentSubscription()
+    try {
+      const response: any = await fetchData.get("/profile/current/balance")
+      if (response.data) {
+        const availableProfileBalance: BigNum = BigNum.from_str(response.data.toString());
+        let lessBalance = false
+        if (availableProfileBalance.less_than(currentTierPrice)) {
+          lessBalance = true;
+        } else {
+          const difference = availableProfileBalance.checked_sub(currentTierPrice)
+          lessBalance = difference.less_than(BigNum.from_str(zeroVal.toString()))
+        }
+        if (lessBalance) {
+          const oneAdaInLovelaces = 1000000;
+          const min_fee: BigNum = BigNum.from_str(oneAdaInLovelaces.toString()); // 1 ADA in lovelaces - min req for cardano wallet txn
+          let fee: BigNum = min_fee;
+          if (min_fee.less_than(currentTierPrice)) {
+            fee = currentTierPrice;
+          }
+          triggerTransactionFromWallet(fee);
+        } else {
+          fetchCurrentSubscription()
+        }
+      }
+    } catch (err) {
+      handleError(err)
     }
   };
 
@@ -93,7 +112,7 @@ function Payment() {
               fetchCurrentSubscription(isAfterPayment)
             }, 1000)
           } else {
-            currentTierPrice = current.price;
+            currentTierPrice = BigNum.from_str(current.price.toString());
             triggerPayment()
           }
         } else if (current.status === 'active' && !dayjs().isAfter(dayjs(current.endDate))) {
