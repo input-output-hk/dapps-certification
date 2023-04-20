@@ -82,8 +82,9 @@ const UserProfile = () => {
   useEffect(() => {
     initializeFormState()
     dispatch(clearStates())
+    // initializeFormState() is to not to be triggered on every re-render of the dep-array below but whenever the form or userDetails is updated alone
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userDetails, form]);
+  }, [userDetails, form, dispatch]);
 
   const clearOwnerRepoError = () => {
     setOwnerErr(false)
@@ -159,6 +160,7 @@ const UserProfile = () => {
       }, 600)
       setTimer(newTimer)
     }
+  // the enclosed snippet is to be triggered only on update of owner,repo values and none else; this is a timer in effect to mimic the HTMLInput onChange mechanism
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, repo])
 
@@ -193,7 +195,7 @@ const UserProfile = () => {
     if (githubAccessCode) {
       (async () => {
         const params = "?client_id=" + CLIENT_ID + "&client_secret=" + CLIENT_SECRET + "&code=" + githubAccessCode
-        const access_token = await dispatch(getUserAccessToken({queryParams: params}))
+        await dispatch(getUserAccessToken({queryParams: params}))
         searchParams.delete("code");
         setSearchParams(searchParams);
         const formData = form.getValues()
@@ -213,6 +215,7 @@ const UserProfile = () => {
       setCanShowConnectModal(false)
       localStorage.removeItem('profile')
     }
+    // the enclosed snippet is to be triggered only once right when the component is rendered to check if the url contains code (to validate if it is a redirect from github) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
