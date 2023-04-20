@@ -63,7 +63,7 @@ function Payment() {
     setShowError("");
     setProcessing(true);
     try {
-      const response: any = await fetchData.get("/profile/current/balance")
+      const response: {data: BigNum} = await fetchData.get("/profile/current/balance")
       if (response.data) {
         const availableProfileBalance: BigNum = BigNum.from_str(response.data.toString());
         let lessBalance = false
@@ -129,7 +129,7 @@ function Payment() {
     setProcessing(true);
     fetchData
       .post("/profile/current/subscriptions/" + state.id)
-      .then((response: any) => {
+      .then((response: {data: Subscription}) => {
         currentSubscriptionId = response.data.id
         fetchCurrentSubscription()
       }).catch(handleError);
