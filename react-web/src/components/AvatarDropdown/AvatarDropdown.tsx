@@ -39,7 +39,7 @@ const AvatarDropDown = () => {
         aria-expanded={open ? "true" : undefined}
         onClick={handleClick}
       >
-        <Avatar alt="Profile Photo" src="images/avatar.svg" />
+        <Avatar alt="Profile Photo" src="/images/avatar.svg" />
       </Button>
       <Menu
         id="avatar-menu"

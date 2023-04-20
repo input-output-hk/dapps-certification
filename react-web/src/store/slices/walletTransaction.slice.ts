@@ -30,7 +30,7 @@ export const payFromWallet: any = createAsyncThunk("payFromWallet", (data: any, 
             const cert_fee_in_lovelaces = data.fee
             const walletAddressRes: any = await fetchData.get('/wallet-address').catch(throwError)
             const applicationWallet_receiveAddr = walletAddressRes.data;
-            const cert_fee_lovelace: BigNum = BigNum.from_str(cert_fee_in_lovelaces.toString())
+            const cert_fee_lovelace: BigNum = cert_fee_in_lovelaces; //BigNum.from_str(cert_fee_in_lovelaces.toString())
             
             const protocolParams: any = {
                 linearFee: {
