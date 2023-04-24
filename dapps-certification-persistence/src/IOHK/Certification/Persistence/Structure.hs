@@ -22,10 +22,10 @@ import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
 import           GHC.OverloadedLabels
-import Data.Int
+import           Data.Int
 
-import IOHK.Certification.Persistence.Structure.Profile
-import IOHK.Certification.Persistence.Structure.Subscription
+import           IOHK.Certification.Persistence.Structure.Profile
+import           IOHK.Certification.Persistence.Structure.Subscription
 
 import qualified Data.Text         as Text
 import qualified Data.Aeson.KeyMap as KM
@@ -42,6 +42,7 @@ data SubscriptionDTO = SubscriptionDTO
   , subscriptionDtoProfileId :: ID Profile
   , subscriptionDtoTierId :: ID Tier
   , subscriptionDtoPrice :: Int64
+  , subscriptionDtoAdaUsdPrice :: Double
   , subscriptionDtoStartDate :: UTCTime
   , subscriptionDtoEndDate :: UTCTime
   , subscriptionDtoStatus :: SubscriptionStatus
