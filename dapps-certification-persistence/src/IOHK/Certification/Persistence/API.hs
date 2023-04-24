@@ -390,7 +390,8 @@ createSubscription startDate pid tid adaUsdPrice = do
 
     let subscriptionPrice = usdToLovelace tier.tierUsdPrice adaUsdPrice
         subscriptionToInsert = Subscription def pid tid (tier.tierName) (tier.tierType)
-          subscriptionPrice startDate endDate PendingSubscription
+          subscriptionPrice (realToFrac adaUsdPrice) startDate endDate PendingSubscription
+
     -- create a new subscription
     subscriptionId <- insertWithPK subscriptions [subscriptionToInsert]
     let subscription = subscriptionToInsert { subscriptionId = subscriptionId}
@@ -463,6 +464,7 @@ toSubscriptionDTO (Subscription{..}) = do
     , subscriptionDtoProfileId = subscriptionProfileId
     , subscriptionDtoTierId = subscriptionTierId
     , subscriptionDtoPrice = subscriptionPrice
+    , subscriptionDtoAdaUsdPrice = subscriptionAdaUsdPrice
     , subscriptionDtoStartDate = subscriptionStartDate
     , subscriptionDtoEndDate = subscriptionEndDate
     , subscriptionDtoStatus = subscriptionStatus

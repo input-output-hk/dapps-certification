@@ -173,6 +173,7 @@ data Subscription = Subscription
   , subscriptionName :: Text
   , subscriptionType :: TierType
   , subscriptionPrice :: Int64
+  , subscriptionAdaUsdPrice :: Double
   , subscriptionStartDate :: UTCTime
   , subscriptionEndDate :: UTCTime
   , subscriptionStatus :: SubscriptionStatus
