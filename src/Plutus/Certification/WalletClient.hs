@@ -136,14 +136,17 @@ mkSettings walletAPIAddress = liftIO $ do
   manager' <- newManager (if baseUrlScheme walletAPIAddress == Https then tlsManagerSettings else defaultManagerSettings)
   pure (mkClientEnv manager' walletAPIAddress)
 
+type MetadataKey = Int
 broadcastTransaction :: (MonadIO m, ToJSON metadata)
                      => WalletArgs
+                     -> MetadataKey
                      -> metadata
                      -> m (Either ClientError TxResponse)
-broadcastTransaction WalletArgs{..} metadata = liftIO $ do
+broadcastTransaction WalletArgs{..} metadataKey metadata = liftIO $ do
   settings <- mkSettings walletAPIAddress
   let broadcastTx :<|> _ = mkClient walletId
-  let body = TxBody walletPassphrase walletAddress [aesonQQ| { "0": #{ metadata }} |]
+      metadataKeyStr = show metadataKey
+  let body = TxBody walletPassphrase walletAddress [aesonQQ| { $metadataKeyStr: #{ metadata }} |]
   runClientM (broadcastTx body ) settings
 
 getTransactionList :: (MonadIO m)
