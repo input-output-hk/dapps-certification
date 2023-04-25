@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useAppSelector } from "store/store";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -10,15 +8,12 @@ import TableComponent from "components/Table/Table";
 import { fetchData } from "api/api";
 import { Subscription } from "../Subscription.interface";
 import Toast from "components/Toast/Toast";
-import { getCurrentAdaUsdPrice } from "store/slices/auth.slice";
 
 dayjs.extend(utc)
 dayjs.extend(tz)
 
 const SubscriptionHistory = () => {
-    const dispatch = useDispatch()
     const navigate = useNavigate();
-    const {adaUsdPrice} = useAppSelector((state) => state.auth);
     const [data, setData] = useState<Array<Subscription>>([]);
     const [skipPageReset, setSkipPageReset] = useState(false);
     const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
@@ -26,25 +21,12 @@ const SubscriptionHistory = () => {
 
     useEffect(() => {
         fetchTableData();
-        if (adaUsdPrice === 0) {
-            dispatch(getCurrentAdaUsdPrice())
-        }
     }, []);
     
     useEffect(() => {
         setSkipPageReset(false);
     }, [data]);
 
-    const handleError = (error: any) => {
-        if (error.response) {
-          setErrorToast({display: true, statusText: error.response.statusText, message: error.response.data || undefined})
-        } else {
-          setErrorToast({display: true})
-        }
-        const timeout = setTimeout(() => { clearTimeout(timeout); setErrorToast({display: false}) }, 3000)
-    }
-  
-      
     const updateMyData = (rowIndex: any, columnID: any, value: any) => {
         setSkipPageReset(true); // turn on flag to not reset the page
         setData((old) =>
@@ -77,6 +59,13 @@ const SubscriptionHistory = () => {
             accessor: "price",
             Cell: (props: any) => (
                 <span>{(props.row.original.price / 1000000).toFixed(2)}</span>
+            )
+        },
+        {
+            Header: "Amount Paid(in USD)",
+            accessor: "adaUsdPrice",
+            Cell: (props: any) => (
+                <span>${props.row.original.adaUsdPrice}</span>
             )
         },
         {
