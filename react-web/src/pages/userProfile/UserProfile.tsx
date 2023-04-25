@@ -239,7 +239,6 @@ const UserProfile = () => {
       }).then(async () => {
           connectToGithub()
         })
-        .catch(() => { });
     }, 0)
   }
 
