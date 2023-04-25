@@ -46,7 +46,7 @@ const SubscriptionHistory = () => {
             Header: "Amount Paid",
             accessor: "adaUsdPrice",
             Cell: (props: any) => (
-                <span>${props.row.original.adaUsdPrice}</span>
+                <span>${Math.floor((props.row.original.price/1000000) * props.row.original.adaUsdPrice)}</span>
             )
         },
         {
