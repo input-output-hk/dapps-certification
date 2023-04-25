@@ -15,32 +15,13 @@ dayjs.extend(tz)
 const SubscriptionHistory = () => {
     const navigate = useNavigate();
     const [data, setData] = useState<Array<Subscription>>([]);
-    const [skipPageReset, setSkipPageReset] = useState(false);
+    const [skipPageReset] = useState(false);
     const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
     const timeZone = dayjs.tz.guess()
 
     useEffect(() => {
         fetchTableData();
     }, []);
-    
-    useEffect(() => {
-        setSkipPageReset(false);
-    }, [data]);
-
-    const updateMyData = (rowIndex: any, columnID: any, value: any) => {
-        setSkipPageReset(true); // turn on flag to not reset the page
-        setData((old) =>
-          old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...old[rowIndex],
-                [columnID]: value,
-              };
-            }
-            return row;
-          })
-        );
-      };
 
     const fetchTableData = async () => {
         const result = await fetchData.get("/profile/current/subscriptions?just-enabled=false")
@@ -122,7 +103,7 @@ const SubscriptionHistory = () => {
       </button> 
       <div id="testHistory">
         <TableComponent dataSet={data} columns={columns}
-          updateMyData={updateMyData}
+          updateMyData={() => {}}
           skipPageReset={skipPageReset}
         />
       </div>
