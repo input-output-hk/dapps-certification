@@ -2,8 +2,8 @@ import { AxiosError, AxiosRequestConfig } from "axios";
 
 // Add a request interceptor
 export function onRequest(config: AxiosRequestConfig) {
-  const address: any = localStorage.getItem('address');
-  const TokenAuth = address;
+  const address: any = localStorage.getItem('authToken');
+  const TokenAuth = 'Bearer ' + address;
 
   if (address) {
     config.headers = {

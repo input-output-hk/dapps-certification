@@ -21,7 +21,8 @@ const Header = () => {
     // check if address, walletName is in localStorage - login user without having to connect to wallet again
     const addressCache = localStorage.getItem('address')
     const walletNameCache = localStorage.getItem('walletName')
-    if (addressCache?.length && walletNameCache?.length) {
+    const authToken = localStorage.getItem('authToken')
+    if (addressCache?.length && walletNameCache?.length && authToken?.length) {
       (async () => {
         try {
           const enabledWallet = await window.cardano[walletNameCache].enable()

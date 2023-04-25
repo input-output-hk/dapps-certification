@@ -25,6 +25,7 @@ const initialState: AuthState = {
 const clearLSCache = () => {
   localStorage.removeItem('address')
   localStorage.removeItem('walletName')
+  localStorage.removeItem('authToken')
 }
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
