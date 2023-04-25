@@ -105,12 +105,12 @@ const SubscriptionHistory = () => {
               </span>
             ),
         }
-    ], []);
+    ], [timeZone]);
 
     return (<>
       <button
         className="back-btn"
-        onClick={(e) => {
+        onClick={(_) => {
           navigate(-1)
         }}
       >
