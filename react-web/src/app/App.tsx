@@ -71,7 +71,7 @@ const App = () => {
               <Route path="payment" element={<Payment />} />
             </Route>
             <Route path="/history" element={<TestHistory />} />
-            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/profile/*" element={<UserProfile />} />
           </Route>
           <Route path="/" element={<MaintenancePage />} />
           <Route path="/community" element={<Community />} />

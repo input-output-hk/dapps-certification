@@ -36,20 +36,19 @@ import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
 import Plutus.Certification.WalletClient
-import qualified IOHK.Certification.Persistence as DB
-import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import Control.Lens hiding ((.=))
-import qualified Data.Swagger.Lens as SL
 import Plutus.Certification.GitHubClient (RepositoryInfo)
 import Control.Arrow (ArrowChoice(left))
 import GHC.TypeLits
-import Control.Lens hiding ((.=))
+import Servant.Client (BaseUrl)
+import IOHK.Certification.SignatureVerification
+  (COSEKey,COSESign1, decodeHex,encodeHex)
+import Data.Char (isAlphaNum)
+import Text.Regex
 
-
+import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
-import IOHK.Certification.SignatureVerification 
-  (COSEKey,COSESign1, decodeHex,encodeHex)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
@@ -153,7 +152,6 @@ type ServerTimestamp = "server-timestamp"
   :> Description "Get the current server timestamp"
   :> Get '[JSON] Integer
 
-
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
 
@@ -254,7 +252,7 @@ instance FromJSON DAppBody where
       <*> v .: "owner"
       <*> v .: "repo"
       <*> v .: "version"
-      <*> v .: "githubToken"
+      <*> v .:? "githubToken" .!= Nothing
 
 instance ToJSON DAppBody where
   toJSON DAppBody{..} = object
@@ -265,12 +263,55 @@ instance ToJSON DAppBody where
     , "githubToken"  .= dappGitHubToken
     ]
 
+newtype Twitter = Twitter { unTwitter :: Text }
+
+instance FromJSON Twitter where
+    parseJSON = withText "Twitter" $ \v ->
+      -- validate twitter account regex format ^[A-Za-z0-9_]{1,15}$
+      if not (isTwitterValid v)
+        then fail "Invalid twitter account format"
+        else pure $ Twitter v
+
+isTwitterValid :: Text -> Bool
+isTwitterValid v = not (
+  Text.length v > 15 || Text.length v < 1 || Text.any (\c -> not (isAlphaNum c || c == '_')) v
+  )
+
+instance ToJSON Twitter where
+  toJSON (Twitter v) = String v
+
+instance ToSchema Twitter where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "Twitter") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ "^[A-Za-z0-9_]{1,15}$"
+
+newtype LinkedIn = LinkedIn { unLinkedIn :: Text }
+
+linkedInProfilePattern :: Text
+linkedInProfilePattern = "^(http(s)?:\\/\\/)?([\\w]+\\.)?linkedin\\.com\\/(pub|in|profile|company)\\/([a-zA-Z0-9_-]+)$"
+
+instance ToSchema LinkedIn where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "LinkedIn") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ linkedInProfilePattern
+
+instance FromJSON LinkedIn where
+  parseJSON = withText "LinkedIn" $ \v -> do
+    case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) (Text.unpack v) of
+      Just _ -> return (LinkedIn v)
+      Nothing -> fail "Invalid LinkedIn profile URL"
+
+instance ToJSON LinkedIn where
+  toJSON = toJSON . unLinkedIn
+
 data ProfileBody = ProfileBody
    { dapp :: !(Maybe DAppBody)
-   , website :: !(Maybe Text)
+   , website :: !(Maybe BaseUrl)
    , vendor :: !(Maybe Text)
-   , twitter :: !(Maybe Text)
-   , linkedin :: !(Maybe Text)
+   , twitter :: !(Maybe Twitter)
+   , linkedin :: !(Maybe LinkedIn)
    , authors :: Maybe Text
    , contacts :: Maybe Text
    } deriving stock Generic
@@ -509,8 +550,35 @@ instance ToSchema DAppBody where
     return $ NamedSchema (Just "DAppBody") $ profileSchema
         & properties . at "githubToken" ?~ apiGitHubAccessTokenSchema
 
-instance ToSchema ProfileBody
+-- | A phantom type for website for swagger schema
+data Website
 
+instance ToSchema Website where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "BaseUrl") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ baseUrlPattern
+
+baseUrlPattern :: Pattern
+baseUrlPattern = "^[(http(s)?):\\/\\/(www\\.)?a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)$"
+
+instance ToSchema ProfileBody where
+   declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    dappSchema <- declareSchemaRef (Proxy :: Proxy DAppBody)
+    urlSchema <- declareSchemaRef (Proxy :: Proxy Website)
+    twitterSchema <- declareSchemaRef (Proxy :: Proxy Twitter)
+    return $ NamedSchema (Just "Profile") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("dapp", dappSchema)
+          , ("website", urlSchema)
+          , ("vendor", textSchema)
+          , ("twitter", twitterSchema)
+          , ("linkedin", textSchema)
+          , ("authors", textSchema)
+          , ("contacts", textSchema)
+          ]
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
