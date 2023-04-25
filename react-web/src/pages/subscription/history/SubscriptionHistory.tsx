@@ -54,15 +54,15 @@ const SubscriptionHistory = () => {
             Header: "Type of Subscription",
             accessor: "name",
         },
+        // {
+        //     Header: "Amount Paid(in ADA)",
+        //     accessor: "price",
+        //     Cell: (props: any) => (
+        //         <span>{(props.row.original.price / 1000000).toFixed(2)}</span>
+        //     )
+        // },
         {
-            Header: "Amount Paid(in ADA)",
-            accessor: "price",
-            Cell: (props: any) => (
-                <span>{(props.row.original.price / 1000000).toFixed(2)}</span>
-            )
-        },
-        {
-            Header: "Amount Paid(in USD)",
+            Header: "Amount Paid",
             accessor: "adaUsdPrice",
             Cell: (props: any) => (
                 <span>${props.row.original.adaUsdPrice}</span>
