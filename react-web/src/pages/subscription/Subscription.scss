@@ -27,3 +27,18 @@
       line-height: 26px;
     }
   }
+
+.head-section {
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+button.back-btn {
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  img {
+    width: "30px";
+    padding: "10px";
+  }
+}

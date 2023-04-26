@@ -80,7 +80,7 @@ const PricingCard: React.FC<PriceCardProps> = ( {...props} ) => {
         }
       </div>
     </div>
-    <Modal open={showContactUs} title="Contact Us" onCloseModal={onCloseModal}>
+    <Modal open={showContactUs} title="Contact Us" onCloseModal={onCloseModal} modalId="contactUsModal">
       {contactFormSubmitted ? 
         <h5>Thank you for reaching out to us. <br/>We'll get in touch with you soon.</h5>
       : <Form form={form} onSubmit={formHandler}>

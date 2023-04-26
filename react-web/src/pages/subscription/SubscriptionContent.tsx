@@ -4,6 +4,7 @@ import { fetchData } from 'api/api';
 import PricingCard, {PriceCardProps} from './components/PricingCard/PricingCard';
 import { Subscription, Tier } from './Subscription.interface';
 import { useNavigate } from 'react-router-dom';
+import Button from 'components/Button/Button';
 
 type TiersByType = {
   developers: PriceCardProps[];
@@ -64,10 +65,12 @@ const SubscriptionContent = () => {
   return (
     <>
       <div className="head-section">
-        <span id="view-subscription-history" onClick={() => navigate('/subscription/history')}>
-          <img src="images/list.svg" alt="grid" />
-          <span>View History</span>
-        </span>
+      <label id="view-subscription-history">
+        <Button
+          displayStyle="primary" 
+          onClick={() => navigate('/subscription/history')}
+          iconUrl="images/list.svg" buttonLabel={"View History"}></Button>
+      </label>
       </div>
       <div className="pricing-container">
         <div className="subscription-content">

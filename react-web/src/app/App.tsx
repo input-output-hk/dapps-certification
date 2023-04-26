@@ -21,6 +21,7 @@ const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const SubscriptionContent = lazy(() => import("../pages/subscription/SubscriptionContent"));
 const Payment = lazy(() => import("../pages/subscription/payment/Payment"));
 const Auditor = lazy(() => import("../pages/auditor/Auditor"));
+const SubscriptionHistory = lazy(() => import("../pages/subscription/history/SubscriptionHistory"));
 
 
 const PageLayout = () => {
@@ -71,6 +72,7 @@ const App = () => {
             <Route path="/subscription" element={<Subscription />}>
               <Route path="" element={<SubscriptionContent/>} />  
               <Route path="payment" element={<Payment />} />
+              <Route path="history" element={<SubscriptionHistory />} />
             </Route>
             <Route path="/history" element={<TestHistory />} />
             <Route path="/profile/*" element={<UserProfile />} />
