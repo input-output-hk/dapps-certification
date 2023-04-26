@@ -15,20 +15,34 @@ dayjs.extend(tz)
 const SubscriptionHistory = () => {
     const navigate = useNavigate();
     const [data, setData] = useState<Array<Subscription>>([]);
-    const [skipPageReset] = useState(false);
     const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
     const timeZone = dayjs.tz.guess()
 
+    // to be invoked only once at first
     useEffect(() => {
-        fetchTableData();
+      fetchTableData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchTableData = async () => {
+      try {
         const result = await fetchData.get("/profile/current/subscriptions?just-enabled=false")
         if (result.data.length) {
           setData(result.data);
         }
+      } catch (err) {
+        handleError(err)
+      }
     };
+
+    const handleError = (error: any) => {
+      if (error.response) {
+        setErrorToast({display: true, statusText: error.response.statusText, message: error.response.data || undefined})
+      } else {
+        setErrorToast({display: true})
+      }
+      const timeout = setTimeout(() => { clearTimeout(timeout); setErrorToast({display: false}) }, 3000)
+    }
 
     const columns = React.useMemo(() => [
         {
@@ -104,7 +118,7 @@ const SubscriptionHistory = () => {
       <div id="testHistory">
         <TableComponent dataSet={data} columns={columns}
           updateMyData={() => {}}
-          skipPageReset={skipPageReset}
+          skipPageReset={false}
         />
       </div>
       {(errorToast && errorToast.display) ? (
