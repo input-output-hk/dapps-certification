@@ -16,9 +16,10 @@ module Main where
 import Control.Monad.Except
 import Control.Monad.Catch hiding (try)
 import Servant.Swagger.UI
+import Data.Maybe
 import Control.Exception hiding (Handler)
 import Data.Aeson
-import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl')
+import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl',words)
 import Data.Function
 import Data.Singletons
 import Data.Time
@@ -58,11 +59,13 @@ import IOHK.Certification.Actions
 import Plutus.Certification.JWT
 import Data.Int
 import IOHK.Certification.Persistence (toId)
-
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
+import Data.HashSet as HashSet
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as Text
+import System.Environment (lookupEnv)
 
 data Backend
   = Local
@@ -76,6 +79,7 @@ data Args = Args
   , githubToken :: !(Maybe GitHubAccessToken)
   , auth :: !AuthMode
   , signatureTimeout :: !Seconds
+  , useWhitelist :: !Bool
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -131,6 +135,8 @@ argsParser =  Args
      <> showDefault
      <> Opts.value 60
       )
+  <*> switch
+      ( long "use-whitelist" <> help "use the whitelist for authentication" )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -237,19 +243,24 @@ renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 
 -- | plain address authentication
 -- NOTE: this is for testing only, and should not be used in production
-plainAddressAuthHandler :: AuthHandler Request (DB.ProfileId,UserAddress)
-plainAddressAuthHandler = mkAuthHandler handler
+plainAddressAuthHandler :: Maybe Whitelist -> AuthHandler Request (DB.ProfileId,UserAddress)
+plainAddressAuthHandler whitelist = mkAuthHandler handler
   where
   handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
           => Request
           -> m (DB.ProfileId, UserAddress)
-  handler req = either throw401 ensureProfile $ do
-    maybeToEither "Missing Authorization header" $ lookup "Authorization" $ requestHeaders req
+  handler req = do
+     bs <- either throw401 pure $ extractAddress req
+     verifyWhiteList whitelist (decodeUtf8 bs)
+     ensureProfile bs
   maybeToEither e = maybe (Left e) Right
+  extractAddress = maybeToEither "Missing Authorization header" . lookup "Authorization" . requestHeaders
 
 -- | JWT authentication
-jwtAuthHandler :: String -> AuthHandler Request (DB.ProfileId,UserAddress)
-jwtAuthHandler secret = mkAuthHandler handler
+jwtAuthHandler :: Maybe Whitelist
+               -> String
+               -> AuthHandler Request (DB.ProfileId,UserAddress)
+jwtAuthHandler whitelist secret = mkAuthHandler handler
   where
   handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
           => Request
@@ -269,6 +280,8 @@ jwtAuthHandler secret = mkAuthHandler handler
         Right ((pid,addr),expiration) -> do
           -- verify expiration
           now <- liftIO getCurrentTime
+          -- verify if the address is whitelisted
+          verifyWhiteList whitelist addr
           -- compare the expiration time with the current time
           when (now > expiration) $ throw401 "JWT token expired"
           pure (toId pid, UserAddress addr)
@@ -277,14 +290,20 @@ jwtAuthHandler secret = mkAuthHandler handler
     let isSpace = (== ' ')
     in BS.dropWhileEnd isSpace . BS.dropWhile isSpace . snd . BS.break isSpace
 
+-- | Get the whitelisted addresses from $WLIST env var
+whitelisted :: IO Whitelist
+whitelisted = do
+  HashSet.fromList . fmap Text.pack . words . fromMaybe [] <$> lookupEnv "WLIST"
+
 throw401 :: MonadError ServerError m => LBS.ByteString -> m a
 throw401 msg = throwError $ err401 { errBody = msg }
 
-genAuthServerContext :: AuthMode
+genAuthServerContext :: Maybe Whitelist
+                     -> AuthMode
                      -> Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
-genAuthServerContext mSecret = (case mSecret of
-  PlainAddressAuth -> plainAddressAuthHandler
-  JWTAuth JWTArgs{..} -> jwtAuthHandler jwtSecret ) :. EmptyContext
+genAuthServerContext whitelist mSecret = (case mSecret of
+  PlainAddressAuth -> plainAddressAuthHandler whitelist
+  JWTAuth JWTArgs{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
 initDb :: IO ()
 initDb = void $ try' $ DB.withDb DB.createTables
@@ -335,13 +354,16 @@ main = do
                      { corsRequestHeaders = ["Content-Type", "Authorization"]
                      , corsMethods = [methodGet,methodPost,methodPut,methodDelete,methodHead]
                      }
+      -- get the whitelisted addresses from $WLIST env var
+      -- if useWhitelist is set to false the whitelist is ignored
+      whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       _ <- initDb
       _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext args.auth) .
-        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb))
+        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist args.auth) .
+        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb whitelist))
   exitFailure
   where
   serverArgs args caps r eb = ServerArgs

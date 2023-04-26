@@ -27,6 +27,8 @@ import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
+import Control.Monad (unless)
+import Text.Regex
 import qualified Data.ByteString.Base16 as Hexa
 
 
@@ -54,7 +56,6 @@ createRunParser = CreateRunArgs
 
 authParser :: Parser Auth
 authParser = (PublicKeyAuth <$> publicKeyParser) <|> (JWTAuth <$> jwtParser)
-
 
 createRunInfo :: ParserInfo CreateRunArgs
 createRunInfo = info createRunParser
@@ -260,7 +261,7 @@ dappBodyParser = DAppBody
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
   <$> optional dappBodyParser
-  <*> optional (option str
+  <*> optional (option baseUrlReader
         ( long "website"
        <> metavar "WEBSITE"
        <> help "dapp website url"
@@ -270,12 +271,12 @@ profileBodyParser = ProfileBody
        <> metavar "VENDOR"
        <> help "vendor identification"
         ))
-  <*> optional (option str
+  <*> optional (option twitterReader
         ( long "twitter"
        <> metavar "TWITTER"
        <> help "twitter account"
         ))
-  <*> optional (option str
+  <*> optional (option linkedinReader
         ( long "linkedin"
        <> metavar "LINKEDIN"
        <> help "linkedin account"
@@ -290,6 +291,13 @@ profileBodyParser = ProfileBody
        <> metavar "CONTACTS"
        <> help "the list of contacts represented as a string"
         ))
+
+linkedinReader :: ReadM LinkedIn
+linkedinReader = do
+  v <- str
+  case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) v of
+    Just _ -> pure (LinkedIn (Text.pack v))
+    Nothing -> fail "Invalid LinkedIn profile URL"
 
 getCurrentProfileInfo :: ParserInfo Auth
 getCurrentProfileInfo = info authParser
@@ -408,6 +416,13 @@ baseUrlReader = do
       Just (InvalidBaseUrlException s) -> readerError $ "invalid URL '" ++ urlStr ++ "': " ++ s
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
+
+twitterReader :: ReadM Twitter
+twitterReader = do
+  twitterStr <- str
+  unless (isTwitterValid twitterStr) $
+    readerError $ "invalid twitter account '" <> Text.unpack twitterStr <> "'"
+  pure $ Twitter twitterStr
 
 hexaReader :: ReadM ByteString
 hexaReader = do

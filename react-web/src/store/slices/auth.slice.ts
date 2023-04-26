@@ -25,8 +25,7 @@ const initialState: AuthState = {
 };
 
 const clearLSCache = () => {
-  localStorage.removeItem('address')
-  localStorage.removeItem('walletName')
+  localStorage.clear();
 }
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
@@ -62,6 +61,8 @@ export const authSlice = createSlice({
         state.loading = false;
         state.isLoggedIn = true;
         state.userDetails = actions.payload;
+        localStorage.setItem("userDetails", JSON.stringify(actions.payload));
+        localStorage.setItem("isLoggedIn", "true");
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
           localStorage.setItem('address', state.address)

@@ -30,7 +30,7 @@ import Network.HTTP.Client hiding (Proxy,parseUrl)
 
 import Network.HTTP.Types
 import Control.Applicative
-import Data.Text as Text hiding (elem,replicate, last)
+import Data.Text as Text hiding (elem,replicate, last,words,replicate)
 import Data.Text.Encoding
 import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
 import IOHK.Certification.Interface hiding (Status)
@@ -42,6 +42,7 @@ import Plutus.Certification.JWT (jwtEncode, JWTArgs(..))
 import IOHK.Certification.SignatureVerification as SV
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
+import Data.HashSet as HashSet
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
@@ -67,8 +68,18 @@ data ServerArgs m r = ServerArgs
   , serverJWTArgs :: Maybe JWTArgs
   , serverEventBackend :: EventBackend m r ServerEventSelector
   , serverSigningTimeout :: Seconds
+  , serverWhitelist :: Maybe Whitelist
   }
 
+type Whitelist = HashSet Text
+
+-- | verify if the address is whitelisted
+verifyWhiteList :: MonadError ServerError m => Maybe (HashSet Text) -> Text -> m ()
+verifyWhiteList Nothing _ = pure ()
+verifyWhiteList (Just whitelist) addr =
+  unless (HashSet.member addr whitelist) $ throw401 "address not whitelisted"
+  where
+  throw401 msg = throwError $ err401 { errBody = msg }
 
 type Seconds = Integer
 
@@ -140,12 +151,18 @@ server ServerArgs{..} = NamedAPI
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
-      let dappM = fmap (\DAppBody{..} -> DB.DApp{
+          website' = fmap (Text.pack . showBaseUrl) website
+          twitter' = fmap unTwitter twitter
+          dappM = fmap (\DAppBody{..} -> DB.DApp{
             dappId, dappName,dappOwner,dappVersion,dappRepo,
             dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
           }) dapp
       DB.withDb $ do
-        _ <- DB.upsertProfile (DB.Profile{..}) dappM
+        _ <- DB.upsertProfile (DB.Profile
+                { website=website'
+                , twitter=twitter'
+                , linkedin=fmap unLinkedIn linkedin
+                ,..}) dappM
         -- it's safe to call partial function fromJust
 
         fromJust <$> DB.getProfile profileId
@@ -202,12 +219,15 @@ server ServerArgs{..} = NamedAPI
   , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
       addField ev address
       now <- getNow
+      -- verify whitelist
+      verifyWhiteList serverWhitelist address
       -- ensure the profile exists
       (pid,UserAddress userAddress) <- ensureProfile $  encodeUtf8 address
       --verify the wallet signature validation
       verifySignature key signature address
       -- verify the message timestamp
       verifyMessageTimeStamp signature
+
 
       let -- minimum between the expiration time and the jwtExpirationSeconds
           expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration

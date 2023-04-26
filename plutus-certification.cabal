@@ -49,6 +49,8 @@ library
     filepath,
     temporary,
     jwt ^>=0.11.0,
+    unordered-containers,
+    regex-compat,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -107,6 +109,7 @@ executable plutus-certification
     dapps-certification-helpers,
     swagger2,
     servant-swagger-ui,
+    unordered-containers,
   main-is: Main.hs
   hs-source-dirs: server
   other-modules: Paths_plutus_certification
@@ -132,6 +135,7 @@ executable plutus-certification-client
     http-types ^>= 0.12.3,
     dapps-certification-helpers,
     base16-bytestring,
+    regex-compat,
     plutus-certification
   main-is: Main.hs
   hs-source-dirs: client
