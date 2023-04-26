@@ -75,7 +75,7 @@ createCertification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertif
                     (profile.twitter) uri dappVersion
 
   -- broadcast the certification
-  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs certificate
+  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs 1304 certificate
     >>= eitherToError show
   addField ev (CreateCertificationTxResponse tx)
 

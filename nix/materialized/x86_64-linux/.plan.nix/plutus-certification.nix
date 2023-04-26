@@ -63,6 +63,8 @@
           (hsPkgs."filepath" or (errorHandler.buildDepError "filepath"))
           (hsPkgs."temporary" or (errorHandler.buildDepError "temporary"))
           (hsPkgs."jwt" or (errorHandler.buildDepError "jwt"))
+          (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
+          (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
           (hsPkgs."dapps-certification-signature-verification" or (errorHandler.buildDepError "dapps-certification-signature-verification"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
@@ -121,6 +123,7 @@
             (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
             (hsPkgs."swagger2" or (errorHandler.buildDepError "swagger2"))
             (hsPkgs."servant-swagger-ui" or (errorHandler.buildDepError "servant-swagger-ui"))
+            (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
             ];
           buildable = true;
           modules = [ "Paths_plutus_certification" ];
@@ -146,6 +149,7 @@
             (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
             (hsPkgs."dapps-certification-helpers" or (errorHandler.buildDepError "dapps-certification-helpers"))
             (hsPkgs."base16-bytestring" or (errorHandler.buildDepError "base16-bytestring"))
+            (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
             (hsPkgs."plutus-certification" or (errorHandler.buildDepError "plutus-certification"))
             ];
           buildable = true;

@@ -297,7 +297,7 @@ const Certification = () => {
       {formSubmitted && (
         <>
           <div id="resultContainer">
-            {runStatus !== "finished" ? (
+            {runStatus === "finished" ? (
               <button
                 className="back-btn"
                 onClick={(e) => {

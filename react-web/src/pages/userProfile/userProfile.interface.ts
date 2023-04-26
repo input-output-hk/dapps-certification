@@ -5,7 +5,8 @@ export interface IUserProfile {
     "name": string,
     "owner": string,
     "repo": string,
-    "version": string
+    "version": string,
+    "githubToken"?: string | null
   } | null,
   "linkedin"?: string,
   "twitter"?: string,
