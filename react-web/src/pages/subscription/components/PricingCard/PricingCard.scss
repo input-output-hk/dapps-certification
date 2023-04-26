@@ -1,0 +1,146 @@
+.card_content {
+    &.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+    width: 100%;
+  
+    @media only screen and (min-width: 1024px) {
+      width: 20rem;
+    }
+    .card_head {
+      margin: 0 0 20px 0;
+      background-color: #f6f6f6;
+      .card_head_content {
+        margin: 0 0 50px 0;
+        .head_bg {
+          border-color: #e4e4e4 rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) #e4e4e4;
+          border-style: solid;
+          border-width: 90px 1411px 23px 399px;
+          position: absolute;
+          transition: all 0.3s ease-in-out 0s;
+          -moz-transition: all 0.3s ease-in-out 0s;
+          -ms-transition: all 0.3s ease-in-out 0s;
+          -o-transition: all 0.3s ease-in-out 0s;
+          -webkit-transition: all 0.3s ease-in-out 0s;
+          &:hover {
+            border-color: #2ecc71 rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) #2ecc71;
+            color: #fff;
+          }
+        }
+        .head {
+          padding-top: 40px;
+          position: relative;
+          z-index: 1;
+          span {
+            color: #525252;
+            font-size: 28px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            margin: 0;
+            padding: 0;
+            text-transform: uppercase;
+          }
+        }
+      }
+    }
+    .card_price_tag {
+      padding: 0 0 20px;
+      .price {
+        display: block;
+        transition: all 0.3s ease-in-out 0s;
+        -moz-transition: all 0.3s ease-in-out 0s;
+        -ms-transition: all 0.3s ease-in-out 0s;
+        -o-transition: all 0.3s ease-in-out 0s;
+        -webkit-transition: all 0.3s ease-in-out 0s;
+        .sign {
+          color: #414141;
+          display: inline-block;
+          font-size: 28px;
+          font-weight: 400;
+          vertical-align: middle;
+        }
+        .currency {
+          color: #414141;
+          font-size: 60px;
+          font-weight: 300;
+          letter-spacing: -2px;
+          line-height: 60px;
+          padding: 0;
+          vertical-align: middle;
+        }
+        .cent {
+          color: #414141;
+          display: inline-block;
+          font-size: 24px;
+          font-weight: 400;
+          vertical-align: bottom;
+        }
+        .month {
+          color: #414141;
+          font-size: 18px;
+          font-weight: 400;
+          letter-spacing: 3px;
+          vertical-align: bottom;
+        }
+      }
+    }
+    .card_feature_list {
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        li {
+          color: #666666;
+          font-size: 18px;
+          padding: 15px 0;
+          line-height: 22px;
+          span {
+            color: #414141;
+          }
+        }
+      }
+    }
+  }
+  .card_price_btn_fixed {
+    bottom: 0px;
+    width: 100%;
+    @media only screen and (min-width: 1024px) {
+        position: absolute;
+    }
+  }
+  .card_price_btn {
+    margin: 0.5rem;
+  }
+  .button-pay {
+    width: 90%;
+    padding: 1rem;
+    font-size: 1.5rem;
+    background-color: white;
+    border: 1px solid #2ecc71;
+    color: #2ecc71;
+    cursor: pointer;
+    &:hover {
+      background-color: #2ecc71;
+      color: white;
+    }
+  }
+  
+  .clearfix {
+    &:before {
+      display: table;
+      content: " ";
+    }
+  }
+.MuiPaper-root.MuiDialog-paper {
+  width: 100%;
+  button {
+    margin-left: 37%;
+  }
+}

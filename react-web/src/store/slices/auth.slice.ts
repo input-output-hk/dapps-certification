@@ -10,6 +10,8 @@ interface AuthState {
   userDetails: IUserProfile;
   loading: boolean;
   network: number | null;
+  subscribedFeatures: Array<"l1-run" | "l2-upload-report">;
+  adaUsdPrice: number;
 }
 
 // Define the initial state using that type
@@ -19,7 +21,9 @@ const initialState: AuthState = {
   wallet: null,
   userDetails: {dapp: null},
   loading: false,
-  network: null
+  network: null,
+  subscribedFeatures: [],
+  adaUsdPrice: 0
 };
 
 const clearLSCache = () => {
@@ -31,6 +35,11 @@ export const getProfileDetails: any = createAsyncThunk("getProfileDetails", asyn
   const response = await fetchData.get("/profile/current", data)
   // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
   return response.data
+})
+
+export const getCurrentAdaUsdPrice: any = createAsyncThunk("getCurrentAdaUsdPrice", async (data: any, {rejectWithValue}) => {
+  const response: any = await fetchData.get('/ada-usd-price')
+  return response.data;
 })
 
 export const authSlice = createSlice({
@@ -72,6 +81,15 @@ export const authSlice = createSlice({
       .addCase(getProfileDetails.rejected, (state) => {
         clearLSCache()
         return initialState
+      })
+      .addCase(getCurrentAdaUsdPrice.pending, (state) => {
+        // do nothing 
+      })
+      .addCase(getCurrentAdaUsdPrice.rejected, (state) => {
+        state.adaUsdPrice = 0
+      })
+      .addCase(getCurrentAdaUsdPrice.fulfilled, (state, actions) => {
+        state.adaUsdPrice = actions.payload;
       })
   }
 });

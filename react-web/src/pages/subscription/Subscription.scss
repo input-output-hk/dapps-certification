@@ -1,0 +1,29 @@
+.pricing-container {
+    font-family: Arial, Helvetica, sans-serif;
+    .pricing-card-container {
+      display: flex;
+      justify-content: space-around;
+      flex-direction: column;
+      @media only screen and (min-width: 1020px) {
+        flex-direction: row;
+      }
+    }
+    .subscription-content {
+      font-size: 1.3rem;
+      margin: 40px 0;
+      line-height: 1.8rem;
+    }
+    .tier-container {
+        margin-top: 50px;
+    }
+    h5 {
+        line-height: 56px;
+      font-size: 1.4rem;
+      color: #2ecc71;
+    }
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 1.3rem;
+      line-height: 26px;
+    }
+  }

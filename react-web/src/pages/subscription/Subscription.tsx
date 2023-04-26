@@ -1,9 +1,10 @@
-import React from "react";
-import MaintenancePage from "pages/maintenance/Maintenance";
-
+import { Outlet } from 'react-router-dom';
+import "./Subscription.scss";
 
 const Subscription = () => {
-  return <MaintenancePage />;
-}
+  return (
+    <Outlet />
+  );
+};
 
 export default Subscription;
