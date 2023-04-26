@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { onRequest, onRequestError } from "./onRequest";
+import { onRequest, onRequestError, onRepoAccessRequest } from "./onRequest";
 
 export const BASE_URL = process.env.REACT_APP_BASE_URL;
 
@@ -26,6 +26,21 @@ export const fetchImage = axios.create({
   }
 })
 
+export const getRepoAccess = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    "Content-type": "application/json",
+    Accept: "application/json",
+  },
+})
+
+export const postExternal = axios.create({
+  headers: {
+    "Content-type": "application/json",
+    Accept: "application/json",
+  },
+})
+
 fetchData.interceptors.request.use(
   (config: AxiosRequestConfig) => onRequest(config),
   onRequestError
@@ -35,3 +50,8 @@ postData.interceptors.request.use(
   (config: AxiosRequestConfig) => onRequest(config),
   onRequestError
 );
+
+getRepoAccess.interceptors.request.use(
+  (config: AxiosRequestConfig) => onRepoAccessRequest(config),
+  onRequestError
+)

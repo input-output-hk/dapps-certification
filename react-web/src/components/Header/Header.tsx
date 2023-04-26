@@ -2,15 +2,16 @@ import React, { useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch, useAppSelector } from "store/store";
-import { logout, getProfileDetails, setNetwork } from "store/slices/auth.slice";
+import { logout, getProfileDetails, setNetwork, setSubscribedFeatures } from "store/slices/auth.slice";
 import "./Header.scss";
 
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import { useDelayedApi } from "hooks/useDelayedApi";
+import { fetchData } from "api/api";
 
 const Header = () => {
-  const { isLoggedIn, address, wallet, network } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, address, wallet, network, subscribedFeatures } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
@@ -27,9 +28,14 @@ const Header = () => {
         try {
           const enabledWallet = await window.cardano[walletNameCache].enable()
           dispatch(getProfileDetails({"address": addressCache, "wallet": enabledWallet, "walletName": walletNameCache}))
-          enabledWallet.getNetworkId().then(async (data: number) => { console.log('new network -', data)
+          enabledWallet.getNetworkId().then(async (data: number) => { 
             dispatch(setNetwork(data))
           })
+          const features = await fetchData.get("/profile/current/subscriptions/active-features")
+          dispatch(setSubscribedFeatures(features.data))
+          if (!features.data?.length) {
+            navigate('/subscription')
+          }
         } catch(e) {
           console.log(e)
         }
@@ -37,13 +43,13 @@ const Header = () => {
     }
   }, [dispatch])
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      navigate("/");
-    }
-  // can't add navigate to the array as it would break internal navigations
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  // useEffect(() => {
+  //   if (isLoggedIn) {
+  //     navigate("/");
+  //   }
+  // // can't add navigate to the array as it would break internal navigations
+  // // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [isLoggedIn]);
 
   useEffect(() => {
     setPollForAddress(wallet && address && isLoggedIn);
@@ -132,6 +138,9 @@ const Header = () => {
         <li>
           <Link to="support">Support</Link>
         </li>
+        {subscribedFeatures.indexOf('l2-upload-report') !== -1 ? (<li>
+          <Link to="auditor">Auditor</Link>
+        </li>) : null}
         <li>
           <Link to="subscription">Subscription</Link>
         </li>
@@ -158,7 +167,7 @@ const Header = () => {
     <header className="header">
       <Link to="/" state={{insideNavigation: true}}>
         <img
-          src="images/logo.png"
+          src="/images/logo.png"
           alt="IOHK logo"
           style={{ width: "82px", padding: "10px" }}
         />
