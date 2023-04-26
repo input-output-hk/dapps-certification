@@ -12,7 +12,6 @@ import "./Payment.scss";
 import dayjs from "dayjs";
 import { Subscription } from "../Subscription.interface";
 
-
 function Payment() {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -27,37 +26,37 @@ function Payment() {
   let currentTierPrice: BigNum = BigNum.from_str(zeroVal.toString());
   let currentSubscriptionId: string = '';
 
-  const onCloseModal = () => { 
-    setOpenModal(false)
-    navigate(-1)
-  }
+  const onCloseModal = () => {
+    setOpenModal(false);
+    navigate(-1);
+  };
 
   const handleError = (errorObj: any) => {
-    let errorMsg = ''
-    if (typeof errorObj === 'string') {
-        errorMsg = errorObj + ' Please try again.'
+    let errorMsg = "";
+    if (typeof errorObj === "string") {
+      errorMsg = errorObj + " Please try again.";
     } else if (errorObj?.info) {
-        errorMsg = errorObj.info + ' Please try again.'
+      errorMsg = errorObj.info + " Please try again.";
     } else if (errorObj?.response?.message) {
-        errorMsg = errorObj?.response.message + ' Please try again.'
+      errorMsg = errorObj?.response.message + " Please try again.";
     } else if (errorObj?.response?.data) {
-        errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
+      errorMsg = errorObj.response.statusText + " - " + errorObj.response.data;
     } else {
-      errorMsg = 'Something wrong occurred. Please try again later.'
+      errorMsg = "Something wrong occurred. Please try again later.";
     }
     setShowError(errorMsg);
-    setProcessing(false)
-    const timeout = setTimeout(() => { 
-      clearTimeout(timeout); 
-      setShowError("") 
-    }, 5000)
-    setOpenModal(false)
-    console.log(errorMsg)
-}
+    setProcessing(false);
+    const timeout = setTimeout(() => {
+      clearTimeout(timeout);
+      setShowError("");
+    }, 5000);
+    setOpenModal(false);
+    console.log(errorMsg);
+  };
 
   useEffect(() => {
-    error && handleError(error)
-  }, [error])
+    error && handleError(error);
+  }, [error]);
 
   const triggerPayment = async () => {
     setShowError("");
@@ -91,14 +90,16 @@ function Payment() {
   };
 
   const triggerTransactionFromWallet = async (fee_in_lovelace: BigNum) => {
-    const response = await dispatch(payFromWallet({fee: fee_in_lovelace, wallet: wallet, address: address}))
+    const response = await dispatch(
+      payFromWallet({ fee: fee_in_lovelace, wallet: wallet, address: address })
+    );
     if (response.payload) {
       setTransactionId(response.payload);
       fetchCurrentSubscription(true)
     } else if (response?.error?.message) {
       handleError(response.error.message);
     }
-  }
+  };
 
   const fetchCurrentSubscription = (isAfterPayment?: boolean) => {
     fetchData.get("/profile/current/subscriptions").then((response: {data: Subscription[]}) => {

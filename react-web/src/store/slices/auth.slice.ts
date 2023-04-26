@@ -57,6 +57,9 @@ export const authSlice = createSlice({
     },
     setNetwork: (state, actions) => {
       state.network = actions.payload
+    },
+    setSubscribedFeatures: (state, actions) => {
+      state.subscribedFeatures = actions.payload
     }
   },
   extraReducers: (builder) => {
@@ -95,6 +98,6 @@ export const authSlice = createSlice({
 });
 
 
-export const { logout, clearCache, setNetwork } = authSlice.actions;
+export const { logout, clearCache, setNetwork, setSubscribedFeatures} = authSlice.actions;
 
 export default authSlice.reducer;
