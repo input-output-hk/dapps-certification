@@ -62,8 +62,8 @@ function Payment() {
     setShowError("");
     setProcessing(true);
     try {
-      const response: {data: BigNum} = await fetchData.get("/profile/current/balance")
-      if (response.data) {
+      const response: {data: number} = await fetchData.get("/profile/current/balance")
+      if (response.hasOwnProperty('data') && typeof response.data === 'number') {
         const availableProfileBalance: BigNum = BigNum.from_str(response.data.toString());
         let lessBalance = false
         if (availableProfileBalance.less_than(currentTierPrice)) {
@@ -136,6 +136,12 @@ function Payment() {
       }).catch(handleError);
   }
 
+  useEffect(() => {
+    if (!state) {
+      navigate(-1)
+    }
+  })
+  
   const renderPage = () => {
     return (
     <div className="payment-container">

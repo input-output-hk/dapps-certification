@@ -107,7 +107,7 @@ const TableComponent: FC<any> = ({
                 onClick={(e) => setShowPivot(!showPivot)}
               >
                 <span className="sideBarButtonIcon">
-                  <img src="images/grid.svg" alt="colvis" title="Show/Hide Columns"/>
+                  <img src="/images/grid.svg" alt="colvis" title="Show/Hide Columns"/>
                 </span>
               </button>
             </div>
@@ -134,13 +134,13 @@ const TableComponent: FC<any> = ({
                             column.isSortedDesc ? (
                               <img
                                 className="sort-icon"
-                                src="images/descIcon.svg"
+                                src="/images/descIcon.svg"
                                 alt="descIcon"
                               />
                             ) : (
                               <img
                                 className="sort-icon"
-                                src="images/ascIcon.svg"
+                                src="/images/ascIcon.svg"
                                 alt="ascIcon"
                               />
                             )

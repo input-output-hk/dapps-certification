@@ -1,17 +1,4 @@
 #testHistory {
-  margin: 2rem;
-  position: relative;
-  th {
-    font-weight: bold !important;
-  }
-  .col-header {
-    display: flex;
-    white-space: nowrap;
-    img {
-      width: 15px;
-      margin-left: 5px;
-    }
-  }
   .sync-btn {
     background-color: transparent;
     background-repeat: no-repeat;
@@ -20,32 +7,9 @@
     overflow: hidden;
     outline: none;
   }
-  .icon {
-    width: 15px;
-    vertical-align: text-top;
-    margin-left: 8px;
-    cursor: pointer;
-  }
-  .trash-icon-btn {
-    border: none;
-    cursor: pointer;
-    appearance: none;
-    background-color: inherit;
-  }
-  .trim-cell-text {
-    max-width: 85px;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    display: block;
-    cursor: default;
-  }
   td {
     span.run-status {
       padding: 0 1px;
-    }
-    .cell-highlight {
-      background: yellow;
     }
   }
 }

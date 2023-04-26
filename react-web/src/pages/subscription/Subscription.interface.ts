@@ -1,5 +1,3 @@
-import { BigNum } from "@emurgo/cardano-serialization-lib-browser";
-
 export interface TierFeature {
     "id": "l1-run" | "l2-upload-report"
     "name": string;
@@ -9,7 +7,8 @@ export interface Subscription {
     "features": Array<TierFeature>;
     "id": string;
     "name": string;
-    "price": BigNum,
+    "price": number,
+    "adaUsdPrice": number,
     "profileId": string;
     "startDate": string;
     "status": SubscriptionStatus;
