@@ -29,7 +29,11 @@ const ConnectWallet = () => {
     const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
     const [walletLoading, setWalletLoading] = useState(false)
 
-    const openConnectWalletModal = useCallback(() => setIsOpen(true),[])
+    const openConnectWalletModal = useCallback(() => {
+        setErrorToast({display: false})
+        setWallet(null)
+        setIsOpen(true)
+    },[])
 
     const onCloseModal = useCallback(() => setIsOpen(false),[]) 
 
@@ -58,17 +62,14 @@ const ConnectWallet = () => {
         } else {
           setErrorToast({display: true})
         }
-        setTimeout(() => { setErrorToast({display: false}) }, 3000)
     }
 
     const initiatePrivateWalletSignature = (currentWallet: any, walletAddr_bech32: any, walletAddr: string) => {
         fetchData.get('/server-timestamp').then(async (res) => {
             const timestamp = res.data;
-            const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>>`;
+            const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>> \n Expiry: 60 seconds`;
             try {
                 const {key, signature} = await currentWallet.signData(walletAddr, Buffer.from(msgToBeSigned, 'utf8').toString('hex'))
-                console.log(key, signature)
-
                 if (key && signature) {
                     fetchData.post('/login', {
                         address: walletAddr_bech32,
@@ -89,7 +90,6 @@ const ConnectWallet = () => {
             } catch (err) {
                 handleError(err)
                 setWalletLoading(false)
-                setIsOpen(false)
                 dispatch(logout())
             }
         }).catch((err) => {
