@@ -39,7 +39,7 @@ const Button: FC<IButtonProps> = ({
       ) : (
         <>
           {iconUrl && (
-            <img className="icon-image" src={iconUrl} alt="icon-img" />
+            <img data-testid="btn-icon" className="icon-image" src={iconUrl} alt="icon-img" />
           )}
           <span className="button-label">{buttonLabel}</span>
         </>
