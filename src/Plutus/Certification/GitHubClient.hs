@@ -15,6 +15,8 @@ module Plutus.Certification.GitHubClient
   , GitHubAccessToken(..)
   , RepositoryInfo(..)
   , getRepoInfo
+  , AccessTokenGenerationResponse(..)
+  , generateGithubAccessToken
   ) where
 
 import Data.Aeson
@@ -131,7 +133,7 @@ instance FromJSON Commit
 instance FromJSON CommitDetails
 instance FromJSON Author
 
-type API = "repos"
+type RepoAPI = "repos"
          :> Header "User-Agent" Text
          :> Header "Authorization" GitHubAccessToken
          :> Capture "owner" Text
@@ -141,42 +143,48 @@ type API = "repos"
           :<|> Get '[JSON] RepositoryInfo
             )
 
-api :: Proxy API
+
+api :: Proxy RepoAPI
 api = Proxy
 
 type Repo = Text
 type Owner = Text
 
-mkClient :: Maybe GitHubAccessToken
+mkRepoClient :: Maybe GitHubAccessToken
          -> Repo
          -> Owner
          -> (Text -> ClientM BranchResponse)
           :<|> (Text -> ClientM Commit)
           :<|> ClientM RepositoryInfo
-mkClient = client api (Just "")
+mkRepoClient = client api (Just "")
 
 instance ToHttpApiData GitHubAccessToken where
   toUrlPiece = ("Bearer " <>) . ghAccessTokenToText
 
+githubApiBaseUrl :: BaseUrl
+githubApiBaseUrl = BaseUrl Https "api.github.com" 443 ""
+
+createSettings :: BaseUrl -> IO ClientEnv
+createSettings url' = flip mkClientEnv url' <$> newManager tlsManagerSettings
+
 -- | Binds the client to a specific owner , repo and github access token
 -- also applies same settings and https github domain
 -- returns a tuple of 3 functions: getBranch, getCommit, getRepo
-bindClient :: Maybe GitHubAccessToken
+bindRepoClient :: Maybe GitHubAccessToken
            -> Repo
            -> Owner
            -> ( Text -> IO (Either ClientError BranchResponse)
               , Text -> IO (Either ClientError Commit)
               , IO (Either ClientError RepositoryInfo)
               )
-bindClient githubAccessToken owner repo =
-  ( \path' -> mkSettings >>= runClientM (getBranch path' )
-  , \path' -> mkSettings >>= runClientM (getCommit path' )
-  , mkSettings >>= runClientM getRepo
+bindRepoClient githubAccessToken owner repo =
+  ( \path' -> settings >>= runClientM (getBranch path' )
+  , \path' -> settings >>= runClientM (getCommit path' )
+  , settings >>= runClientM getRepo
   )
   where
-  mkSettings = flip mkClientEnv (BaseUrl Https "api.github.com" 443 "")
-            <$> newManager tlsManagerSettings
-  getBranch :<|> getCommit :<|> getRepo = mkClient githubAccessToken owner repo
+  settings = createSettings githubApiBaseUrl
+  getBranch :<|> getCommit :<|> getRepo = mkRepoClient githubAccessToken owner repo
 
 -- | Tries to get the commit info from a branch,
 -- if it fails it tries to get it from the commit
@@ -186,7 +194,7 @@ getCommitInfo :: Maybe GitHubAccessToken
               -> Text
               -> IO (Either ClientError Commit)
 getCommitInfo githubAccessToken owner repo path' = do
-  let (getBranch, getCommit,_) = bindClient githubAccessToken owner repo
+  let (getBranch, getCommit,_) = bindRepoClient githubAccessToken owner repo
   -- first try branch
   respE <- getBranch path'
   case respE of
@@ -199,6 +207,73 @@ getRepoInfo :: Maybe GitHubAccessToken
             -> Owner
             -> IO (Either ClientError RepositoryInfo)
 getRepoInfo githubAccessToken owner repo = do
-  let (_, _, getRepo') = bindClient githubAccessToken owner repo
+  let (_, _, getRepo') = bindRepoClient githubAccessToken owner repo
   getRepo'
 
+--------------------------------------------------------------------------------
+-- | GITHUB AUTH TOKEN
+
+-- an example to get an access token
+type AccessTokenAPI
+  = "login"
+  :> "oauth"
+  :> "access_token"
+  :> Header "User-Agent" Text
+  :> QueryParam "client_id" Text
+  :> QueryParam "client_secret" Text
+  :> QueryParam "code" Text
+  :> Post '[JSON] AccessTokenGenerationResponse
+
+accessTokenAPI :: Proxy AccessTokenAPI
+accessTokenAPI = Proxy
+
+data AccessTokenGenerationResponse = AccessTokenGenerationResponse
+  { accessToken :: !GitHubAccessToken
+  , tokenType :: !(Maybe Text)
+  , scope :: !(Maybe Text)
+  } deriving (Generic)
+
+instance FromJSON AccessTokenGenerationResponse where
+    parseJSON = withObject "AccessTokenGenerationResponse" $ \v -> do
+      accessToken' <- v .: "access_token"
+      case ghAccessTokenFromText accessToken' of
+        Left err -> fail err
+        Right ghAccessToken -> AccessTokenGenerationResponse ghAccessToken
+          <$> v .: "token_type"
+          <*> v .: "scope"
+
+instance ToSchema AccessTokenGenerationResponse where
+   declareNamedSchema _ = do
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    textSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe Text))
+    return $ NamedSchema (Just "Profile") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("access_token", textSchema)
+          , ("token_type", textSchemaM)
+          , ("scope", textSchemaM)
+          ]
+      & required .~ [ "access_token" ]
+
+instance ToJSON AccessTokenGenerationResponse where
+  toJSON (AccessTokenGenerationResponse accessToken' tokenType' scope') =
+    object [ "access_token" .= ghAccessTokenToText accessToken'
+           , "token_type" .= tokenType'
+           , "scope" .= scope'
+           ]
+type ClientId = Text
+type ClientSecret = Text
+type Code = Text
+
+-- | Generates a github access token based on the client id,
+-- client secret and code
+generateGithubAccessToken :: ClientId       -- ^ client id
+                          -> ClientSecret   -- ^ client secret
+                          -> Code           -- ^ code
+                          -> IO (Either ClientError AccessTokenGenerationResponse)
+generateGithubAccessToken clientId clientSecret code = do
+  settings <- createSettings baseUrl'
+  let client' = client accessTokenAPI (Just "") (Just clientId) (Just clientSecret) (Just code)
+  runClientM client' settings
+  where
+  baseUrl' = BaseUrl Https "github.com" 443 ""

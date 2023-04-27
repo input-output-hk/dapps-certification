@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { getRepoAccess, postExternal } from "api/api";
+import { getRepoAccess, postExternal,fetchData } from "api/api";
+import { AxiosResponse } from "axios";
 
 interface RepoAccessState {
     verifying: boolean,
@@ -28,10 +29,9 @@ export const verifyRepoAccess = createAsyncThunk(
   );
 
 
-export const getUserAccessToken = createAsyncThunk("getUserAccessToken", async(payload: any, {rejectWithValue}) => {
-    const response: any = postExternal.post("https://github.com/login/oauth/access_token" + payload.queryParams)
-    return response
-})  
+export const getUserAccessToken = createAsyncThunk("getUserAccessToken", async(payload: any) => 
+    fetchData.post<any,AxiosResponse<{access_token: string}>,any>(`/github/access-token/${payload.code}`)
+)
 
 export const repoAccessSlice = createSlice({
   name: "repoAccess",
@@ -70,7 +70,7 @@ export const repoAccessSlice = createSlice({
         state.accessToken = ""
       })
       .addCase(getUserAccessToken.pending, (state, actions) => {
-        
+
       })
       .addCase(getUserAccessToken.fulfilled, (state, actions) => { console.log('payload-', actions.payload)
         const token: string = actions.payload?.data.access_token

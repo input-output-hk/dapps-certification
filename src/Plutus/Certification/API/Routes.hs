@@ -37,7 +37,7 @@ import Data.Time
 import Data.Proxy
 import Plutus.Certification.WalletClient
 import Control.Lens hiding ((.=))
-import Plutus.Certification.GitHubClient (RepositoryInfo)
+import Plutus.Certification.GitHubClient (RepositoryInfo,AccessTokenGenerationResponse)
 import Control.Arrow (ArrowChoice(left))
 import GHC.TypeLits
 import Servant.Client (BaseUrl)
@@ -143,6 +143,15 @@ type GitHubRoute = "repo"
   :> Servant.Header "Authorization" ApiGitHubAccessToken
   :> Get '[JSON] RepositoryInfo
 
+type GenerateGitHubTokenRoute = "github" :> "access-token"
+  :> Description "Generate a github access token"
+  :> Capture "code" Text
+  :> Post '[JSON] AccessTokenGenerationResponse
+
+type GetGitHubClientId = "github" :> "client-id"
+  :> Description "Get the application client id"
+  :> Get '[JSON] Text
+
 type LoginRoute = "login"
   :> Description "Get a jwt token based on the provided credentials"
   :> ReqBody '[JSON] LoginBody
@@ -151,6 +160,7 @@ type LoginRoute = "login"
 type ServerTimestamp = "server-timestamp"
   :> Description "Get the current server timestamp"
   :> Get '[JSON] Integer
+
 
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
@@ -236,6 +246,8 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getRepositoryInfo :: mode :- GitHubRoute
   , login :: mode :- LoginRoute
   , serverTimestamp :: mode :- ServerTimestamp
+  , generateGitHubToken :: mode :- GenerateGitHubTokenRoute
+  , getGitHubClientId :: mode :- GetGitHubClientId
   } deriving stock Generic
 
 data DAppBody = DAppBody

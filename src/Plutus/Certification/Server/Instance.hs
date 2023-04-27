@@ -59,16 +59,22 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   }
 
 
+data GitHubCredentials = GitHubCredentials
+  { githubClientId :: !Text
+  , githubClientSecret :: !Text
+  } deriving (Show, Eq )
+
 -- | A type for server arguments including the wallet arguments
 -- and the github access token as optional
 data ServerArgs m r = ServerArgs
-  { serverCaps :: ServerCaps m r
-  , serverWalletArgs :: Wallet.WalletArgs
-  , githubToken :: Maybe GitHubAccessToken
-  , serverJWTArgs :: Maybe JWTArgs
-  , serverEventBackend :: EventBackend m r ServerEventSelector
-  , serverSigningTimeout :: Seconds
-  , serverWhitelist :: Maybe Whitelist
+  { serverCaps :: !(ServerCaps m r)
+  , serverWalletArgs :: !Wallet.WalletArgs
+  , githubToken :: !(Maybe GitHubAccessToken)
+  , serverJWTArgs :: !(Maybe JWTArgs)
+  , serverEventBackend :: !(EventBackend m r ServerEventSelector)
+  , serverSigningTimeout :: !Seconds
+  , serverWhitelist :: !(Maybe Whitelist)
+  , serverGitHubCredentials :: !(Maybe GitHubCredentials)
   }
 
 type Whitelist = HashSet Text
@@ -147,7 +153,7 @@ server ServerArgs{..} = NamedAPI
       runConduit
          $ getLogs (setAncestor $ reference ev) actionTypeM rid
         .| (dropWhileC dropCond >> sinkList)
-  , getRuns = \(profileId,_) afterM countM -> do
+  , getRuns = \(profileId,_) afterM countM ->
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
@@ -163,8 +169,8 @@ server ServerArgs{..} = NamedAPI
                 , twitter=twitter'
                 , linkedin=fmap unLinkedIn linkedin
                 ,..}) dappM
-        -- it's safe to call partial function fromJust
 
+        -- it's safe to call partial function fromJust
         fromJust <$> DB.getProfile profileId
   , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
 
@@ -208,6 +214,7 @@ server ServerArgs{..} = NamedAPI
     addField ev rid
     DB.withDb (DB.getCertification uuid)
       >>= maybeToServerError err404 "Certification not found"
+
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
     addField ev (GetRepoInfoOwner owner)
     addField ev (GetRepoInfoRepo repo)
@@ -216,6 +223,7 @@ server ServerArgs{..} = NamedAPI
         -- provided from arguments
         ghAccessTokenM' =  ghAccessTokenM <|> githubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
+
   , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
       addField ev address
       now <- getNow
@@ -236,6 +244,22 @@ server ServerArgs{..} = NamedAPI
       -- encode jwt with with expiration time
       pure $ jwtEncode jwtSecret expiresAt (DB.fromId pid, userAddress)
   , serverTimestamp = withEvent eb Version (const $ round . utcTimeToPOSIXSeconds <$> getNow)
+
+  , generateGitHubToken = \code -> withEvent eb GenerateGitHubToken \ev -> do
+      case serverGitHubCredentials of
+        Nothing -> throwError err404 { errBody = "GitHub credentials not configured" }
+        Just GitHubCredentials{..} -> do
+          respE <- liftIO $ generateGithubAccessToken githubClientId githubClientSecret code
+          either (\err -> do
+           addField ev (GenerateGitHubTokenError $ show err)
+           -- let's hide the error from the user from security reasons
+           throwError err400 { errBody = "Invalid code or something went wrong" }
+           ) pure respE
+
+  , getGitHubClientId = withEvent eb GetGitHubClientId \_ ->
+      case serverGitHubCredentials of
+        Nothing -> throwError err404 { errBody = "GitHub credentials not configured" }
+        Just GitHubCredentials{..} -> pure githubClientId
   }
   where
     fromClientResponse = \case
