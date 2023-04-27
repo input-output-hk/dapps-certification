@@ -44,6 +44,7 @@ const TableComponent: FC<any> = ({
     page,
     gotoPage,
     setPageSize,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     state: { pageIndex, pageSize },
   } = useTable(
     {

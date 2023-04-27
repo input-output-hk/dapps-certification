@@ -1,10 +1,6 @@
-import React from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 
-import { useAppSelector } from "store/store";
-
 import NotAuthorized from "components/NotAuthorized/NotAuthorized";
-
 import { IUserProfile } from "pages/userProfile/userProfile.interface";
 
 const PrivateRoutes = () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails, setNetwork } from "store/slices/auth.slice";
@@ -6,7 +6,6 @@ import { getProfileDetails, setNetwork } from "store/slices/auth.slice";
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 import Loader from "components/Loader/Loader";
-import Toast from "components/Toast/Toast";
 
 import './ConnectWallet.scss';
 
@@ -63,7 +62,7 @@ const ConnectWallet = () => {
         if (address) {
             (async () => {
                 try {
-                    const response: any = await dispatch(getProfileDetails({"address": address, "wallet": wallet, "walletName": walletName})).catch(handleError)
+                    await dispatch(getProfileDetails({"address": address, "wallet": wallet, "walletName": walletName})).catch(handleError)
                     setWalletLoading(false)
                 } catch(error) {
                     setWalletLoading(false)

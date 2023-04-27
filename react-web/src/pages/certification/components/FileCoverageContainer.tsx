@@ -17,7 +17,7 @@ const FileCoverageContainer: React.FC<{
     }
 
     const parseHTMLContents = (filename: string) => {
-        const pattern = new RegExp("<h2(.*)>"+filename+"<\/h2>")
+        const pattern = new RegExp("<h2(.*)>"+filename+"</h2>")
         const pre = coverageFile.split(pattern)
         const content = pre[2].split('</pre>')[0] + '</pre>'
         return parse(content);

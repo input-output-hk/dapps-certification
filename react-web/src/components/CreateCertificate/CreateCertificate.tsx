@@ -52,10 +52,6 @@ const CreateCertificate = () => {
 
     const onCloseModal = () => { setOpenModal(false) }
 
-    const convertAdaToLovelace = (fee_ada: number) => {
-        return BigNum.from_str((fee_ada * 1000000).toString())
-    }
-
     const handleError = (errorObj: any) => {
         let errorMsg = ''
         if (typeof errorObj === 'string') {
@@ -130,10 +126,6 @@ const CreateCertificate = () => {
             const walletAddressRes: any = await fetchData.get('/wallet-address').catch(handleError)
             const applicationWallet_receiveAddr = walletAddressRes.data;
             const cert_fee_lovelace: BigNum = BigNum.from_str(cert_fee_in_lovelaces.toString())
-            /** For mock */
-            // const applicationWallet_receiveAddr = 'addr_test1qz2rzeqq8n82gajfp35enq3mxhaynx6zhuql2c7yaljr25mfaznfszxu8275k6v7n05w5azzmxahfzdq564xuuyg73pqnqtrrc'
-            // const cert_fee_ada = 3
-            // const cert_fee_lovelace = convertAdaToLovelace(cert_fee_ada)
 
             const protocolParams: any = {
                 linearFee: {
