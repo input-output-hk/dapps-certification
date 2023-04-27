@@ -41,8 +41,8 @@
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "build:production": "REACT_APP_ENV=production yarn build",
-    "test": "react-app-rewired test --passWithNoTests",
-    "test:coverage": "react-app-rewired test --coverage --passWithNoTests",
+    "test": "react-app-rewired test",
+    "test:coverage": "react-app-rewired test --coverage",
     "eject": "react-app-rewired eject"
   },
   "eslintConfig": {
