@@ -11,10 +11,10 @@ import { useAppDispatch, useAppSelector } from "store/store";
 import "./UserProfile.scss";
 import { userProfileSchema } from "./userProfile.schema";
 import { IUserProfile } from "./userProfile.interface";
-import { clearStates, 
-  clearAccessToken, 
-  getUserAccessToken, 
-  verifyRepoAccess, 
+import { clearStates,
+  clearAccessToken,
+  getUserAccessToken,
+  verifyRepoAccess,
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
 import Toast from "components/Toast/Toast";
 
@@ -58,14 +58,14 @@ const UserProfile = () => {
       owner?: string;
       version?: string;
     } = { contacts, authors, linkedin, twitter, vendor, website };
-    
+
     const profileInLS: any = localStorage.getItem('profile')
     if (profileInLS && profileInLS !== 'undefined') {
       const profileFormData = JSON.parse(profileInLS);
       setOwner(profileFormData.owner);
       setRepo(profileFormData.repo)
       form.reset(profileFormData)
-    } 
+    }
     else if (dapp !== null) {
       const { name, owner, repo, version } = dapp
       formData = { ...formData, name, version }
@@ -73,7 +73,7 @@ const UserProfile = () => {
       setRepo(repo)
       form.reset(formData);
     }
-    
+
     if (!userDetails.dapp?.owner || !userDetails.dapp?.repo || profileInLS) {
       setIsEdit(true);
     }
@@ -132,18 +132,18 @@ const UserProfile = () => {
       }).catch((errorObj) => {
         let errorMsg = 'Something went wrong. Please try again.'
         if (errorObj?.response?.data) {
-          errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
+          errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data
         }
         setShowError(errorMsg);
         const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
-        
+
       })
     };
     submitProfile();
   };
 
   useEffect(() => {
-    if (focussedOwnerRepo) {    
+    if (focussedOwnerRepo) {
       if (timer) {
         clearTimeout(timer)
         setTimer(null);
@@ -180,22 +180,15 @@ const UserProfile = () => {
     setFocussedOwnerRepo(false)
     setCanShowConnectModal(false)
   }
-  
-  const CLIENT_ID = "10c45fe6a101a3abe3a0"; //of CertificationApp OAuthApp owned by CertGroup in anusree91
-  const CLIENT_SECRET = "9fe0553a4727c47b434e732c3e258ba54c992051";
-  // Lists all repo and have to manually click 'Grant' for the repo we need. 
+
+  // Lists all repo and have to manually click 'Grant' for the repo we need.
   // If that is not chosen, it doesn't ask again for permission
-
-
-  // const CLIENT_ID = "Iv1.78d108e12af627c4" // of CertTestApp GithubApp under CertGroup in anusree91
-  // const CLIENT_SECRET = "a77d34c1ffde5c4a7f0749fd7f969d6bbcda1ae7"
 
   useEffect(() => {
     // to extract ?code= from the app base url redirected after Github connect
     if (githubAccessCode) {
       (async () => {
-        const params = "?client_id=" + CLIENT_ID + "&client_secret=" + CLIENT_SECRET + "&code=" + githubAccessCode
-        await dispatch(getUserAccessToken({queryParams: params}))
+        await dispatch(getUserAccessToken({code: githubAccessCode}))
         searchParams.delete("code");
         setSearchParams(searchParams);
         const formData = form.getValues()
@@ -215,30 +208,29 @@ const UserProfile = () => {
       setCanShowConnectModal(false)
       localStorage.removeItem('profile')
     }
-    // the enclosed snippet is to be triggered only once right when the component is rendered to check if the url contains code (to validate if it is a redirect from github) 
+    // the enclosed snippet is to be triggered only once right when the component is rendered to check if the url contains code (to validate if it is a redirect from github)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const connectToGithub = () => {
+  const connectToGithub = async () => {
     const data = {...form.getValues(), owner: owner, repo: repo}
     // store current form data in localStorage
     localStorage.setItem('profile', JSON.stringify(data))
 
-    // fetch CLIENT_ID from api 
-    window.location.assign("https://github.com/login/oauth/authorize?client_id=" + CLIENT_ID + "&scope=repo")
+    // fetch CLIENT_ID from api
+    const clientId = (await fetchData.get("/github/client-id")).data as string
+    window.location.assign(`https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo`)
   }
 
 
   const confirmConnectModal = () => {
     setTimeout(() => {
-      confirm({ 
-        title: "Verify the Repository details", 
+      confirm({
+        title: "Verify the Repository details",
         description: "Unable to find the entered repository. Please go back and correct the Owner/Repository. Or, is this a Private one? If so, please hit Connect to authorize us to access it!",
         confirmationText: "Connect",
         cancellationText: "Go back"
-      }).then(async () => {
-          connectToGithub()
-        })
+      }).then( connectToGithub )
     }, 0)
   }
 

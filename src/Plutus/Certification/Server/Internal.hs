@@ -32,7 +32,6 @@ import Control.Exception hiding (Handler)
 import Plutus.Certification.WalletClient (WalletAddress)
 
 import qualified IOHK.Certification.Persistence as DB
-import Control.Lens (only)
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -58,6 +57,9 @@ data GetRepoInfoField
   = GetRepoInfoOwner !Text
   | GetRepoInfoRepo !Text
 
+type Error = String
+newtype GenerateGitHubTokenField = GenerateGitHubTokenError Error
+
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
@@ -72,6 +74,8 @@ data ServerEventSelector f where
   StartCertification :: ServerEventSelector StartCertificationField
   Login :: ServerEventSelector WalletAddress
   ServerTimestamp :: ServerEventSelector Void
+  GenerateGitHubToken :: ServerEventSelector GenerateGitHubTokenField
+  GetGitHubClientId :: ServerEventSelector Void
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -84,6 +88,10 @@ renderServerEventSelector GetProfileBalance = ("get-profile-balance", renderProf
 renderServerEventSelector GetCertification = ("get-certification", renderRunIDV1)
 renderServerEventSelector Login = ("login", \address' -> ("user-address", toJSON address'))
 renderServerEventSelector ServerTimestamp = ("server-timestamp", absurd)
+renderServerEventSelector GenerateGitHubToken = ("generate-github-token", \
+    (GenerateGitHubTokenError err) -> ("error", toJSON err)
+  )
+renderServerEventSelector GetGitHubClientId = ("get-github-client-id", absurd)
 
 renderServerEventSelector CreateRun = ("create-run", \case
     CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")

@@ -40,6 +40,8 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute
+  :<|> GenerateGitHubTokenRoute
+  :<|> GetGitHubClientId
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth
