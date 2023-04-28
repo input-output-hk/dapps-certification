@@ -26,7 +26,7 @@ const ConnectWallet = () => {
     const [walletName, setWalletName] = useState("")
     const [address, setAddress] = useState("")
     const [isOpen, setIsOpen] = useState(false)
-    const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string;}>({display: false});
+    const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string; showRetry?: boolean}>({display: false});
     const [walletLoading, setWalletLoading] = useState(false)
 
     const openConnectWalletModal = useCallback(() => {
@@ -56,9 +56,17 @@ const ConnectWallet = () => {
 
     const handleError = (error: any) => {
         if (error.info) {
-            setErrorToast({display: true, message: error.info})
+            setErrorToast({
+                display: true, 
+                message: error.info, 
+                showRetry: error.code === 3})
         } else if (error.response) {
-          setErrorToast({display: true, statusText: error.response.statusText, message: error.response.data || undefined})
+            setErrorToast({
+                display: true, 
+                statusText: error.response.statusText, 
+                message: error.response.data || undefined,
+                showRetry: error.status === 403
+            })
         } else {
           setErrorToast({display: true})
         }
@@ -141,7 +149,10 @@ const ConnectWallet = () => {
                     }
                     { walletLoading ? <Loader /> : null}
                     {
-                        (errorToast && errorToast.display) ? (<span className="error">{errorToast.message}</span>): null
+                        (errorToast && errorToast.display) ? (<>
+                            <span className="error">{errorToast.message}</span>
+                            <span className="link" style={{marginLeft: '5px'}} onClick={openConnectWalletModal}>Retry</span>
+                        </>): null
                     }
                 </div>
             </Modal>
