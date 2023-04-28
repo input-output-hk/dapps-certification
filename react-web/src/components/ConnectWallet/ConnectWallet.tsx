@@ -72,6 +72,12 @@ const ConnectWallet = () => {
         }
     }
 
+    const catchError = (err: any) => {
+        handleError(err)
+        setWalletLoading(false)
+        dispatch(logout())
+    }
+
     const initiatePrivateWalletSignature = (currentWallet: any, walletAddr_bech32: any, walletAddr: string) => {
         fetchData.get('/server-timestamp').then(async (res) => {
             const timestamp = res.data;
@@ -89,21 +95,15 @@ const ConnectWallet = () => {
                             setAddress(walletAddr_bech32)
                         }
                     }).catch(err => {
-                        handleError(err)
-                        setWalletLoading(false)
-                        dispatch(logout())
+                        catchError(err)
                     })
                 }
 
             } catch (err) {
-                handleError(err)
-                setWalletLoading(false)
-                dispatch(logout())
+                catchError(err)
             }
         }).catch((err) => {
-            handleError(err)
-            setWalletLoading(false)
-            dispatch(logout())
+            catchError(err)
         })
     }
 
@@ -156,11 +156,6 @@ const ConnectWallet = () => {
                     }
                 </div>
             </Modal>
-            {/* {(errorToast && errorToast.display) ? (
-                ((errorToast.message && errorToast.statusText) ? 
-                <Toast message={errorToast.message} title={errorToast.statusText}/> :
-                <Toast />))
-            : null} */}
         </>
     )
 }
