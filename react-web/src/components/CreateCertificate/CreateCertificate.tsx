@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppSelector } from "store/store";
 
 import Button from "components/Button/Button";
@@ -49,7 +49,22 @@ const CreateCertificate = () => {
     const [ showError, setShowError ] = useState("");
     const [ openModal, setOpenModal ] = useState(false);
     const [ disableCertify, setDisableCertify ] = useState(false);
+    const [certificationPrice, setCertificationPrice] = useState(0);
 
+    // to run only once initially
+    useEffect(() => {
+        fetchData.get('/profile/current/balance').then(response => {
+            const availableProfileBalance: number = response.data
+            fetchData.get('/run/' + uuid + '/details').then(res => {
+                const runDetails: Run = res.data
+                if ((availableProfileBalance - runDetails.certificationPrice) < 0) {
+                    setCertificationPrice(runDetails.certificationPrice);
+                }
+            })
+        })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+    
     const onCloseModal = () => { setOpenModal(false) }
 
     const convertAdaToLovelace = (fee_ada: number) => {
@@ -112,17 +127,11 @@ const CreateCertificate = () => {
     const triggerGetCertificate = async () => {
         setCertifying(true);
         setShowError("")
-        fetchData.get('/profile/current/balance').then(response => {
-            const availableProfileBalance: number = response.data
-            fetchData.get('/run/' + uuid + '/details').then(res => {
-                const runDetails: Run = res.data
-                if ((availableProfileBalance - runDetails.certificationPrice) < 0) {
-                    triggerTransactionFromWallet(runDetails.certificationPrice)
-                } else {
-                    triggerSubmitCertificate()
-                }
-            })
-        })
+        if (certificationPrice) {
+            triggerTransactionFromWallet(certificationPrice)
+        } else {
+            triggerSubmitCertificate()
+        }
     }
     
     const triggerTransactionFromWallet = async (cert_fee_in_lovelaces: number) => {
@@ -197,7 +206,7 @@ const CreateCertificate = () => {
         {certified || disableCertify ? null : (<Button
             displayStyle="gradient"
             onClick={() => triggerGetCertificate()}
-            buttonLabel="Get Certificate"
+            buttonLabel={"Get Certificate " + (certificationPrice ? ("(" + (certificationPrice/1000000).toString() + " ADA)") : "")}
             showLoader={certifying}
         />)}
         {transactionId ? (
