@@ -1,0 +1,22 @@
+#auditReportUploadContainer {
+    max-width: 760px;
+    margin: 50px auto 0;
+    .separator-label {
+        margin: 50px 0 20px;
+    }
+    .bordered {
+        border: 2px solid #f7f7f7;
+        padding: 15px 20px;
+        margin: 20px 0 40px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .button-wrapper {
+        margin-top: 40px;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+    }
+}

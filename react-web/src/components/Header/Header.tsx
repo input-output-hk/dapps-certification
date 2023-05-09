@@ -137,13 +137,15 @@ const Header = () => {
       <>
         <li>
           <Link to="support">Support</Link>
-        </li>
-        {subscribedFeatures.indexOf('l2-upload-report') !== -1 ? (<li>
-          <Link to="auditor">Auditor</Link>
-        </li>) : null}
+        </li>        
         <li>
           <Link to="subscription">Subscription</Link>
         </li>
+        {subscribedFeatures.indexOf('l2-upload-report') !== -1 ? (
+          <li>
+            <Link to="auditing">Auditing</Link>
+          </li>
+        ) : null}
         <li>
           <Link to="history">Test History</Link>
         </li>

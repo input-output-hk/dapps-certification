@@ -1,0 +1,16 @@
+.script-item {
+    flex-direction: column;
+}
+.action-button {
+    clear: both;
+    float: left;
+    width: 100%;
+    margin-bottom: 10px;
+    margin-top: -28px;
+    button {
+        float: right;
+    }
+}
+.input-wrapper {
+    width: 100%;
+}
