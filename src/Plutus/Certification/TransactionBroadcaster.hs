@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Plutus.Certification.TransactionBroadcaster
-  ( createCertification
+  ( createL1Certification
   , renderTxBroadcasterSelector
   , TxBroadcasterSelector(..)
   ) where
@@ -52,13 +52,13 @@ renderTxBroadcasterSelector CreateCertification = ("create-certification", \case
   )
 
 -- caution: this function doesn't verify if the run has the proper status
-createCertification :: (MonadMask m,MonadIO m, MonadError IOException m)
-                    => EventBackend m r TxBroadcasterSelector
-                    -> WalletArgs
-                    -> DB.ProfileId
-                    -> RunIDV1
-                    -> m DB.Certification
-createCertification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertification \ev -> do
+createL1Certification :: (MonadMask m,MonadIO m, MonadError IOException m)
+                      => EventBackend m r TxBroadcasterSelector
+                      -> WalletArgs
+                      -> DB.ProfileId
+                      -> RunIDV1
+                      -> m DB.L1CertificationDTO
+createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertification \ev -> do
   addField ev (CreateCertificationRunID rid)
 
   -- getting required profile information before further processing
@@ -74,13 +74,13 @@ createCertification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertif
   let certificate = Wallet.CertificationMetadata uuid (DB.IpfsCid ipfsCid) dappName websiteUrl
                     (profile.twitter) uri dappVersion
 
-  -- broadcast the certification
+  -- broadcast the l1 certification
   tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs 1304 certificate
     >>= eitherToError show
   addField ev (CreateCertificationTxResponse tx)
 
   -- persist it into the db
-  (DB.withDb . DB.createCertificate uuid txRespId =<< getNow)
+  (DB.withDb . DB.createL1Certificate uuid txRespId =<< getNow)
     >>= maybeToError "Certification couldn't be persisted"
   where
     getRun = DB.withDb (DB.getRun uuid) >>= maybeToError "No Run"

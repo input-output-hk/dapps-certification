@@ -126,7 +126,7 @@ type GetCertificateRoute = "run"
   :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
   :> Capture "id" RunIDV1
   :> "certificate"
-  :> Get '[JSON] DB.Certification
+  :> Get '[JSON] DB.L1CertificationDTO
 
 type GetBalanceRoute (auth :: Symbol) = "profile"
   :> Description "Get the current balance of the profile"

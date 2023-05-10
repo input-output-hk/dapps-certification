@@ -19,8 +19,10 @@ module IOHK.Certification.Persistence.Structure where
 import           Control.Lens         hiding (index, (.=))
 import           Data.Aeson
 import           Data.Proxy
+--import           Control.Exception ( throw)
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
+--import           Database.Selda.SqlType as Selda
 import           GHC.OverloadedLabels
 import           Data.Int
 
@@ -118,41 +120,115 @@ instance ToSchema ProfileDTO where
 
 --------------------------------------------------------------------------------
 -- | Certification
+{-
+data CertificationLevel = L0 | L1 | L2 | L3
+  deriving (Generic,Show,Read,Eq,Ord,Enum)
+
+instance SqlType CertificationLevel where
+  mkLit n = LCustom TInt64 (LInt64 (toInt64 n))
+    where
+    toInt64 = \case
+      L0 -> 0
+      L1 -> 1
+      L2 -> 2
+      L3 -> 3
+  sqlType _ = TInt64
+  fromSql (SqlInt64 0) = L0
+  fromSql (SqlInt64 1) = L1
+  fromSql (SqlInt64 2) = L2
+  fromSql (SqlInt64 3) = L3
+  fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
+  defaultValue = mkLit L1
+
+instance ToJSON CertificationLevel where
+  toJSON = toJSON . \case
+    L0 -> "l0" :: String
+    L1 -> "l1"
+    L2 -> "l2"
+    L3 -> "l3"
+
+instance FromJSON CertificationLevel where
+  parseJSON = withText "CertificationLevel" $ \case
+    "l0" -> pure L0
+    "l1" -> pure L1
+    "l2" -> pure L2
+    "l3" -> pure L3
+    _    -> fail "CertificationLevel"
+
+instance ToSchema CertificationLevel where
+   declareNamedSchema _ = do
+     let values = [ "l0", "l1", "l2", "l3" ] :: [Value]
+     return $ NamedSchema (Just "CertificationLevel") $ mempty
+       & type_ ?~ SwaggerString
+       & enum_ ?~ values
+-}
 
 data Certification = Certification
-  { certRunId           :: UUID
+  { certId              :: ID Certification
   , certTransactionId   :: Text
   , certCreatedAt       :: UTCTime
   } deriving (Generic,Show)
 
 instance FromJSON Certification where
-    parseJSON = withObject "Certification" $ \v -> Certification
-      <$> v .: "runId"
-      <*> v .: "transactionId"
+    parseJSON = withObject "Certification" $ \v -> Certification def
+      <$> v .: "transactionId"
       <*> v .: "createdAt"
 
 instance ToJSON Certification where
   toJSON (Certification{..}) = object
       [ "transactionId" .= certTransactionId
       , "createdAt" .= certCreatedAt
-      , "runId" .= certRunId
       ]
 
 instance ToSchema Certification where
    declareNamedSchema _ = do
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     utcSchema <- declareSchemaRef (Proxy :: Proxy UTCTime)
-    uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
     return $ NamedSchema (Just "Certification") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("transactionId", textSchema)
           , ("createdAt", utcSchema)
-          , ("runId", uuidSchema)
           ]
-      & required .~ [ "runId", "createdAt" ]
+      & required .~ [ "createdAt" ]
 
 instance SqlRow Certification
+
+-- one to one mapping with Run
+data L1Certification = L1Certification
+  { l1CertRunId :: UUID
+  , l1CertId  :: ID Certification
+  } deriving (Generic,Show)
+
+instance SqlRow L1Certification
+
+data L1CertificationDTO = L1CertificationDTO
+  { l1Certification :: L1Certification
+  , certification :: Certification
+  }
+
+instance ToJSON L1CertificationDTO where
+  toJSON L1CertificationDTO{..} = Object (x <> y)
+    where
+    x = case toJSON certification of
+            Object obj -> obj
+            _          -> KM.empty
+    y = KM.fromList [ "runId" .= l1CertRunId l1Certification ]
+
+instance FromJSON L1CertificationDTO where
+  parseJSON = withObject "L1CertificationDTO" $ \v -> do
+    l1Certification <- L1Certification
+      <$> v .: "runId"
+      <*> pure def
+    L1CertificationDTO l1Certification <$> v .: "runId"
+
+instance ToSchema L1CertificationDTO where
+  declareNamedSchema _ = do
+    certificationSchema <- declareSchema (Proxy :: Proxy Certification)
+    uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
+    return $ NamedSchema (Just "TierDTO") $ certificationSchema
+              & properties %~ (`mappend` [ ("certRunId", uuidSchema) ])
+              & required %~  (<> [ "certRunId" ])
 
 --------------------------------------------------------------------------------
 -- | Dapp
@@ -198,7 +274,6 @@ instance ToJSON DApp where
       ]
 
 instance SqlRow DApp
-
 
 --------------------------------------------------------------------------------
 -- | Run
@@ -367,8 +442,14 @@ runs = table "run"
 
 certifications :: Table Certification
 certifications = table "certification"
-  [ #certRunId :- primary
-  , #certRunId :- foreignKey runs #runId
+  [ #certId :- primary
+  ]
+
+l1Certifications :: Table L1Certification
+l1Certifications = table "certification"
+  [ #l1CertRunId :- primary
+  , #l1CertRunId :- foreignKey runs #runId
+  , #l1CertId :- foreignKey certifications #certId
   ]
 
 dapps :: Table DApp
@@ -389,3 +470,4 @@ createTables = do
   createTable tiers
   createTable tierFeatures
   createTable subscriptions
+  createTable l1Certifications
