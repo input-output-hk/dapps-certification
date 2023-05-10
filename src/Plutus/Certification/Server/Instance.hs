@@ -218,7 +218,7 @@ server ServerArgs{..} = NamedAPI
 
   , getCertification = \rid@RunID{..} -> withEvent eb GetCertification \ev -> do
     addField ev rid
-    DB.withDb (DB.getCertification uuid)
+    DB.withDb (DB.getL1Certification uuid)
       >>= maybeToServerError err404 "Certification not found"
 
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do

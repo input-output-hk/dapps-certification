@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 
 module IOHK.Certification.Persistence.API where
 
@@ -90,7 +91,6 @@ activateSubscription sub = do
       else
         pure Nothing
     Nothing -> pure Nothing
-
 
 getAllCertifiedRunsForAddress :: MonadSelda m => Text -> m [Run]
 getAllCertifiedRunsForAddress address = query $ do
@@ -291,12 +291,12 @@ markAsReadyForCertification runId IpfsCid{..}  time = update runs
           , #reportContentId := literal (Just ipfsCid)
           ])
 
-createCertificate :: (MonadSelda m,MonadMask m)
+createL1Certificate :: (MonadSelda m,MonadMask m)
                   => UUID
                   -> TxId
                   -> UTCTime
-                  -> m (Maybe Certification)
-createCertificate runId TxId{..} time = transaction $ do
+                  -> m (Maybe L1CertificationDTO)
+createL1Certificate runId TxId{..} time = transaction $ do
   result <- query $ do
     run <- select runs
     restrict (run ! #runId .== literal runId)
@@ -309,19 +309,28 @@ createCertificate runId TxId{..} time = transaction $ do
         (`with` [ #runStatus := literal Certified
                 , #syncedAt := literal time
                 ])
-      let cert = Certification runId txId time
-      _ <- insert certifications [cert]
-      pure $ Just cert
+      let cert = Certification def txId time
+      certId <- insertWithPK certifications [cert]
+      -- and now add a l1Certification
+      let l1Cert = L1Certification runId certId
+      _ <-  insert l1Certifications [l1Cert]
+      pure $ Just (L1CertificationDTO l1Cert (cert { certId }))
     _ -> pure Nothing
 
-getCertificationQuery :: UUID -> Query t (Row t Certification)
-getCertificationQuery runID = do
-    c <- select certifications
-    restrict (c ! #certRunId .== literal runID )
-    pure c
+getL1CertificationQuery :: UUID -> Query t (Row t Certification :*: Row t L1Certification)
+getL1CertificationQuery runID = do
+    l1Cert <- select l1Certifications
+    restrict (l1Cert ! #l1CertRunId .== literal runID )
+    c <- innerJoin
+      (\t -> t ! #certId .== l1Cert ! #l1CertId)
+      (select certifications)
+    pure (c :*: l1Cert)
 
-getCertification :: MonadSelda m => UUID -> m (Maybe Certification)
-getCertification = fmap listToMaybe . query . getCertificationQuery
+getL1Certification :: MonadSelda m => UUID -> m (Maybe L1CertificationDTO)
+getL1Certification pid = fmap (fmap toL1CertificationDTO . listToMaybe ) $ query $ getL1CertificationQuery pid
+
+toL1CertificationDTO :: (Certification :*: L1Certification) -> L1CertificationDTO
+toL1CertificationDTO  (cert :*: l1Cert) = L1CertificationDTO l1Cert cert
 
 getRun :: MonadSelda m => UUID -> m (Maybe Run)
 getRun rid = listToMaybe <$> query (do

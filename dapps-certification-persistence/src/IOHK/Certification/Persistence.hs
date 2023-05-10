@@ -4,6 +4,8 @@ import IOHK.Certification.Persistence.Structure as X
   , Status(..)
   , DApp(..)
   , Certification(..)
+  , L1Certification(..)
+  , L1CertificationDTO(..)
   , ProfileDTO(..)
   , runs
   , createTables
@@ -45,8 +47,8 @@ import IOHK.Certification.Persistence.API as X
   , getProfileAddress
   , syncRun
   , getRunOwner
-  , getCertification
-  , createCertificate
+  , getL1Certification
+  , createL1Certificate
   , deleteRun
   , markAsAborted
   , getRunStatus
