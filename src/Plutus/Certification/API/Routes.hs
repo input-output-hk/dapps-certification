@@ -35,6 +35,8 @@ import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
+import Data.Int
+import Text.Read hiding (String)
 import Plutus.Certification.WalletClient
 import Control.Lens hiding ((.=))
 import Plutus.Certification.GitHubClient (RepositoryInfo,AccessTokenGenerationResponse)
@@ -45,6 +47,7 @@ import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
 import Data.Char (isAlphaNum)
 import Text.Regex
+import Control.Lens hiding ((.=))
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -130,7 +133,7 @@ type GetBalanceRoute (auth :: Symbol) = "profile"
   :> "current"
   :> "balance"
   :> AuthProtect auth
-  :> Get '[JSON] Int
+  :> Get '[JSON] Int64
 
 type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
@@ -161,6 +164,45 @@ type ServerTimestamp = "server-timestamp"
   :> Description "Get the current server timestamp"
   :> Get '[JSON] Integer
 
+type GetProfileSubscriptionsRoute (auth :: Symbol) = "profile"
+  :> Description "Get the current profile subscriptions. Expiration isn't checked, so it's possible to get expired subscriptions"
+  :> "current"
+  :> "subscriptions"
+  :> AuthProtect auth
+  :> QueryParam "just-enabled" Bool
+  :> Get '[JSON] [DB.SubscriptionDTO]
+
+type SubscribeRoute (auth :: Symbol) = "profile"
+  :> Description "Create a new profile subscription"
+  :> "current"
+  :> "subscriptions"
+  :> AuthProtect auth
+  :> Capture "tier" Int64
+  :> PostCreated '[JSON] DB.SubscriptionDTO
+
+type CancelProfilePendingSubscriptionsRoute (auth :: Symbol) = "profile"
+  :> Description "Cancel a pending subscription"
+  :> "current"
+  :> "subscriptions"
+  :> "pending"
+  :> AuthProtect auth
+  :> Delete '[JSON] Int
+
+type GetTiersRoute = "tiers"
+  :> Description "Get the available tiers"
+  :> Get '[JSON] [DB.TierDTO]
+
+type GetProfileActiveFeaturesRoute (auth :: Symbol) = "profile"
+  :> Description "Get the active features of the profile"
+  :> "current"
+  :> "subscriptions"
+  :> "active-features"
+  :> AuthProtect auth
+  :> Get '[JSON] [DB.FeatureType]
+
+type GetAdaUsdPriceRoute = "ada-usd-price"
+  :> Description "Get the current ADA/USD price"
+  :> Get '[JSON] DB.AdaUsdPrice
 
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
@@ -223,6 +265,12 @@ instance ToJSON LoginBody where
       ] ++ maybe [] (\exp' -> ["expiration" .= exp']) expiration
       )
 
+instance FromHttpApiData DB.TierId where
+  parseUrlPiece  = left Text.pack . maybe (Left "Invalid tier id") (Right . DB.toId) . readMaybe . Text.unpack
+
+instance ToHttpApiData DB.TierId where
+  toUrlPiece  = Text.pack . show . DB.fromId
+
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
   }
@@ -248,6 +296,12 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , serverTimestamp :: mode :- ServerTimestamp
   , generateGitHubToken :: mode :- GenerateGitHubTokenRoute
   , getGitHubClientId :: mode :- GetGitHubClientId
+  , getProfileSubscriptions :: mode :- GetProfileSubscriptionsRoute auth
+  , subscribe :: mode :- SubscribeRoute auth
+  , cancelPendingSubscriptions :: mode :- CancelProfilePendingSubscriptionsRoute auth
+  , getAllTiers :: mode :- GetTiersRoute
+  , getActiveFeatures :: mode :- GetProfileActiveFeaturesRoute auth
+  , getAdaUsdPrice :: mode :- GetAdaUsdPriceRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -534,7 +588,6 @@ instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
 instance ToParamSchema KnownActionType
 
-
 instance ToParamSchema ApiGitHubAccessToken where
   toParamSchema _ = mempty
     & type_ ?~ SwaggerString
@@ -542,7 +595,7 @@ instance ToParamSchema ApiGitHubAccessToken where
     -- we use SL qualified because of an issue
     -- of parsing for the hlint. it seems to be
     -- some kind of bug
-    & SL.pattern ?~ ghAccessTokenPattern
+    & pattern ?~ ghAccessTokenPattern
 
 ghAccessTokenPattern :: Pattern
 ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
@@ -553,7 +606,7 @@ instance ToSchema ApiGitHubAccessToken where
     return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
       & type_ ?~ SwaggerString
       & maxLength ?~ 40
-      & SL.pattern ?~ ghAccessTokenPattern
+      & pattern ?~ ghAccessTokenPattern
 
 instance ToSchema DAppBody where
   declareNamedSchema _ = do

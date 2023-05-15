@@ -37,7 +37,6 @@ import Control.Monad.Except (MonadError)
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
-
 data InitializingField
   = WalletArgsField WalletArgs
   | DelayField Int
@@ -46,9 +45,9 @@ data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
+  ActivateSubscriptions :: SynchronizerSelector [DB.SubscriptionId]
 
 newtype TransactionsCount = TransactionsCount Int
-
 
 renderSynchronizerSelector :: RenderSelectorJSON SynchronizerSelector
 renderSynchronizerSelector InitializingSynchronizer =
@@ -64,6 +63,10 @@ renderSynchronizerSelector InitializingSynchronizer =
   )
 renderSynchronizerSelector (InjectTxBroadcaster selector) = renderTxBroadcasterSelector selector
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
+renderSynchronizerSelector ActivateSubscriptions = ("activate-subscriptions", renderSubscriptions)
+
+renderSubscriptions :: RenderFieldJSON [DB.SubscriptionId]
+renderSubscriptions subscriptions = ("subscriptions", toJSON subscriptions)
 
 renderTransactionsCount :: RenderFieldJSON TransactionsCount
 renderTransactionsCount (TransactionsCount count) = ("transactions-count",toJSON count)
@@ -134,7 +137,8 @@ fromInputsToDbInputs = foldl (\acc input -> case fromInputToDbInput input of
 
 fromInputToDbInput :: TxInput -> Maybe DB.TransactionEntry
 fromInputToDbInput (TxInput _ _ Nothing) = Nothing
-fromInputToDbInput (TxInput index _ (Just TxOutput{..})) = Just $ DB.TransactionEntry
+fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
+  = Just $ DB.TransactionEntry
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
@@ -154,6 +158,7 @@ monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
   transactions <- getTransactionList args >>= handleResponse
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions transactions
+  activateSubscriptions (subEventBackend ev)
   certifyRuns (subEventBackend ev) args
   where
     -- handle the response from the wallet
@@ -185,8 +190,18 @@ certifyRuns eb args = do
   certificationProcess a b = createCertification
     ( narrowEventBackend InjectTxBroadcaster eb ) args a (RunID b)
 
+activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m)
+                      => EventBackend m r SynchronizerSelector
+                      -> m ()
+activateSubscriptions eb = withEvent eb ActivateSubscriptions $ \ev -> do
+  -- activate all pending subscriptions with enough credits
+  DB.withDb DB.activateAllPendingSubscriptions >>= addField ev
+
 -- certify all runs of a profile
-certifyProfileRuns :: (MonadIO m, MonadMask m) => CertificationProcess m -> [DB.Run] -> m ()
+certifyProfileRuns :: (MonadIO m, MonadMask m)
+                   => CertificationProcess m
+                   -> [DB.Run]
+                   -> m ()
 certifyProfileRuns certificationProcess runs =
   -- get the profile
   DB.withDb (DB.getProfileAddress pid)
@@ -205,7 +220,8 @@ certifyProfileRuns certificationProcess runs =
     -- calculate the cost of the run
     let cost = run.certificationPrice
     -- if we have enough credits, certify the run
-    when (creditsAvailable >= cost) $ void (certificationProcess pid (run.runId))
+    when (creditsAvailable >= cost) $
+      void (certificationProcess pid (run.runId))
     -- recursively certify the next runs
     certifyRuns' rs (creditsAvailable - cost)
 
@@ -219,13 +235,14 @@ startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
                          -> WalletArgs
                          -> Int
                          -> m b
-startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynchronizer $ \ev -> do
-  addField ev $ WalletArgsField args
-  addField ev $ DelayField delayInSeconds
-  -- TODO maybe a forkIO here will be better than into the calling function
-  -- hence, now, the parent instrumentation event will never terminate 
-  forever $ do
-    monitorWalletTransactions (subEventBackend ev) args
-    liftIO $ threadDelay delayInMicroseconds
+startTransactionsMonitor eb args delayInSeconds =
+  withEvent eb InitializingSynchronizer $ \ev -> do
+    addField ev $ WalletArgsField args
+    addField ev $ DelayField delayInSeconds
+    -- TODO maybe a forkIO here will be better than into the calling function
+    -- hence, now, the parent instrumentation event will never terminate
+    forever $ do
+      monitorWalletTransactions (subEventBackend ev) args
+      liftIO $ threadDelay delayInMicroseconds
   where
     delayInMicroseconds = delayInSeconds * 1000000
