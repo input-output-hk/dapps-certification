@@ -39,6 +39,7 @@ import Observe.Event.Render.IO.JSON
 import Observe.Event.Wai hiding (OnException)
 import Observe.Event.Servant.Client
 import System.IO
+import Data.IORef
 import Control.Concurrent.MVar
 import Control.Concurrent.Async
 import Network.Wai
@@ -81,7 +82,6 @@ data Args = Args
   , useWhitelist :: !Bool
   , github :: !GitHubArgs
   , bypassSubscriptionValidation :: !Bool
-  , adaUsdPrice :: !DB.AdaUsdPrice
   }
 
 data GitHubArgs = GitHubArgs
@@ -148,11 +148,6 @@ argsParser =  Args
   <*> switch
       ( long "unsafe-bypass-subscription-validation"
      <> help "Bypass subscription validation"
-      )
-  <*> option auto
-      ( long "ada-usd-price"
-      <> metavar "ADA_USD_PRICE"
-      <> help "price of ADA in USD"
       )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
@@ -399,15 +394,20 @@ main = do
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       _ <- initDb
-      _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
+      adaPriceRef <- startSynchronizer eb args
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist args.auth) .
-        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb whitelist))
+        (\r -> swaggerSchemaUIServer (documentation args.auth)
+               :<|> server (serverArgs args caps r eb whitelist adaPriceRef))
   exitFailure
   where
-  serverArgs args caps r eb whitelist = ServerArgs
+  startSynchronizer eb args = do
+    ref <- newIORef Nothing
+    _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) ref 10
+    pure ref
+  serverArgs args caps r eb whitelist ref = ServerArgs
     { serverCaps = caps
     , serverWalletArgs  = args.wallet
     , githubToken = args.github.accessToken
@@ -416,8 +416,8 @@ main = do
     , serverSigningTimeout = args.signatureTimeout
     , serverWhitelist = whitelist :: Maybe Whitelist
     , validateSubscriptions = not args.bypassSubscriptionValidation
-    , adaUsdPrice = args.adaUsdPrice
     , serverGitHubCredentials = args.github.credentials
+    , adaUsdPrice = liftIO $ readIORef ref
     }
   jwtArgs PlainAddressAuth = Nothing
   jwtArgs (JWTAuth args) = Just args

@@ -78,7 +78,7 @@ data ServerArgs m r = ServerArgs
   , serverWhitelist :: !(Maybe Whitelist)
   , serverGitHubCredentials :: !(Maybe GitHubCredentials)
   , validateSubscriptions :: Bool
-  , adaUsdPrice :: DB.AdaUsdPrice
+  , adaUsdPrice :: m (Maybe DB.AdaUsdPrice)
   }
 
 type Whitelist = HashSet Text
@@ -108,7 +108,7 @@ server ServerArgs{..} = NamedAPI
   , versionHead = withEvent eb Version . const $ pure NoContent
   , walletAddress = withEvent eb WalletAddress . const $ pure serverWalletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
-      -- ensure the profile has an active feauture for L1Run
+      -- ensure the profile has an active feature for L1Run
       validateFeature L1Run profileId
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
       let githubToken' =  profileAccessToken <|> githubToken
@@ -276,7 +276,8 @@ server ServerArgs{..} = NamedAPI
     addField ev $ SubscribeFieldProfileId profileId
     addField ev $ SubscribeFieldTierId tierId
     now <- getNow
-    ret <- DB.withDb (DB.createSubscription now profileId tierId adaUsdPrice)
+    adaUsdPrice' <- getAdaUsdPrice'
+    ret <- DB.withDb (DB.createSubscription now profileId tierId adaUsdPrice')
     forM_ ret $ \dto -> addField ev $ SubscribeFieldSubscriptionId (dto.subscriptionDtoId)
     maybeToServerError err404 "Tier not found" ret
 
@@ -295,10 +296,13 @@ server ServerArgs{..} = NamedAPI
     addField ev $ GetActiveFeaturesFieldFeatures featureTypes
     pure featureTypes
   , getAdaUsdPrice = withEvent eb GetAdaUsdPrice \ev -> do
-    addField ev adaUsdPrice
-    pure adaUsdPrice
+    adaUsdPrice' <- getAdaUsdPrice'
+    addField ev adaUsdPrice'
+    pure adaUsdPrice'
   }
   where
+    getAdaUsdPrice' =
+      adaUsdPrice >>= maybeToServerError err500 "Can't get ada usd price"
     validateFeature featureType profileId = do
       -- ensure the profile has an active feauture for L1Run
       when validateSubscriptions $ do

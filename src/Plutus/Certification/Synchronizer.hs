@@ -24,6 +24,7 @@ import Control.Monad.IO.Class ( MonadIO(..) )
 import Control.Monad.Catch (MonadMask)
 import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
+import Plutus.Certification.CoinGeckoClient
 import Data.Aeson
 import Plutus.Certification.TransactionBroadcaster
 import Observe.Event.Render.JSON
@@ -37,6 +38,9 @@ import Control.Monad.Except (MonadError)
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
+import Data.IORef
+import Data.Void
+
 data InitializingField
   = WalletArgsField WalletArgs
   | DelayField Int
@@ -44,8 +48,10 @@ data InitializingField
 data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
+  InjectCoinGeckoClient :: forall f . !(CoinGeckoClientSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
   ActivateSubscriptions :: SynchronizerSelector [DB.SubscriptionId]
+  UpdateAdaPrice :: SynchronizerSelector Void
 
 newtype TransactionsCount = TransactionsCount Int
 
@@ -62,8 +68,10 @@ renderSynchronizerSelector InitializingSynchronizer =
       DelayField delay -> ("delay", toJSON delay)
   )
 renderSynchronizerSelector (InjectTxBroadcaster selector) = renderTxBroadcasterSelector selector
+renderSynchronizerSelector (InjectCoinGeckoClient selector) = renderCoinGeckoClientSelector selector
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
 renderSynchronizerSelector ActivateSubscriptions = ("activate-subscriptions", renderSubscriptions)
+renderSynchronizerSelector UpdateAdaPrice = ("refresh-ada-price", absurd)
 
 renderSubscriptions :: RenderFieldJSON [DB.SubscriptionId]
 renderSubscriptions subscriptions = ("subscriptions", toJSON subscriptions)
@@ -233,16 +241,31 @@ certifyProfileRuns certificationProcess runs =
 startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
                          => EventBackend m r SynchronizerSelector
                          -> WalletArgs
+                         -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
                          -> m b
-startTransactionsMonitor eb args delayInSeconds =
+startTransactionsMonitor eb args adaPriceRef delayInSeconds =
   withEvent eb InitializingSynchronizer $ \ev -> do
     addField ev $ WalletArgsField args
     addField ev $ DelayField delayInSeconds
     -- TODO maybe a forkIO here will be better than into the calling function
     -- hence, now, the parent instrumentation event will never terminate
     forever $ do
+      updateAdaPrice (subEventBackend ev) adaPriceRef
       monitorWalletTransactions (subEventBackend ev) args
       liftIO $ threadDelay delayInMicroseconds
   where
     delayInMicroseconds = delayInSeconds * 1000000
+
+updateAdaPrice :: (MonadIO m,MonadMask m)
+               => EventBackend m r SynchronizerSelector
+               -> IORef (Maybe DB.AdaUsdPrice)
+               -> m ()
+updateAdaPrice eb ref = withEvent eb UpdateAdaPrice $ \_ -> do
+  -- fetch the ada price from the wallet
+  adaPrice <- getAdaPrice ( narrowEventBackend InjectCoinGeckoClient eb )
+  liftIO $ writeIORef ref $
+    case adaPrice of
+     Left _ -> Nothing
+     Right p -> Just p
+
