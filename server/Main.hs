@@ -80,6 +80,8 @@ data Args = Args
   , signatureTimeout :: !Seconds
   , useWhitelist :: !Bool
   , github :: !GitHubArgs
+  , bypassSubscriptionValidation :: !Bool
+  , adaUsdPrice :: !DB.AdaUsdPrice
   }
 
 data GitHubArgs = GitHubArgs
@@ -143,6 +145,15 @@ argsParser =  Args
       ( long "use-whitelist" <> help "use the whitelist for authentication" )
   <*> githubArgsParser
 
+  <*> switch
+      ( long "unsafe-bypass-subscription-validation"
+     <> help "Bypass subscription validation"
+      )
+  <*> option auto
+      ( long "ada-usd-price"
+      <> metavar "ADA_USD_PRICE"
+      <> help "price of ADA in USD"
+      )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -330,15 +341,20 @@ genAuthServerContext whitelist mSecret = (case mSecret of
   PlainAddressAuth -> plainAddressAuthHandler whitelist
   JWTAuth JWTArgs{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
+-- TODO: replace the try with some versioning mechanism
 initDb :: IO ()
-initDb = void $ try' $ DB.withDb DB.createTables
+initDb = void $ try' $
+  DB.withDb do
+    DB.createTables
+    DB.addInitialData
+
   where
   try' :: IO a -> IO (Either SomeException a)
   try' = try
 
 main :: IO ()
 main = do
-  args <- execParser opts
+  args :: Args <- execParser opts
   eb <- jsonHandleBackend stderr renderJSONException renderRoot
   withEvent eb Initializing \initEv -> do
     addField initEv $ VersionField Package.version
@@ -391,10 +407,18 @@ main = do
         (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb whitelist))
   exitFailure
   where
-  serverArgs args caps r eb whiteList =
-    ServerArgs caps (args.wallet) args.github.accessToken (jwtArgs args.auth) (be r eb) 
-        (args.signatureTimeout) whiteList args.github.credentials 
-
+  serverArgs args caps r eb whitelist = ServerArgs
+    { serverCaps = caps
+    , serverWalletArgs  = args.wallet
+    , githubToken = args.github.accessToken
+    , serverJWTArgs = jwtArgs args.auth
+    , serverEventBackend = be r eb
+    , serverSigningTimeout = args.signatureTimeout
+    , serverWhitelist = whitelist :: Maybe Whitelist
+    , validateSubscriptions = not args.bypassSubscriptionValidation
+    , adaUsdPrice = args.adaUsdPrice
+    , serverGitHubCredentials = args.github.credentials
+    }
   jwtArgs PlainAddressAuth = Nothing
   jwtArgs (JWTAuth args) = Just args
   documentation PlainAddressAuth = swaggerJson

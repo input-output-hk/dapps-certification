@@ -60,6 +60,19 @@ data GetRepoInfoField
 type Error = String
 newtype GenerateGitHubTokenField = GenerateGitHubTokenError Error
 
+data SubscribeField
+  = SubscribeFieldTierId !DB.TierId
+  | SubscribeFieldProfileId !DB.ProfileId
+  | SubscribeFieldSubscriptionId !DB.SubscriptionId
+
+data CancelProfilePendingSubscriptionsField
+  = CancelProfilePendingSubscriptionsFieldProfileId !DB.ProfileId
+  | CancelProfilePendingSubscriptionsFieldCount !Int
+
+data GetActiveFeaturesField
+  = GetActiveFeaturesFieldProfileId !DB.ProfileId
+  | GetActiveFeaturesFieldFeatures ![DB.FeatureType]
+
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
@@ -76,6 +89,12 @@ data ServerEventSelector f where
   ServerTimestamp :: ServerEventSelector Void
   GenerateGitHubToken :: ServerEventSelector GenerateGitHubTokenField
   GetGitHubClientId :: ServerEventSelector Void
+  GetProfileSubscriptions :: ServerEventSelector DB.ProfileId
+  Subscribe :: ServerEventSelector SubscribeField
+  CancelProfilePendingSubscriptions :: ServerEventSelector CancelProfilePendingSubscriptionsField
+  GetAllTiers :: ServerEventSelector Int
+  GetActiveFeatures :: ServerEventSelector GetActiveFeaturesField
+  GetAdaUsdPrice :: ServerEventSelector DB.AdaUsdPrice
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -93,6 +112,16 @@ renderServerEventSelector GenerateGitHubToken = ("generate-github-token", \
   )
 renderServerEventSelector GetGitHubClientId = ("get-github-client-id", absurd)
 
+renderServerEventSelector GetProfileSubscriptions = ("get-profile-subscriptions", renderProfileId)
+renderServerEventSelector Subscribe = ("subscribe", \case
+    SubscribeFieldTierId tid -> ("tier-id", toJSON tid)
+    SubscribeFieldProfileId pid -> ("profile-id", toJSON (show pid))
+    SubscribeFieldSubscriptionId sid -> ("subscription-id", toJSON (show sid))
+  )
+renderServerEventSelector CancelProfilePendingSubscriptions = ("cancel-profile-pending-subscriptions", \case
+    CancelProfilePendingSubscriptionsFieldProfileId pid -> ("profile-id", toJSON (show pid))
+    CancelProfilePendingSubscriptionsFieldCount count' -> ("deleted-count", toJSON count')
+  )
 renderServerEventSelector CreateRun = ("create-run", \case
     CreateRunRef fr -> ("flake-reference", toJSON $ uriToString id fr.uri "")
     CreateRunID rid -> ("run-id", toJSON rid)
@@ -107,6 +136,12 @@ renderServerEventSelector GetRepoInfo = ("get-repo-info", \case
     GetRepoInfoOwner owner -> ("owner", toJSON owner)
     GetRepoInfoRepo repo -> ("repo", toJSON repo)
   )
+renderServerEventSelector GetAllTiers = ("get-all-tiers", \count' -> ("count", toJSON count'))
+renderServerEventSelector GetActiveFeatures = ("get-active-features", \case
+    GetActiveFeaturesFieldProfileId pid -> ("profile-id", toJSON (show pid))
+    GetActiveFeaturesFieldFeatures features -> ("features", toJSON features)
+  )
+renderServerEventSelector GetAdaUsdPrice = ("get-ada-usd-price", \price -> ("price", toJSON price))
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)
