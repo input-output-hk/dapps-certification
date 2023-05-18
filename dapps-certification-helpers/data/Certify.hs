@@ -27,7 +27,7 @@ import "uuid" Data.UUID.V4
 taskName :: CertificationTask -> I.CertificationTaskName
 taskName UnitTestsTask = I.UnitTestsTask
 taskName StandardPropertyTask = I.StandardPropertyTask
-taskName DoubleSatisfactionTask = I.DoubleSatisfactionTask
+-- taskName DoubleSatisfactionTask = I.DoubleSatisfactionTask
 taskName NoLockedFundsTask = I.NoLockedFundsTask
 taskName NoLockedFundsLightTask = I.NoLockedFundsLightTask
 taskName CrashToleranceTask = I.CrashToleranceTask
