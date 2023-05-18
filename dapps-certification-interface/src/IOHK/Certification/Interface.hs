@@ -18,7 +18,7 @@ import Data.Char (isAlphaNum)
 data CertificationTaskName
   = UnitTestsTask
   | StandardPropertyTask
-  | DoubleSatisfactionTask
+--   | DoubleSatisfactionTask
   | NoLockedFundsTask
   | NoLockedFundsLightTask
   | CrashToleranceTask
@@ -34,7 +34,7 @@ instance ToSchema CertificationTaskName where
 renderTask :: CertificationTaskName -> Either String Text
 renderTask UnitTestsTask = Right "unit-tests"
 renderTask StandardPropertyTask = Right "standard-property"
-renderTask DoubleSatisfactionTask = Right "double-satisfaction"
+-- renderTask DoubleSatisfactionTask = Right "double-satisfaction"
 renderTask NoLockedFundsTask = Right "no-locked-funds"
 renderTask NoLockedFundsLightTask = Right "no-locked-funds-light"
 renderTask CrashToleranceTask = Right "crash-tolerance"
@@ -58,7 +58,7 @@ instance FromJSON CertificationTaskName where
       known = flip (withText "CertificationTaskName") v \nm ->
         if | nm == "unit-tests" -> pure UnitTestsTask
            | nm == "standard-property" -> pure StandardPropertyTask
-           | nm == "double-satisfaction" -> pure DoubleSatisfactionTask
+        --    | nm == "double-satisfaction" -> pure DoubleSatisfactionTask
            | nm == "no-locked-funds" -> pure NoLockedFundsTask
            | nm == "no-locked-funds-light" -> pure NoLockedFundsLightTask
            | nm == "crash-tolerance" -> pure CrashToleranceTask
