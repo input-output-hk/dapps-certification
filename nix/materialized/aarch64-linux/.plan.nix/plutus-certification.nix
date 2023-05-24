@@ -65,6 +65,9 @@
           (hsPkgs."jwt" or (errorHandler.buildDepError "jwt"))
           (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
           (hsPkgs."regex-compat" or (errorHandler.buildDepError "regex-compat"))
+          (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
+          (hsPkgs."http-conduit" or (errorHandler.buildDepError "http-conduit"))
+          (hsPkgs."cryptonite" or (errorHandler.buildDepError "cryptonite"))
           (hsPkgs."dapps-certification-signature-verification" or (errorHandler.buildDepError "dapps-certification-signature-verification"))
           (hsPkgs."dapps-certification-persistence" or (errorHandler.buildDepError "dapps-certification-persistence"))
           (hsPkgs."dapps-certification-interface" or (errorHandler.buildDepError "dapps-certification-interface"))
@@ -73,6 +76,7 @@
         buildable = true;
         modules = [
           "Paths_plutus_certification"
+          "Plutus/Certification/Metadata/Types"
           "Plutus/Certification/API/Routes"
           "Plutus/Certification/API/Swagger"
           "Plutus/Certification/Web3StorageClient"
@@ -81,6 +85,7 @@
           "Plutus/Certification/TransactionBroadcaster"
           "Plutus/Certification/Server/Internal"
           "Plutus/Certification/Server/Instance"
+          "Plutus/Certification/CoinGeckoClient"
           "Plutus/Certification/API"
           "Plutus/Certification/Cache"
           "Plutus/Certification/Cicero"
@@ -91,6 +96,7 @@
           "Plutus/Certification/JWT"
           "Plutus/Certification/WalletClient"
           "Plutus/Certification/Synchronizer"
+          "Plutus/Certification/Metadata"
           ];
         hsSourceDirs = [ "src" ];
         };

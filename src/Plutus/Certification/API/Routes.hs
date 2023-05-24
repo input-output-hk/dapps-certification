@@ -47,7 +47,7 @@ import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
 import Data.Char (isAlphaNum)
 import Text.Regex
-import Control.Lens hiding ((.=))
+import Plutus.Certification.Metadata as Metadata
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -204,6 +204,14 @@ type GetAdaUsdPriceRoute = "ada-usd-price"
   :> Description "Get the current ADA/USD price"
   :> Get '[JSON] DB.AdaUsdPrice
 
+type CreateAuditorReport (auth :: Symbol) = "auditor"
+  :> Description "Get the available tiers"
+  :> "reports"
+  :> QueryParam "dry-run" Bool
+  :> ReqBody '[JSON] Metadata.AuditorCertificationInput
+  :> AuthProtect auth
+  :> Post '[JSON] Metadata.FullMetadata
+
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
 
@@ -302,6 +310,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getAllTiers :: mode :- GetTiersRoute
   , getActiveFeatures :: mode :- GetProfileActiveFeaturesRoute auth
   , getAdaUsdPrice :: mode :- GetAdaUsdPriceRoute
+  , createAuditorReport :: mode :- CreateAuditorReport auth
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -595,7 +604,7 @@ instance ToParamSchema ApiGitHubAccessToken where
     -- we use SL qualified because of an issue
     -- of parsing for the hlint. it seems to be
     -- some kind of bug
-    & pattern ?~ ghAccessTokenPattern
+    & SL.pattern ?~ ghAccessTokenPattern
 
 ghAccessTokenPattern :: Pattern
 ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
@@ -606,7 +615,7 @@ instance ToSchema ApiGitHubAccessToken where
     return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
       & type_ ?~ SwaggerString
       & maxLength ?~ 40
-      & pattern ?~ ghAccessTokenPattern
+      & SL.pattern ?~ ghAccessTokenPattern
 
 instance ToSchema DAppBody where
   declareNamedSchema _ = do
@@ -657,6 +666,7 @@ instance ToSchema CommitOrBranch  where
 instance ToSchema Cicero.Run.RunLog where
   --TODO: find a way to embed aeson Value to the definition
   declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") mempty
+
 instance ToSchema IncompleteRunStatus where
   declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 

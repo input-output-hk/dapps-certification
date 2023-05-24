@@ -73,6 +73,13 @@ data GetActiveFeaturesField
   = GetActiveFeaturesFieldProfileId !DB.ProfileId
   | GetActiveFeaturesFieldFeatures ![DB.FeatureType]
 
+data CreateAuditorReportField
+  = CreateAuditorReportFieldProfileId !DB.ProfileId
+  -- is dry run
+  | CreateAuditorReportDryRun !Bool
+  -- ifpfs cid
+  | CreateAuditorReportIpfsCid !DB.IpfsCid
+
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
@@ -95,6 +102,7 @@ data ServerEventSelector f where
   GetAllTiers :: ServerEventSelector Int
   GetActiveFeatures :: ServerEventSelector GetActiveFeaturesField
   GetAdaUsdPrice :: ServerEventSelector DB.AdaUsdPrice
+  CreateAuditorReport :: ServerEventSelector CreateAuditorReportField
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -142,6 +150,11 @@ renderServerEventSelector GetActiveFeatures = ("get-active-features", \case
     GetActiveFeaturesFieldFeatures features -> ("features", toJSON features)
   )
 renderServerEventSelector GetAdaUsdPrice = ("get-ada-usd-price", \price -> ("price", toJSON price))
+renderServerEventSelector CreateAuditorReport = ("create-auditor-report", \case
+    CreateAuditorReportFieldProfileId pid -> ("profile-id", toJSON (show pid))
+    CreateAuditorReportDryRun isDryRun -> ("is-dry-run", toJSON isDryRun)
+    CreateAuditorReportIpfsCid  cid -> ("cid", toJSON cid)
+  )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

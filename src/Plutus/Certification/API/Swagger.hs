@@ -34,6 +34,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> AbortRunRoute auth
   :<|> GetLogsRoute
   :<|> GetRunsRoute auth
+  :<|> GetRunDetailsRoute
   :<|> GetCurrentProfileRoute auth
   :<|> UpdateCurrentProfileRoute auth
   :<|> CreateCertificationRoute auth
@@ -49,6 +50,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetTiersRoute
   :<|> GetProfileActiveFeaturesRoute auth
   :<|> GetAdaUsdPriceRoute
+  :<|> CreateAuditorReport auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth
