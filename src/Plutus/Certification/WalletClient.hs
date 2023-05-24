@@ -35,6 +35,7 @@ import           Plutus.Certification.WalletClient.Transaction
 import           Servant.API
 import           Servant.Client
 import           Data.Int
+import           Plutus.Certification.Internal
 
 data TxBody = forall a . (ToJSON a) => TxBody
   { passphrase :: !Text
@@ -108,16 +109,6 @@ data CertificationMetadata = CertificationMetadata
   , crtmContractLink :: !URI
   , crtmVersion      :: !Text
   } deriving Generic
-
-splitString :: Int -> Text -> Value
-splitString maxChars = toValue . chunksOf maxChars
-    where
-    toValue []  = toJSON ("" :: Text)
-    toValue [x] = toJSON x
-    toValue xs  = toJSON xs
-
-split64 :: Text -> Value
-split64 = splitString 64
 
 instance ToJSON CertificationMetadata where
   toJSON CertificationMetadata{..} =  object $

@@ -1,13 +1,17 @@
 module IOHK.Certification.Persistence (module X) where
-import IOHK.Certification.Persistence.Structure as X
+import IOHK.Certification.Persistence.Structure.Run as X 
   ( Run(..)
   , Status(..)
-  , DApp(..)
-  , Certification(..)
+  )
+import IOHK.Certification.Persistence.Structure.Certification as X 
+  ( Certification(..)
   , L1Certification(..)
+  , CertificationLevel(..)
   , L1CertificationDTO(..)
+  )
+import IOHK.Certification.Persistence.Structure as X
+  ( DApp(..)
   , ProfileDTO(..)
-  , runs
   , createTables
   , IpfsCid(..)
   , TxId(..)

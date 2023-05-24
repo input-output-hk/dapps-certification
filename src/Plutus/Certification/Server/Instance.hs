@@ -44,13 +44,14 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
 import Data.HashSet as HashSet
 import Data.List as List
-import IOHK.Certification.Persistence (FeatureType(L1Run))
+import IOHK.Certification.Persistence (FeatureType(..))
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
+import Plutus.Certification.Metadata
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -299,8 +300,21 @@ server ServerArgs{..} = NamedAPI
     adaUsdPrice' <- getAdaUsdPrice'
     addField ev adaUsdPrice'
     pure adaUsdPrice'
+  , createAuditorReport = \dryRun reportInput (profileId,_) -> withEvent eb CreateAuditorReport \ev -> do
+    validateFeature L2UploadReport profileId
+    addField ev $ CreateAuditorReportFieldProfileId profileId
+    addField ev $ CreateAuditorReportDryRun (dryRun == Just True)
+    case dryRun of
+      Just True -> catch (createDraftMetadata reportInput) handleException
+      _ -> do
+        (fullMetadata,ipfs) <- catch (createMetadataAndPushToIpfs reportInput) handleException
+        addField ev $ CreateAuditorReportIpfsCid ipfs
+        pure fullMetadata
   }
   where
+    handleException :: (MonadError ServerError m ) =>  SomeException -> m a
+    handleException e = do
+      throwError err400 { errBody = LSB.pack $ show e }
     getAdaUsdPrice' =
       adaUsdPrice >>= maybeToServerError err500 "Can't get ada usd price"
     validateFeature featureType profileId = do

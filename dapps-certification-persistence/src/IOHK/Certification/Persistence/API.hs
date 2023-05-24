@@ -1,10 +1,10 @@
-{-# LANGUAGE OverloadedLabels    #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators       #-}
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module IOHK.Certification.Persistence.API where
 
@@ -15,6 +15,8 @@ import Database.Selda
 import Database.Selda.SQLite
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
+import IOHK.Certification.Persistence.Structure.Run 
+import IOHK.Certification.Persistence.Structure.Certification 
 import IOHK.Certification.Persistence.Structure
 import Data.Time.Clock
 import Data.Int
@@ -314,7 +316,7 @@ createL1Certificate runId TxId{..} time = transaction $ do
       -- and now add a l1Certification
       let l1Cert = L1Certification runId certId
       _ <-  insert l1Certifications [l1Cert]
-      pure $ Just (L1CertificationDTO l1Cert (cert { certId }))
+      pure $ Just (L1CertificationDTO l1Cert (#certId certId cert))
     _ -> pure Nothing
 
 getL1CertificationQuery :: UUID -> Query t (Row t Certification :*: Row t L1Certification)

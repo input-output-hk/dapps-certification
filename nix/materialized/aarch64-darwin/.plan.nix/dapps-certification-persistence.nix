@@ -52,6 +52,8 @@
           "IOHK/Certification/Persistence/Structure"
           "IOHK/Certification/Persistence/API"
           "IOHK/Certification/Persistence/Structure/Subscription"
+          "IOHK/Certification/Persistence/Structure/Certification"
+          "IOHK/Certification/Persistence/Structure/Run"
           "IOHK/Certification/Persistence/Structure/Profile"
           "IOHK/Certification/Persistence"
           ];

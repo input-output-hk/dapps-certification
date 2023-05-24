@@ -54,7 +54,7 @@ uploadReportToIpfs key content = liftIO $ withSystemTempFile "certification-repo
   let form = [ partFileSource "file" fn ]
   req <- applyBearerAuth key <$> parseRequest "https://api.web3.storage/upload"
   resp <- flip httpLbs manager' =<< formDataBody form req
-  pure $ case  (responseStatus resp) of
+  pure $ case  responseStatus resp of
     Status 200 _ -> either (Left . DecodeFailure resp ) Right (eitherDecode' (responseBody resp))
     _ -> Left $ HttpError resp
 
