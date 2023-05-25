@@ -1,16 +1,27 @@
+@import "styles/colors.scss";
+@import "styles/constants.scss";
+
 .script-item {
-    flex-direction: column;
+  flex-direction: column;
 }
+
 .action-button {
-    clear: both;
-    float: left;
-    width: 100%;
-    margin-bottom: 10px;
-    margin-top: -28px;
-    button {
-        float: right;
-    }
+  top: -68px;
+  right: 20px;
+  background-color: $white;
 }
+
 .input-wrapper {
-    width: 100%;
+  width: 100%;
+}
+
+.card-layout {
+  border-radius: $border-radius;
+  border: $border;
+  padding: 50px 20px 20px;
+  margin-top: 50px;
+}
+
+.addScript-btn {
+  top: -75px;
 }

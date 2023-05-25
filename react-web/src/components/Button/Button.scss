@@ -20,7 +20,8 @@
   &:focus,
   &:hover {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-    background-color: #6c4bd2;
+    background-color: $primary-btn-hover-color;
+    color: $white;
   }
 
   &-primary {

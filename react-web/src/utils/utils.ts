@@ -56,3 +56,18 @@ export const formatTimeToReadable = (duration: number) => {
     }
     return timeStr
 }
+
+export const getObjectByPath = (object: { [x: string]: any }, path: string): any => {
+  path = path.replace(/\[(\w+)\]/g, ".$1"); // convert indexes to properties
+  path = path.replace(/^\./, ""); // strip a leading dot
+  var a = path.split(".");
+  for (var i = 0, n = a.length; i < n; ++i) {
+    var k = a[i];
+    if (object && k in object) {
+      object = object[k];
+    } else {
+      return;
+    }
+  }
+  return object;
+};
