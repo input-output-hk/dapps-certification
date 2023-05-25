@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails, logout, setNetwork } from "store/slices/auth.slice";
@@ -6,10 +6,10 @@ import { getProfileDetails, logout, setNetwork } from "store/slices/auth.slice";
 import Modal from "components/Modal/Modal";
 import Button from "components/Button/Button";
 import Loader from "components/Loader/Loader";
-import Toast from "components/Toast/Toast";
 
 import './ConnectWallet.scss';
 import { fetchData } from "api/api";
+import { AxiosResponse } from "axios";
 
 const wallets: Array<string> = ['lace', 'nami', 'yoroi']
 
@@ -78,40 +78,32 @@ const ConnectWallet = () => {
         dispatch(logout())
     }
 
-    const initiatePrivateWalletSignature = (currentWallet: any, walletAddr_bech32: any, walletAddr: string) => {
-        fetchData.get('/server-timestamp').then(async (res) => {
-            const timestamp = res.data;
-            const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>> \n Expiry: 60 seconds`;
-            try {
-                const {key, signature} = await currentWallet.signData(walletAddr, Buffer.from(msgToBeSigned, 'utf8').toString('hex'))
-                if (key && signature) {
-                    fetchData.post('/login', {
-                        address: walletAddr_bech32,
-                        key: key,
-                        signature: signature
-                    }).then((response: any) => {
-                        if (response.data) {
-                            localStorage.setItem('authToken', response.data)
-                            setAddress(walletAddr_bech32)
-                        }
-                    }).catch(err => {
-                        catchError(err)
-                    })
-                }
-
-            } catch (err) {
-                catchError(err)
+    const initiatePrivateWalletSignature = async (currentWallet: any, walletAddr_bech32: any, walletAddr: string) => {
+        const timestamp = (await fetchData.get<any,AxiosResponse<number>,any>('/server-timestamp')).data;
+        const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>> \n Expiry: 60 seconds`;
+        try {
+            const {key, signature} = await currentWallet.signData(walletAddr, Buffer.from(msgToBeSigned, 'utf8').toString('hex'))
+            if (key && signature) {
+                const token = (await fetchData.post<any,AxiosResponse<string>,any>('/login', {
+                    address: walletAddr_bech32,
+                    key: key,
+                    signature: signature
+                })).data;
+                localStorage.setItem('authToken', token)
+                setAddress(walletAddr_bech32)
+            } else {
+                catchError({ message: "Could not obtain the proper key and signature for the wallet. Please try connecting again." })
             }
-        }).catch((err) => {
+        } catch (err) {
             catchError(err)
-        })
+        }
     }
 
     useEffect(() => {
         if (address) {
             (async () => {
                 try {
-                    const response: any = await dispatch(getProfileDetails({"address": address, "wallet": wallet, "walletName": walletName})).catch(handleError)
+                    await dispatch(getProfileDetails({"address": address, "wallet": wallet, "walletName": walletName})).catch(handleError)
                     setWalletLoading(false)
                 } catch(error) {
                     setWalletLoading(false)
@@ -149,7 +141,7 @@ const ConnectWallet = () => {
                     }
                     { walletLoading ? <Loader /> : null}
                     {
-                        (errorToast && errorToast.display) ? (<>
+                        (errorToast?.display) ? (<>
                             <span className="error">{errorToast.message}</span>
                             <span className="link" style={{marginLeft: '5px'}} onClick={openConnectWalletModal}>Retry</span>
                         </>): null
