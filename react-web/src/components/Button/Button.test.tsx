@@ -48,7 +48,7 @@ describe("renders the Button component", () => {
     render(<Button showLoader={true} />);
     expect(screen.getByTestId("spinner")).toBeInTheDocument()
   })
-  
+
   it("renders with class is-loading when isLoading", () => {
     render(<Button isLoading={true} />);
     expect(screen.getAllByRole("button")[0]).toHaveClass("is-loading");

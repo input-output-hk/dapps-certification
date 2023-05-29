@@ -42,7 +42,7 @@
     "build": "react-app-rewired build",
     "build:production": "REACT_APP_ENV=production yarn build",
     "test": "react-app-rewired test",
-    "test:coverage": "react-app-rewired test --coverage",
+    "test:coverage": "react-app-rewired test --collectCoverageFrom='src/**/*.tsx' --coverage",
     "eject": "react-app-rewired eject"
   },
   "eslintConfig": {

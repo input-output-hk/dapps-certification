@@ -1,9 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Link, MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import "@testing-library/jest-dom";
-
 import Support from "pages/support/Support";
-
 
 const Header = () => {
   return (
@@ -15,16 +13,10 @@ const Header = () => {
   );
 };
 
-describe("renders landing page", () => {
-  // it("header contains button Connect Wallet", () => {})
-})
-
 describe("renders banners", () => {
   // it("renders banner when not in mainnet", () => {});
   // it("renders banner to ensure network is preprod", () => {});
-});
 
-describe("renders components on click of menu links", () => {
   it("header links navigates to corresponding components successfully", async () => {
     render(
       <MemoryRouter>
@@ -52,6 +44,6 @@ describe("renders components on click of menu links", () => {
     fireEvent.click(supportPageLink);
 
     // Expect content of support page to be in the DOM
-    expect(screen.getByText(/Coming soon.../i)).toBeInTheDocument();
+    expect(screen.getByText(/Support Coming soon.../i)).toBeInTheDocument();
   });
 });

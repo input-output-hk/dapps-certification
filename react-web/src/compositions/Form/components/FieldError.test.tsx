@@ -1,14 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { FieldError } from "./FieldError";
 
-describe("renders FieldError component", () => {
+describe("Test cases for FieldError component", () => {
   it("renders field error with default className", () => {
-    render(<FieldError message="Sample"/>);
-    expect(screen.getAllByRole("span")[0]).toHaveClass("danger");
+    const { container } = render(<FieldError message="Sample" />);
+    expect(container.firstChild).toHaveClass("danger");
   });
 
   it("renders field error with custom message", () => {
-    render(<FieldError message="Sample"/>);
-    expect(screen.getAllByRole("span")[0]).toHaveTextContent("Sample");
+    const { container } = render(<FieldError message="Sample" />);
+    expect(container.firstChild).toHaveTextContent("Sample");
   });
 });

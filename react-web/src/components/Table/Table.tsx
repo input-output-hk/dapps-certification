@@ -44,7 +44,6 @@ const TableComponent: FC<any> = ({
     page,
     gotoPage,
     setPageSize,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     state: { pageIndex, pageSize },
   } = useTable(
     {
@@ -96,6 +95,7 @@ const TableComponent: FC<any> = ({
                 display: showPivot ? "block" : "none",
               }}
               className="colviz-container"
+              data-testid="colviz-container"
             >
               <ColViz
                 columns={columns}
@@ -104,6 +104,7 @@ const TableComponent: FC<any> = ({
             </div>
             <div className="sidebarButtons">
               <button
+                data-testid="colviz-sideBarButton"
                 className="sideBarButton"
                 onClick={(e) => setShowPivot(!showPivot)}
               >
@@ -114,7 +115,7 @@ const TableComponent: FC<any> = ({
             </div>
           </div>
         )}
-        <TableContainer component={Paper} id="tableComp">
+        <TableContainer component={Paper} id="tableComp" data-testid="tableComp">
           <Table
             sx={{ minWidth: 650 }}
             aria-label="simple table"

@@ -40,6 +40,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
      className={`input-wrapper ${className}`}
      onBlur={(e: any) => !e.target.value && setActive(false)}
      onClick={(e: any) => setActive(true)}
+     data-testid={`${name}-wrapper`}
    >
      <div
        className={`input ${active ? "active" : ""} ${errors[name] ? "error" : ""} ${disabled ? "disabled" : ""}`}
@@ -47,6 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
          setActive(true);
          document.getElementById(name || "")?.focus();
        }}
+       data-testid={`${name}-container`}
      >
        <label>{label} {required ? <span style={{color: 'red'}}>*</span> : null}</label>
        <input

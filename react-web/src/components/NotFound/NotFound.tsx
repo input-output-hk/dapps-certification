@@ -9,7 +9,7 @@ const NotFound = () => {
         404 - No page found
       </div>
       <div className="buttons">
-        <Link to="">Go to homepage</Link>
+        <Link to="/" data-testid="home">Go to homepage</Link>
       </div>
     </div>
   );
