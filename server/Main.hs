@@ -39,6 +39,7 @@ import Observe.Event.Render.IO.JSON
 import Observe.Event.Wai hiding (OnException)
 import Observe.Event.Servant.Client
 import System.IO
+import Data.IORef
 import Control.Concurrent.MVar
 import Control.Concurrent.Async
 import Network.Wai
@@ -76,10 +77,16 @@ data Args = Args
   , host :: !HostPreference
   , backend :: !Backend
   , wallet :: !WalletArgs
-  , githubToken :: !(Maybe GitHubAccessToken)
   , auth :: !AuthMode
   , signatureTimeout :: !Seconds
   , useWhitelist :: !Bool
+  , github :: !GitHubArgs
+  , bypassSubscriptionValidation :: !Bool
+  }
+
+data GitHubArgs = GitHubArgs
+  { accessToken :: !(Maybe GitHubAccessToken)
+  , credentials :: !(Maybe GitHubCredentials)
   }
 
 baseUrlReader :: ReadM BaseUrl
@@ -126,7 +133,6 @@ argsParser =  Args
       )
   <*> (localParser <|> ciceroParser)
   <*> walletParser
-  <*> optional gitHubAccessTokenParser
   <*> (jwtArgsParser <|> plainAddressAuthParser)
   <*> option auto
       ( long "signature-timeout"
@@ -137,6 +143,12 @@ argsParser =  Args
       )
   <*> switch
       ( long "use-whitelist" <> help "use the whitelist for authentication" )
+  <*> githubArgsParser
+
+  <*> switch
+      ( long "unsafe-bypass-subscription-validation"
+     <> help "Bypass subscription validation"
+      )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -162,6 +174,25 @@ jwtArgsParser =  JWTAuth <$> (JWTArgs
       <> showDefault
       <> Opts.value defaultJWTExpiration
       ))
+githubArgsParser :: Parser GitHubArgs
+githubArgsParser = GitHubArgs
+  <$> optional gitHubAccessTokenParser
+  <*> optional (GitHubCredentials <$> gitHubClientIdParser <*> gitHubClientSecretParser)
+
+gitHubClientIdParser :: Parser Text
+gitHubClientIdParser = Text.pack <$> strOption
+  ( long "github-client-id"
+ <> metavar "GITHUB_CLIENT_ID"
+ <> help "GitHub OAuth client ID"
+  )
+
+gitHubClientSecretParser :: Parser Text
+gitHubClientSecretParser = Text.pack <$> strOption
+  ( long "github-client-secret"
+ <> metavar "GITHUB_CLIENT_SECRET"
+ <> help "GitHub OAuth client secret"
+  )
+
 walletParser :: Parser WalletArgs
 walletParser = WalletArgs
   <$> option str
@@ -305,15 +336,20 @@ genAuthServerContext whitelist mSecret = (case mSecret of
   PlainAddressAuth -> plainAddressAuthHandler whitelist
   JWTAuth JWTArgs{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
+-- TODO: replace the try with some versioning mechanism
 initDb :: IO ()
-initDb = void $ try' $ DB.withDb DB.createTables
+initDb = void $ try' $
+  DB.withDb do
+    DB.createTables
+    DB.addInitialData
+
   where
   try' :: IO a -> IO (Either SomeException a)
   try' = try
 
 main :: IO ()
 main = do
-  args <- execParser opts
+  args :: Args <- execParser opts
   eb <- jsonHandleBackend stderr renderJSONException renderRoot
   withEvent eb Initializing \initEv -> do
     addField initEv $ VersionField Package.version
@@ -358,16 +394,31 @@ main = do
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       _ <- initDb
-      _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) 10
+      adaPriceRef <- startSynchronizer eb args
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist args.auth) .
-        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (serverArgs args caps r eb whitelist))
+        (\r -> swaggerSchemaUIServer (documentation args.auth)
+               :<|> server (serverArgs args caps r eb whitelist adaPriceRef))
   exitFailure
   where
-  serverArgs args caps r eb = ServerArgs
-    caps (args.wallet) args.githubToken (jwtArgs args.auth) (be r eb) (args.signatureTimeout)
+  startSynchronizer eb args = do
+    ref <- newIORef Nothing
+    _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) ref 10
+    pure ref
+  serverArgs args caps r eb whitelist ref = ServerArgs
+    { serverCaps = caps
+    , serverWalletArgs  = args.wallet
+    , githubToken = args.github.accessToken
+    , serverJWTArgs = jwtArgs args.auth
+    , serverEventBackend = be r eb
+    , serverSigningTimeout = args.signatureTimeout
+    , serverWhitelist = whitelist :: Maybe Whitelist
+    , validateSubscriptions = not args.bypassSubscriptionValidation
+    , serverGitHubCredentials = args.github.credentials
+    , adaUsdPrice = liftIO $ readIORef ref
+    }
   jwtArgs PlainAddressAuth = Nothing
   jwtArgs (JWTAuth args) = Just args
   documentation PlainAddressAuth = swaggerJson

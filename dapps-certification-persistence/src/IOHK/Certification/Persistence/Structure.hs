@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -10,84 +9,115 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE DerivingVia                #-}
 
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module IOHK.Certification.Persistence.Structure where
 
 import           Control.Lens         hiding (index, (.=))
 import           Data.Aeson
-import           Data.Aeson.Types
 import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
 import           GHC.OverloadedLabels
+import           Data.Int
 
-import qualified Data.Text            as Text
+import           IOHK.Certification.Persistence.Structure.Profile
+import           IOHK.Certification.Persistence.Structure.Subscription
+
+import qualified Data.Text         as Text
+import qualified Data.Aeson.KeyMap as KM
 
 newtype IpfsCid = IpfsCid { ipfsCid :: Text}
   deriving (ToJSON,FromJSON,Show )
 
 newtype TxId = TxId { txId :: Text}
   deriving (ToJSON,FromJSON,Show,Read)
+--------------------------------------------------------------------------------
+-- | Subscription
+data SubscriptionDTO = SubscriptionDTO
+  { subscriptionDtoId :: ID Subscription
+  , subscriptionDtoProfileId :: ID Profile
+  , subscriptionDtoTierId :: ID Tier
+  , subscriptionDtoPrice :: Int64
+  , subscriptionDtoAdaUsdPrice :: Double
+  , subscriptionDtoStartDate :: UTCTime
+  , subscriptionDtoEndDate :: UTCTime
+  , subscriptionDtoStatus :: SubscriptionStatus
+  , subscriptionDtoName :: Text
+  , subscriptionDtoFeatures :: [Feature]
+  , subscriptionDtoType :: TierType
+  } deriving (Generic)
 
-data Profile = Profile
-  { profileId    :: ID Profile   -- TODO: do we need an internal id?
-  , ownerAddress :: Text         -- TODO: type level restrictions might apply in the future
-                                 -- regarding the format
-  , website      :: Maybe Text
-  , vendor       :: Maybe Text
-  , twitter      :: Maybe Text
-  , linkedin     :: Maybe Text
-  , authors      :: Maybe Text
-  , contacts     :: Maybe Text
-  } deriving (Generic, Show)
+instance ToJSON SubscriptionDTO where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 15 }
 
-type ProfileId = ID Profile
+instance FromJSON SubscriptionDTO where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 15 }
 
-instance FromJSON Profile where
-    parseJSON = withObject "Profile" $ \v -> Profile def
-      <$> v .:  "address"
-      <*> v .:? "website"     .!= Nothing
-      <*> v .:? "vendor"      .!= Nothing
-      <*> v .:? "twitter"     .!= Nothing
-      <*> v .:? "linkedin"    .!= Nothing
-      <*> v .:? "authors"     .!= Nothing
-      <*> v .:? "contacts"    .!= Nothing
+instance ToSchema SubscriptionDTO where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 15 }
 
-instance ToSchema Profile where
-   declareNamedSchema _ = do
-    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
-    textSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe Text))
-    return $ NamedSchema (Just "Profile") $ mempty
-      & type_ ?~ SwaggerObject
-      & properties .~
-          [ ("address", textSchema)
-          , ("dapp", textSchemaM)
-          , ("website", textSchemaM)
-          , ("vendor", textSchemaM)
-          , ("twitter", textSchemaM)
-          , ("linkedin", textSchemaM)
-          , ("authors", textSchemaM)
-          , ("contacts", textSchemaM)
-          , ("githubToken", textSchemaM)
-          ]
-      & required .~ [ "address", "dapp" ]
+data TierDTO = TierDTO
+  { tierDtoTier :: Tier
+  , tierDtoFeatures :: [Feature]
+  }
 
-instance ToJSON Profile where
-  toJSON = object . profileJSONPairs
+instance ToJSON TierDTO where
+  toJSON TierDTO{..} = Object (x <> y)
+    where
+    x = case toJSON tierDtoTier of
+            Object obj -> obj
+            _          -> KM.empty
+    y = KM.fromList [ "features" .= tierDtoFeatures ]
 
-profileJSONPairs :: Profile -> [Pair]
-profileJSONPairs Profile{..} =
-  [ "address" .= ownerAddress
-  , "website" .= website
-  , "vendor" .= vendor
-  , "twitter" .= twitter
-  , "linkedin" .= linkedin
-  , "authors" .= authors
-  , "contacts" .= contacts
-  ]
-instance SqlRow Profile
+instance FromJSON TierDTO where
+  parseJSON = withObject "TierDTO" $ \v -> TierDTO
+      <$> parseJSON (Object v)
+      <*> v .: "features"
+
+instance ToSchema TierDTO where
+  declareNamedSchema _ = do
+    tierSchema <- declareSchema (Proxy :: Proxy Tier)
+    featureSchema <- declareSchemaRef (Proxy :: Proxy [Feature])
+    return $ NamedSchema (Just "TierDTO") $ tierSchema
+              & properties %~ (`mappend` [ ("features", featureSchema) ])
+              & required %~  (<> [ "features" ])
+
+--------------------------------------------------------------------------------
+-- | Profile
+
+instance FromJSON (ID Profile) where
+  parseJSON = withText "ID Profile" $ \t -> pure $ toId $ read $ Text.unpack t
+
+instance ToJSON (ID Profile) where
+  toJSON = toJSON . show . fromId
+
+data ProfileDTO = ProfileDTO
+  { profile :: Profile
+  , dapp    :: Maybe DApp
+  }
+
+instance FromJSON ProfileDTO where
+  parseJSON = withObject "ProfileDTO" $ \v -> ProfileDTO
+      <$> parseJSON (Object v)
+      <*> v .:? "dapp" .!= Nothing
+
+instance ToJSON ProfileDTO where
+  toJSON ProfileDTO{..} = object $
+    ("dapp" .= dapp) : profileJSONPairs profile
+
+instance ToSchema ProfileDTO where
+  declareNamedSchema _ = do
+    profileSchema <- declareSchema (Proxy :: Proxy Profile)
+    dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
+    return $ NamedSchema (Just "ProfileDTO") $ profileSchema
+              & properties %~ (`mappend` [ ("dapp", dappSchema) ])
+
+--------------------------------------------------------------------------------
+-- | Certification
 
 data Certification = Certification
   { certRunId           :: UUID
@@ -123,6 +153,9 @@ instance ToSchema Certification where
       & required .~ [ "runId", "createdAt" ]
 
 instance SqlRow Certification
+
+--------------------------------------------------------------------------------
+-- | Dapp
 
 data DApp = DApp
   { dappId      :: ID Profile
@@ -166,6 +199,10 @@ instance ToJSON DApp where
 
 instance SqlRow DApp
 
+
+--------------------------------------------------------------------------------
+-- | Run
+
 data Status = Queued | Failed | Succeeded | ReadyForCertification | Certified | Aborted
   deriving (Show, Read, Bounded, Enum, Eq, Generic)
 
@@ -193,7 +230,7 @@ instance FromJSON Status where
 instance SqlType Status
 
 type CommitHash = Text
-type CertificationPrice = Int
+type CertificationPrice = Int64
 data Run = Run
   { runId               :: UUID
   , created             :: UTCTime
@@ -272,27 +309,6 @@ instance SqlRow Run
 instance IsLabel "profileId" (ID Profile -> Profile -> Profile) where
   fromLabel v p = p { profileId = v}
 
-data ProfileDTO = ProfileDTO
-  { profile :: Profile
-  , dapp    :: Maybe DApp
-  }
-
-instance FromJSON ProfileDTO where
-  parseJSON = withObject "ProfileDTO" $ \v -> ProfileDTO
-      <$> parseJSON (Object v)
-      <*> v .:? "dapp" .!= Nothing
-
-instance ToJSON ProfileDTO where
-  toJSON ProfileDTO{..} = object $
-    ("dapp" .= dapp) : profileJSONPairs profile
-
-instance ToSchema ProfileDTO where
-  declareNamedSchema _ = do
-    profileSchema <- declareSchema (Proxy :: Proxy Profile)
-    dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
-    return $ NamedSchema (Just "ProfileDTO") $ profileSchema
-              & properties %~ (`mappend` [ ("dapp", dappSchema) ])
-
 --------------------------------------------------------------------------------
 -- | Wallet transactions
 
@@ -306,9 +322,9 @@ instance SqlEnum TxStatus where
 data Transaction = Transaction
     { wtxId         :: ID Transaction
     , wtxExternalId :: Text
-    , wtxAmount     :: Int
+    , wtxAmount     :: Int64
     , wtxTime       :: UTCTime
-    , wtxDepth      :: Int
+    , wtxDepth      :: Int64
     , wtxStatus     :: !TxStatus
     , wtxMetadata   :: !Text
     } deriving (Generic)
@@ -320,7 +336,7 @@ data TransactionEntry = TransactionEntry
     { txEntryId      :: ID TransactionEntry
     , txEntryIndex   :: Maybe Int
     , txEntryAddress :: Text
-    , txEntryAmount  :: Int
+    , txEntryAmount  :: Int64
     , txEntryInput   :: Bool
     , txEntryTxId    :: ID Transaction
     } deriving (Generic,Show)
@@ -342,13 +358,6 @@ transactionEntries = table "entry"
   [ #txEntryId :- autoPrimary
   , #txEntryTxId :- foreignKey transactions #wtxId
   ]
-profiles :: Table Profile
-profiles = table "profile"
-  [ #profileId :- autoPrimary
-  , #ownerAddress :- unique
-  , #ownerAddress :- index
-  ]
-
 runs :: Table Run
 runs = table "run"
   [ #runId :- primary
@@ -376,3 +385,7 @@ createTables = do
   createTable runs
   createTable transactions
   createTable transactionEntries
+  createTable features
+  createTable tiers
+  createTable tierFeatures
+  createTable subscriptions

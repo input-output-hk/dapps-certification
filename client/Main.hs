@@ -29,6 +29,8 @@ import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
 import Control.Monad (unless)
 import Text.Regex
+import Data.Int
+
 import qualified Data.ByteString.Base16 as Hexa
 
 
@@ -359,6 +361,19 @@ data Command
   | CmdGetRepositoryInfo !GetRepositoryInfoArgs
   | CmdLogin !LoginBody
   | CmdServerTimestamp
+  | CmdGetAdaUsdPrice
+  | CmdGetAllTiers
+  | CmdSubscriptions !SubscriptionCommand
+
+data SubscriptionCommand
+  = GetSubscriptions GetSubscriptionsArgs
+  | Subscribe SubscribeArgs
+  | CancelPendingSubscriptions !Auth
+  | GetActiveFeatures !Auth
+
+data GetSubscriptionsArgs = GetSubscriptionsArgs !Auth !Bool
+
+data SubscribeArgs = SubscribeArgs !Auth !Int64
 
 data GetRepositoryInfoArgs = GetGitHubAddressArgs
   { owner :: !Text
@@ -381,6 +396,75 @@ commandParser = hsubparser
  <> command "get-repo-info" (CmdGetRepositoryInfo <$> getGitHubRepoInfo)
  <> command "login" (CmdLogin <$> loginInfo)
  <> command "server-timestamp" (CmdServerTimestamp <$ serverTimestampInfo)
+ <> command "get-ada-usd-price" (CmdGetAdaUsdPrice <$ getAdaUsdPriceInfo)
+ <> command "get-tiers" (CmdGetAllTiers <$ getAllTiersInfo)
+ <> command "subscriptions" (CmdSubscriptions <$> subscriptionsCommandInfo)
+  )
+
+subscriptionsCommandInfo :: ParserInfo SubscriptionCommand
+subscriptionsCommandInfo = info subscriptionsCommandParser
+  ( fullDesc
+ <> header "plutus-certification-client subscriptions — Manage subscriptions"
+  )
+
+subscriptionsCommandParser :: Parser SubscriptionCommand
+subscriptionsCommandParser = hsubparser
+  ( command "get" (GetSubscriptions <$> getSubscriptionsInfo)
+ <> command "choose" (Subscribe <$> subscribeInfo)
+ <> command "cancel-pending" (CancelPendingSubscriptions <$> cancelPendingSubscriptionInfo)
+ <> command "get-active-features" (GetActiveFeatures <$> getActiveFeaturesInfo)
+  )
+
+getActiveFeaturesInfo :: ParserInfo Auth
+getActiveFeaturesInfo = info authParser
+  ( fullDesc
+ <> header "plutus-certification-client subscriptions get-active-features — Get all active features"
+  )
+cancelPendingSubscriptionInfo :: ParserInfo Auth
+cancelPendingSubscriptionInfo = info authParser
+  ( fullDesc
+ <> header "plutus-certification-client subscriptions cancel-pending — Cancel all pending subscriptions"
+  )
+
+subscribeInfo :: ParserInfo SubscribeArgs
+subscribeInfo = info subscribeParser
+  ( fullDesc
+  <> header "plutus-certification-client subscriptions choose — Subscribe to a tier"
+  )
+
+subscribeParser :: Parser SubscribeArgs
+subscribeParser = SubscribeArgs
+  <$> authParser
+  <*> option auto
+        ( long "tier-id"
+       <> metavar "TIER-ID"
+       <> help "Tier to subscribe to"
+        )
+
+getSubscriptionsInfo :: ParserInfo GetSubscriptionsArgs
+getSubscriptionsInfo = info getSubscriptionsParser
+  ( fullDesc
+  <> header "plutus-certification-client subscriptions get — Get the current/all subscriptions"
+  )
+
+getSubscriptionsParser :: Parser GetSubscriptionsArgs
+getSubscriptionsParser = GetSubscriptionsArgs
+  <$> authParser
+  <*> switch
+        ( long "all"
+       <> help "Get all subscriptions, not only the active ones"
+        )
+
+getAdaUsdPriceInfo :: ParserInfo ()
+getAdaUsdPriceInfo = info (pure ())
+  ( fullDesc
+ <> header "plutus-certification-client get-ada-usd-price — Get the current ADA/USD price"
+  )
+
+getAllTiersInfo :: ParserInfo ()
+getAllTiersInfo = info (pure ())
+  ( fullDesc
+ <> header "plutus-certification-client get-tiers — Get the available tiers"
   )
 
 getGitHubRepoInfo :: ParserInfo GetRepositoryInfoArgs
@@ -502,3 +586,15 @@ main = do
       handle $ apiClient.login loginBody
     CmdServerTimestamp ->
       handle $ apiClient.serverTimestamp
+    CmdGetAdaUsdPrice ->
+      handle $ apiClient.getAdaUsdPrice
+    CmdGetAllTiers ->
+      handle $ apiClient.getAllTiers
+    CmdSubscriptions (GetSubscriptions (GetSubscriptionsArgs auth all')) ->
+      withAuth auth $ \c authKey -> c.getProfileSubscriptions authKey (Just (not all'))
+    CmdSubscriptions (Subscribe (SubscribeArgs auth tierId')) ->
+      withAuth auth $ \c authKey -> c.subscribe authKey tierId'
+    CmdSubscriptions (CancelPendingSubscriptions auth) ->
+      withAuth auth $ \c authKey -> c.cancelPendingSubscriptions authKey
+    CmdSubscriptions (GetActiveFeatures auth) ->
+      withAuth auth $ \c authKey -> c.getActiveFeatures authKey
