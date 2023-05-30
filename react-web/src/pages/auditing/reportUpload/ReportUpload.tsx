@@ -8,22 +8,19 @@ import Button from "components/Button/Button";
 import { Form } from "compositions/Form/Form";
 import { Input } from "compositions/Form/components/Input";
 
-import {
-  FILE_SIZE,
-  SUPPORTED_FORMATS,
-  reportUploadSchema,
-} from "./reportUpload.schema";
+import { reportUploadSchema } from "./reportUpload.schema";
 import DAPPScript from "components/DAPPScript/DAPPScript";
 import "./ReportUpload.scss";
 import Dropdown from "components/Dropdown/Dropdown";
 import TextArea from "components/TextArea/TextArea";
-import Upload from "components/FileUpload/Upload";
 import { useFieldArray } from "react-hook-form";
+import { useAppSelector } from "store/store";
 
 export const fieldArrayName: string = "dAppScripts";
 
 const ReportUpload = () => {
   const navigate = useNavigate();
+  const { userDetails }  = useAppSelector((state: any) => state.auth);
 
   useEffect(() => {
     // to be called only once initially
@@ -58,8 +55,14 @@ const ReportUpload = () => {
     console.log(formData);
   };
 
-  // eslint-disable-next-line
-  const uploadReport = () => {};
+  const initializeFormState = () => {
+    const { twitter, website, subject, name, contact } = userDetails
+
+    // map data into formData structure and form.reset(data)
+  }
+
+  // const [files, setFiles] = useState<any>();
+  // const uploadReport = () => {};
 
   const certificationLevelOptions = [
     {
@@ -72,7 +75,6 @@ const ReportUpload = () => {
     },
   ];
 
-  const [files, setFiles] = useState<any>();
 
   return (
     <>
@@ -161,7 +163,7 @@ const ReportUpload = () => {
           />
 
           <div className="separator-label">Audit Report</div>
-          <Upload
+          {/* <Upload
             isMultiple={false}
             highlightText="Upload a PDF"
             uploadFiles={(file) => {
@@ -178,6 +180,13 @@ const ReportUpload = () => {
             onClick={(files) => console.log(files)}
             name="auditReport"
             showDefaultError
+          /> */}
+          <TextArea
+            placeholder="Report URLs"
+            required={true}
+            maxRows={2}
+            tooltipText="Enter comma(,) separatated JSON/PDF URLs or IPFS link corresponding to the report"
+            {...form.register("reportURL")}
           />
 
           <div className="separator-label">DAPP Script</div>

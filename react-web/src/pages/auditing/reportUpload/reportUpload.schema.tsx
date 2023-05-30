@@ -53,18 +53,20 @@ export const reportUploadSchema = yup.object().shape({
       /^(https?:\/\/(?:www\\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\\.[^\\s]{2,}|www\\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\\.[^\\s]{2,}|https?:\/\/(?:www\\.|(?!www))[a-zA-Z0-9]+\\.[^\\s]{2,}|www\\.[a-zA-Z0-9]+\\.[^\\s]{2,})$/,
       "Please verify the characters entered"
     ),
-  auditReport: yup
-    .mixed()
-    .test("required", "This field is required", (value) => {
-      console.log(value, value.length, !!value.length)
-      return !!value.length;
-    })
-    .test("fileType", "Only PDF is allowed", (value) => {
-      if (!value[0]) return true; // Skip the test if no file is selected
-      return Array.from(value).some((file: any) =>
-        allowedTypes.includes(file.type)
-      );
-    }),
+  // auditReport: yup
+  //   .mixed()
+  //   .test("required", "This field is required", (value) => {
+  //     console.log(value, value.length, !!value.length)
+  //     return !!value.length;
+  //   })
+  //   .test("fileType", "Only PDF is allowed", (value) => {
+  //     if (!value[0]) return true; // Skip the test if no file is selected
+  //     return Array.from(value).some((file: any) =>
+  //       allowedTypes.includes(file.type)
+  //     );
+  //   }),
+  reportURL: yup.string().required("This field is required")
+    .matches(/^((ipfs:\/\/(Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})([/?#][-a-zA-Z0-9@:%_+.~#?&//=]*)*){}|((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\.(?:json|pdf)))$/, "Please enter the link to JSON/PDF file or an ipfs:// link"),
   dAppScripts: yup.array().of(
     yup.object({
       scriptHash: yup
