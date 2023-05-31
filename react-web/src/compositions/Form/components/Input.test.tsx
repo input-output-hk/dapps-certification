@@ -49,9 +49,7 @@ describe("Test cases for FieldError component", () => {
     const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
 
-    await act(() => {
-      fireEvent.click(container);
-    });
+    fireEvent.click(container);
 
     expect(container).toHaveClass("active");
     expect(screen.getByTestId("test")).toHaveFocus();
@@ -74,9 +72,7 @@ describe("Test cases for FieldError component", () => {
     const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
 
-    await act(() => {
-      fireEvent.blur(wrapper);
-    });
+    fireEvent.blur(wrapper);
     expect(container).not.toHaveClass("active");
   });
 

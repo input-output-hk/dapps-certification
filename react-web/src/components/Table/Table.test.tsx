@@ -133,9 +133,7 @@ import {
       expect(colVizContainer.style.display).toBe("none");
   
       const toggleBtn = screen.getByTestId("colviz-sideBarButton");
-      await act(() => {
-        fireEvent.click(toggleBtn);
-      });
+      fireEvent.click(toggleBtn);
       expect(colVizContainer.style.display).toBe("block");
     });
   

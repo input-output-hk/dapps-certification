@@ -65,9 +65,7 @@ describe("Table column component", () => {
     );
 
     const columnOption = screen.getByTestId(`${columns[2].Header}-checkbox`);
-    await act(() => {
-      fireEvent.click(columnOption);
-    });
+    fireEvent.click(columnOption);
 
     expect(updateColumnOptions).toHaveBeenCalled();
     expect(updateColumnOptions).toHaveBeenCalledWith([
@@ -133,9 +131,7 @@ describe("Table column component", () => {
     );
 
     const columnOption = screen.getByTestId(`${columns[1].Header}-checkbox`);
-    await act(() => {
-      fireEvent.click(columnOption);
-    });
+    fireEvent.click(columnOption);
 
     expect(columnOption.firstChild).not.toBeChecked();
     expect(mock).toHaveBeenCalledWith([
@@ -195,9 +191,7 @@ describe("Table column component", () => {
     );
 
     const columnOption = screen.getByTestId(`${columns[1].Header}-checkbox`);
-    await act(() => {
-      fireEvent.click(columnOption);
-    });
+    fireEvent.click(columnOption);
 
     const checkbox = screen.getByTestId(`${columns[0].Header}-checkbox`).firstChild as HTMLInputElement;
 
