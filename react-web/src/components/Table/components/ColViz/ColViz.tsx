@@ -71,6 +71,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
                         checked={column.columnVisible}
                         onChange={(e) => handleChange(e, column.accessor)}
                         disabled={column.checkBoxDisabled}
+                        data-testid={`${column?.Header}-checkbox`}
                       />
                     }
                     label={column.Header}

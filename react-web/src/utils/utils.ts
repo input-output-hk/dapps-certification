@@ -1,5 +1,3 @@
-import { BigNum } from "@emurgo/cardano-serialization-lib-browser";
-
 export const exportObjectToJsonFile = (objectData: any) => {
     let filename = "Testing Report.json";
     let contentType = "application/json;charset=utf-8;";
@@ -59,6 +57,7 @@ export const formatTimeToReadable = (duration: number) => {
     return timeStr
 }
 
-export const convertAdaToLovelace = (fee_ada: number) => {
-  return BigNum.from_str((fee_ada * 1000000).toString())
-}
+// unused now
+// export const convertAdaToLovelace = (fee_ada: number) => {
+//   return BigNum.from_str((fee_ada * 1000000).toString())
+// }

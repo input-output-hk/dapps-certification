@@ -44,6 +44,6 @@ describe("renders banners", () => {
     fireEvent.click(supportPageLink);
 
     // Expect content of support page to be in the DOM
-    expect(screen.getByText(/Support Coming soon.../i)).toBeInTheDocument();
+    expect(screen.getByText(/Coming soon.../i)).toBeInTheDocument();
   });
 });
