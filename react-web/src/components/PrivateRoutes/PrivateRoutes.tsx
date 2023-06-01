@@ -32,7 +32,7 @@ const PrivateRoutes = () => {
     // eslint-disable-next-line
   }, [isLoggedIn, location.pathname]);
 
-  return <Outlet />;
+  return isLoggedIn ? <Outlet /> : <></>;
 };
 
 export default PrivateRoutes;
