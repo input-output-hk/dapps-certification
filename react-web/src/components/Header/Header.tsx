@@ -1,5 +1,5 @@
-import React, { useEffect, useState, memo, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { memo, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch, useAppSelector } from "store/store";
 import {
@@ -10,20 +10,19 @@ import {
 } from "store/slices/auth.slice";
 import "./Header.scss";
 
-import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
-import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import { useDelayedApi } from "hooks/useDelayedApi";
 import { fetchData } from "api/api";
 import useLocalStorage from "hooks/useLocalStorage";
+import { AuthenticatedMenu, NoAuthMenu } from "./Menu";
 
 const Header = () => {
-  const { isLoggedIn, address, wallet, network, subscribedFeatures } =
-    useAppSelector((state) => state.auth);
+  const { isLoggedIn, address, wallet, network } = useAppSelector(
+    (state) => state.auth
+  );
   const dispatch = useAppDispatch();
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
   const [pollForNetwork, setPollForNetwork] = useState(false);
-  const navigate = useNavigate();
   const [isLogged, setIsLoggedIn] = useLocalStorage(
     "isLoggedIn",
     localStorage.getItem("isLoggedIn") === "true" ? true : false
@@ -71,9 +70,7 @@ const Header = () => {
 
           if (!features.data?.length) {
             setSubscriptions(false);
-          } else {
-            setSubscriptions(true);
-          }
+          } else setSubscriptions(true);
         } catch (e) {
           console.log(e);
         }
@@ -141,72 +138,6 @@ const Header = () => {
     pollForNetwork
   );
 
-  const hasCachedAddress = () => {
-    return (
-      !localStorage.getItem("address")?.length ||
-      !localStorage.getItem("walletName")?.length
-    );
-  };
-
-  const ShowConnectWallet = memo(() => {
-    return <>{hasCachedAddress() ? <ConnectWallet /> : null}</>;
-  });
-
-  const ShowAvatarDropdown = memo(() => {
-    return <>{address && wallet ? <AvatarDropDown /> : null}</>;
-  });
-
-  const NoAuthMenu = memo(() => {
-    return (
-      <>
-        <li>
-          <Link to="community">Community</Link>
-        </li>
-        <li>
-          <Link to="pricing">Pricing</Link>
-        </li>
-        <li>
-          <Link to="support">Support</Link>
-        </li>
-        <li className="button-wrap">
-          <ShowConnectWallet />
-        </li>
-      </>
-    );
-  });
-  const AuthenticatedMenu = memo(() => {
-    return (
-      <>
-        <li>
-          <Link to="support">Support</Link>
-        </li>
-        {subscribedFeatures?.indexOf("l2-upload-report") !== -1 ? (
-          <li>
-            <Link to="auditor">Auditor</Link>
-          </li>
-        ) : null}
-        <li>
-          <Link to="subscription">Subscription</Link>
-        </li>
-        <li>
-          <Link to="history">Test History</Link>
-        </li>
-        <li>
-          <ShowAvatarDropdown />
-        </li>
-      </>
-    );
-  });
-
-  const ProfileSection = useCallback(() => {
-    return (
-      <ul className={`menu ${isActive ? "active-ul" : ""}`}>
-        {isLoggedIn ? <AuthenticatedMenu /> : <NoAuthMenu />}
-      </ul>
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isLoggedIn]);
-
   return (
     <header className="header">
       <Link to="/" state={{ insideNavigation: true }}>
@@ -226,9 +157,13 @@ const Header = () => {
       <label className="menu-icon" htmlFor="menu-btn">
         <span className="navicon"></span>
       </label>
-      <ProfileSection />
+
+      {/* Profile section */}
+      <ul className={`menu ${isActive ? "active-ul" : ""}`}>
+        {isLoggedIn ? <AuthenticatedMenu /> : <NoAuthMenu />}
+      </ul>
     </header>
   );
 };
 
-export default Header;
+export default memo(Header);
