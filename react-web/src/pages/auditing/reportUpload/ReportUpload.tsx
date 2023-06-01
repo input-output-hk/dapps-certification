@@ -56,7 +56,7 @@ const ReportUpload = () => {
   };
 
   const initializeFormState = () => {
-    const { twitter, website, subject, name, contact } = userDetails
+    const { twitter, website } = userDetails // TBD - subject, name, contact
 
     // map data into formData structure and form.reset(data)
   }
@@ -66,11 +66,11 @@ const ReportUpload = () => {
 
   const certificationLevelOptions = [
     {
-      label: "AUDIT",
+      label: "L0 Audit",
       value: 0,
     },
     {
-      label: "CERTIFY",
+      label: "L2 Certification",
       value: 2,
     },
   ];
