@@ -7,6 +7,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Avatar from "@mui/material/Avatar";
 import "./AvatarDropDown.scss";
+import useLocalStorage from "hooks/useLocalStorage";
 
 const AvatarDropDown = () => {
   const navigate = useNavigate();
@@ -14,6 +15,17 @@ const AvatarDropDown = () => {
   const logOut = () => {
     dispatch(logout());
   };
+  const [, setIsLoggedIn] = useLocalStorage(
+    "isLoggedIn",
+    localStorage.getItem("isLoggedIn") === "true" ? true : false
+  );
+
+  const [, setUserDetails] = useLocalStorage(
+    "userDetails",
+    localStorage.getItem("userDetails")
+      ? JSON.parse(localStorage.getItem("userDetails")!)
+      : null
+  );
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -28,6 +40,8 @@ const AvatarDropDown = () => {
     setAnchorEl(null);
     logOut();
     navigate("/");
+    setUserDetails({ dapp: null });
+    setIsLoggedIn(false);
   };
 
   return (

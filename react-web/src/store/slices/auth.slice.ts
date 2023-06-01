@@ -10,7 +10,7 @@ interface AuthState {
   userDetails: IUserProfile;
   loading: boolean;
   network: number | null;
-  subscribedFeatures: Array<"l1-run" | "l2-upload-report">;
+  subscribedFeatures: Array<"l1-run" | "l2-upload-report"> | null;
 }
 
 // Define the initial state using that type
@@ -21,7 +21,7 @@ const initialState: AuthState = {
   userDetails: {dapp: null},
   loading: false,
   network: null,
-  subscribedFeatures: [],
+  subscribedFeatures: null,
 };
 
 const clearLSCache = () => {
@@ -61,7 +61,6 @@ export const authSlice = createSlice({
         state.loading = false;
         state.isLoggedIn = true;
         state.userDetails = actions.payload;
-        localStorage.setItem("userDetails", JSON.stringify(actions.payload));
         localStorage.setItem("isLoggedIn", "true");
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
