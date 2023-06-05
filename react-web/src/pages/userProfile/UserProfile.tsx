@@ -17,6 +17,7 @@ import { clearStates,
   verifyRepoAccess, 
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
 import Toast from "components/Toast/Toast";
+import useLocalStorage from "hooks/useLocalStorage";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -38,6 +39,13 @@ const UserProfile = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
+
+  const [, setUserDetails] = useLocalStorage(
+    "userDetails",
+    localStorage.getItem("userDetails")
+      ? JSON.parse(localStorage.getItem("userDetails")!)
+      : null
+  );
 
   const form: any = useForm({
     schema: userProfileSchema,
@@ -122,11 +130,12 @@ const UserProfile = () => {
       fetchData.put("/profile/current", reqData).then(async () => {
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
-        await dispatch(
+        const response = await dispatch(
           getProfileDetails({address: address, wallet: wallet, walletName: walletName})
           /** For mock */
           // getProfileDetails({url: "static/data/new-profile.json"})
         );
+        setUserDetails(response.payload);
         dispatch(clearAccessToken())
         navigate('/')
       }).catch((errorObj) => {
@@ -136,7 +145,7 @@ const UserProfile = () => {
         }
         setShowError(errorMsg);
         const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
-        
+        setUserDetails({ dapp: null });        
       })
     };
     submitProfile();
