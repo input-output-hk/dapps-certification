@@ -15,6 +15,7 @@ import Dropdown from "components/Dropdown/Dropdown";
 import TextArea from "components/TextArea/TextArea";
 import { useFieldArray } from "react-hook-form";
 import { useAppSelector } from "store/store";
+import { IScriptObject, OffChainMetadataSchema } from "./reportUpload.interface";
 
 export const fieldArrayName: string = "dAppScripts";
 
@@ -52,14 +53,56 @@ const ReportUpload = () => {
   }
 
   const formHandler = (formData: any) => {
-    console.log(formData);
+    const {subject, certificationLevel, name, logo, email, website, twitter, reportURL, summary, disclaimer, dAppScripts} = formData;
+    const formattedDappScripts: IScriptObject[] = [];
+    dAppScripts.forEach((script: any) => {
+      const {scriptHash, contactAddress, ...rest} = script
+      formattedDappScripts.push({
+        scriptHash: scriptHash,
+        contactAddress: contactAddress,
+        smartContractInfo: {
+          ...rest
+        }
+      })
+    });
+    const payload: OffChainMetadataSchema = {
+      subject: subject,
+      schemaVersion: 1,
+      certificationLevel: parseInt(certificationLevel),
+      certificateIssuer: {
+        name: name,
+        logo: logo,
+        social: {
+          contact: email,
+          link: website,
+          twitter: twitter,
+          github: website,
+          website: website
+        }
+      },
+      report: {
+        reportURLs: reportURL.replace(/\s+/g,"").split(',')
+      },
+      summary: summary,
+      disclaimer: disclaimer,
+      scripts: formattedDappScripts
+    }
+
+    console.log(payload); // to be posted
   };
 
   const initializeFormState = () => {
     const { twitter, website } = userDetails // TBD - subject, name, contact
+    let formData: any = { twitter, website }
 
-    // map data into formData structure and form.reset(data)
+    form.reset(formData)
   }
+
+  useEffect(() => {
+    initializeFormState()
+    // initializeFormState() is to not to be triggered on every re-render of the dep-array below but whenever the form or userDetails is updated alone
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userDetails, form]);
 
   // const [files, setFiles] = useState<any>();
   // const uploadReport = () => {};
@@ -86,7 +129,7 @@ const ReportUpload = () => {
             placeholder="Certification Level"
             required={true}
             onOptionSelect={(option) =>
-              form.setValue("certificationLevel", option.label, {
+              form.setValue("certificationLevel", option.value, {
                 shouldValidate: true, // trigger on change validation manually
               })
             }

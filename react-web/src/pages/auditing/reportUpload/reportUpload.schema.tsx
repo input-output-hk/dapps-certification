@@ -19,13 +19,6 @@ export const reportUploadSchema = yup.object().shape({
     .required("This field is required")
     .max(64, "Please enter upto 64 characters")
     .matches(/[0-9a-f]{1,64}/, "Please verify the characters entered"),
-  github: yup
-    .string()
-    .required("This field is required")
-    .matches(
-      /^(?:https?:\/\/)?(?:www\.)?github\.com\/[\w-]+\/[\w.-]+$/,
-      "Please verify the characters entered"
-    ),
   name: yup.string().required("This field is required"),
   email: yup
     .string()
@@ -34,18 +27,18 @@ export const reportUploadSchema = yup.object().shape({
   discord: yup
     .string()
     .matches(
-      /^(?:https?:\/\/)?discord(?:\.gg|app\.com\/invite|\.com\/invite)\/[\w-]+$/,
+      /^((?:https?:\/\/)?discord(?:\.gg|app\.com\/invite|\.com\/invite)\/[\w-]+)?$/,
       "Please verify the characters entered"
     ),
   logo: yup
     .string()
     .matches(
-      /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\.(?:jpg|jpeg|png|gif|bmp|svg|webp|tiff|tif)$/,
+      /^((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\.(?:jpg|jpeg|png|gif|bmp|svg|webp|tiff|tif))?$/,
       "Please verify the characters entered"
     ),
   twitter: yup
     .string()
-    .matches(/@\w{1,15}/, "Please verify the characters entered"),
+    .matches(/^(@\w{1,15})?$/, "Please verify the characters entered"),
   website: yup
     .string()
     .required("This field is required")
@@ -80,7 +73,11 @@ export const reportUploadSchema = yup.object().shape({
       optimizer: yup.string(),
       optimizerVersion: yup.string(),
       progLang: yup.string(),
-      repoUrl: yup.string(),
+      repoUrl: yup.string()
+        .matches(
+          /^((?:https?:\/\/)?(?:www\.)?github\.com\/[\w-]+\/[\w.-]+)?$/,
+          "Please verify the characters entered"
+        )
     })
   ),
 });
