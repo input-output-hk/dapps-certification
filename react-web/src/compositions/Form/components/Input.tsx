@@ -74,6 +74,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           id={id}
           data-testid={name}
           value={value}
+          onFocusCapture={() => setActive(true)}
+          disabled={disabled}
         />
       </div>
 

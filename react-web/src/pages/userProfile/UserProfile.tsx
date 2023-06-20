@@ -80,6 +80,13 @@ const UserProfile = () => {
   }
 
   useEffect(() => {
+    if (isEdit) {
+      form.setFocus("name"); // focus on first field on Edit mode
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
+
+  useEffect(() => {
     initializeFormState()
     dispatch(clearStates())
     // initializeFormState() is to not to be triggered on every re-render of the dep-array below but whenever the form or userDetails is updated alone

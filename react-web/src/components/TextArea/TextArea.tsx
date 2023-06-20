@@ -4,7 +4,7 @@ import classNames from "classnames";
 
 import Icons from "components/Icons/Icons";
 import ArrowTooltip from "components/Tooltip/Tooltip";
-import HelperText, { HelperTextType } from "../HelperText/HelperText";
+import HelperText from "../HelperText/HelperText";
 
 import "./TextArea.scss";
 import { useFormContext } from "react-hook-form";
@@ -68,6 +68,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
             maxRows={maxRows}
             className={classNames("text-area", className)}
             ref={ref}
+            onFocusCapture={() => setActive(true)}
           />
 
           {errors?.[name] && (
