@@ -1,4 +1,4 @@
-import React, { useEffect, useState, memo, useCallback } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch, useAppSelector } from "store/store";
@@ -9,14 +9,16 @@ import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import { useDelayedApi } from "hooks/useDelayedApi";
 import { fetchData } from "api/api";
+import DropoverMenu from "components/DropoverMenu/DropoverMenu";
 
 const Header = () => {
-  const { isLoggedIn, address, wallet, network, subscribedFeatures } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, address, wallet, network } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
   const [pollForNetwork, setPollForNetwork] = useState(false);
   const navigate = useNavigate();
+  const [featureList, setFeatureList] = useState<String[]>([]);
 
   useEffect(() => {
     // check if address, walletName is in localStorage - login user without having to connect to wallet again
@@ -33,6 +35,7 @@ const Header = () => {
           })
           const features = await fetchData.get("/profile/current/subscriptions/active-features")
           dispatch(setSubscribedFeatures(features.data))
+          setFeatureList(features.data)
           if (!features.data?.length) {
             navigate('/subscription')
           }
@@ -114,6 +117,13 @@ const Header = () => {
     </>)
   })
 
+  const AuditMainMenu = () => <span className="link menu-link">Auditing</span>
+  const AuditSubMenu = () => {
+    return (<>
+      <Link to="audit-report-upload">Report Upload</Link>
+    </>)
+  }
+
   const NoAuthMenu = memo(() => {
     return (
       <>
@@ -141,9 +151,14 @@ const Header = () => {
         <li>
           <Link to="subscription">Subscription</Link>
         </li>
-        {subscribedFeatures.indexOf('l2-upload-report') !== -1 ? (
+        {featureList.indexOf('l2-upload-report') !== -1 ? (
           <li>
-            <Link to="auditing">Auditing</Link>
+            <DropoverMenu 
+              name="auditing" 
+              mainElm={<AuditMainMenu />}
+              listItems={<AuditSubMenu />}></DropoverMenu>
+            
+            
           </li>
         ) : null}
         <li>
@@ -163,7 +178,7 @@ const Header = () => {
       </ul>
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isLoggedIn]);
+  }, [isActive, isLoggedIn, featureList]);
 
   return (
     <header className="header">

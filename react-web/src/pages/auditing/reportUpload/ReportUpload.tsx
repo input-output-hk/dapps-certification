@@ -16,18 +16,26 @@ import TextArea from "components/TextArea/TextArea";
 import { useFieldArray } from "react-hook-form";
 import { useAppSelector } from "store/store";
 import { IScriptObject, OffChainMetadataSchema } from "./reportUpload.interface";
+import { fetchData } from "api/api";
+import Modal from "components/Modal/Modal";
 
 export const fieldArrayName: string = "dAppScripts";
 
 const ReportUpload = () => {
   const navigate = useNavigate();
   const { userDetails }  = useAppSelector((state: any) => state.auth);
+  const [openModal, setOpenModal] = useState(false);
 
   useEffect(() => {
     // to be called only once initially
     addNewDappScript()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const onCloseModal = () => {
+    setOpenModal(false);
+    navigate(-1);
+  };
 
   // eslint-disable-next-line
   const [showError, setShowError] = useState("");
@@ -75,20 +83,29 @@ const ReportUpload = () => {
         social: {
           contact: email,
           link: website,
-          twitter: twitter,
+          twitter: twitter || "",
           github: website,
           website: website
         }
       },
-      report: {
-        reportURLs: reportURL.replace(/\s+/g,"").split(',')
-      },
+      report: reportURL.replace(/\s+/g,"").split(','),
       summary: summary,
       disclaimer: disclaimer,
       scripts: formattedDappScripts
     }
 
-    console.log(payload); // to be posted
+    fetchData.post("/auditor/reports", payload).then((response) => {
+      setShowError("")
+      setOpenModal(true)
+    }).catch((errorObj) => {debugger
+      let errorMsg = 'Something went wrong. Please try again.'
+        if (errorObj?.response?.data) {
+          errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
+        }
+        setShowError(errorMsg);
+        const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
+        
+    })
   };
 
   const initializeFormState = () => {
@@ -275,7 +292,7 @@ const ReportUpload = () => {
             />
 
             <Button
-              // disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid}
               type="submit"
               buttonLabel={"Submit"}
             />
@@ -283,6 +300,16 @@ const ReportUpload = () => {
         </Form>
       </div>
       {showError ? <Toast message={showError} /> : null}
+      <Modal
+        open={openModal}
+        title="Auditor Report Uploaded"
+        onCloseModal={onCloseModal}
+        modalId="subscriptionSuccessModal"
+      >
+        <p style={{ marginBottom: "2rem" }}>
+          Successfully submitted Auditor Report
+        </p>
+      </Modal>
     </>
   );
 };
