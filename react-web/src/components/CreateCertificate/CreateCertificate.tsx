@@ -50,6 +50,7 @@ const CreateCertificate = () => {
     const [ openModal, setOpenModal ] = useState(false);
     const [ disableCertify, setDisableCertify ] = useState(false);
     const [certificationPrice, setCertificationPrice] = useState(0);
+    const [performTransaction, setPerformTransaction] = useState(true);
 
     // to run only once initially
     useEffect(() => {
@@ -57,9 +58,8 @@ const CreateCertificate = () => {
             const availableProfileBalance: number = response.data
             fetchData.get('/run/' + uuid + '/details').then(res => {
                 const runDetails: Run = res.data
-                if ((availableProfileBalance - runDetails.certificationPrice) < 0) {
-                    setCertificationPrice(runDetails.certificationPrice);
-                }
+                setCertificationPrice(runDetails.certificationPrice);
+                setPerformTransaction((availableProfileBalance > 0 && (availableProfileBalance - runDetails.certificationPrice) < 0) ? true : false)
             })
         })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,7 +127,7 @@ const CreateCertificate = () => {
     const triggerGetCertificate = async () => {
         setCertifying(true);
         setShowError("")
-        if (certificationPrice) {
+        if (performTransaction) {
             triggerTransactionFromWallet(certificationPrice)
         } else {
             triggerSubmitCertificate()
@@ -206,7 +206,7 @@ const CreateCertificate = () => {
         {certified || disableCertify ? null : (<Button
             displayStyle="gradient"
             onClick={() => triggerGetCertificate()}
-            buttonLabel={"Purchase a Certificate (" + (certificationPrice/1000000).toString() + " ADA)"}
+            buttonLabel={"Purchase a Certificate"+ (certificationPrice ? " (" + (certificationPrice/1000000).toString() + " ADA)" : null)}
             showLoader={certifying}
         />)}
         {transactionId ? (
