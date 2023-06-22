@@ -206,7 +206,7 @@ const CreateCertificate = () => {
         {certified || disableCertify ? null : (<Button
             displayStyle="gradient"
             onClick={() => triggerGetCertificate()}
-            buttonLabel={"Purchase a Certificate"+ (certificationPrice ? " (" + (certificationPrice/1000000).toString() + " ADA)" : null)}
+            buttonLabel={"Purchase a Certificate"+ (certificationPrice ? " (" + (certificationPrice/1000000).toString() + " ADA)" : "")}
             showLoader={certifying}
         />)}
         {transactionId ? (
