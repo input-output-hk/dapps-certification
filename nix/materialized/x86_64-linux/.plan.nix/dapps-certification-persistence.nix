@@ -51,6 +51,8 @@
         modules = [
           "IOHK/Certification/Persistence/Structure"
           "IOHK/Certification/Persistence/API"
+          "IOHK/Certification/Persistence/Structure/Subscription"
+          "IOHK/Certification/Persistence/Structure/Profile"
           "IOHK/Certification/Persistence"
           ];
         hsSourceDirs = [ "src" ];

@@ -24,10 +24,11 @@ import           Data.Proxy
 import           Data.Time
 import           GHC.TypeLits
 import           Plutus.Certification.Internal
+import           Data.Int
 
 import qualified Data.Aeson.KeyMap as KM
 
-newtype Quantity unit = Quantity { quantity :: Int }
+newtype Quantity unit = Quantity { quantity :: Int64 }
                    deriving (Show,Eq,Generic)
 type LovelaceQty = Quantity "lovelace"
 type BlockQty = Quantity "block"

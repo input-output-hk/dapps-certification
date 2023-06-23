@@ -24,6 +24,7 @@ import Control.Monad.IO.Class ( MonadIO(..) )
 import Control.Monad.Catch (MonadMask)
 import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
+import Plutus.Certification.CoinGeckoClient
 import Data.Aeson
 import Plutus.Certification.TransactionBroadcaster
 import Observe.Event.Render.JSON
@@ -37,6 +38,8 @@ import Control.Monad.Except (MonadError)
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
+import Data.IORef
+import Data.Void
 
 data InitializingField
   = WalletArgsField WalletArgs
@@ -45,10 +48,12 @@ data InitializingField
 data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
+  InjectCoinGeckoClient :: forall f . !(CoinGeckoClientSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
+  ActivateSubscriptions :: SynchronizerSelector [DB.SubscriptionId]
+  UpdateAdaPrice :: SynchronizerSelector Void
 
 newtype TransactionsCount = TransactionsCount Int
-
 
 renderSynchronizerSelector :: RenderSelectorJSON SynchronizerSelector
 renderSynchronizerSelector InitializingSynchronizer =
@@ -63,7 +68,13 @@ renderSynchronizerSelector InitializingSynchronizer =
       DelayField delay -> ("delay", toJSON delay)
   )
 renderSynchronizerSelector (InjectTxBroadcaster selector) = renderTxBroadcasterSelector selector
+renderSynchronizerSelector (InjectCoinGeckoClient selector) = renderCoinGeckoClientSelector selector
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
+renderSynchronizerSelector ActivateSubscriptions = ("activate-subscriptions", renderSubscriptions)
+renderSynchronizerSelector UpdateAdaPrice = ("refresh-ada-price", absurd)
+
+renderSubscriptions :: RenderFieldJSON [DB.SubscriptionId]
+renderSubscriptions subscriptions = ("subscriptions", toJSON subscriptions)
 
 renderTransactionsCount :: RenderFieldJSON TransactionsCount
 renderTransactionsCount (TransactionsCount count) = ("transactions-count",toJSON count)
@@ -134,7 +145,8 @@ fromInputsToDbInputs = foldl (\acc input -> case fromInputToDbInput input of
 
 fromInputToDbInput :: TxInput -> Maybe DB.TransactionEntry
 fromInputToDbInput (TxInput _ _ Nothing) = Nothing
-fromInputToDbInput (TxInput index _ (Just TxOutput{..})) = Just $ DB.TransactionEntry
+fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
+  = Just $ DB.TransactionEntry
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
@@ -154,6 +166,7 @@ monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
   transactions <- getTransactionList args >>= handleResponse
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions transactions
+  activateSubscriptions (subEventBackend ev)
   certifyRuns (subEventBackend ev) args
   where
     -- handle the response from the wallet
@@ -185,8 +198,18 @@ certifyRuns eb args = do
   certificationProcess a b = createCertification
     ( narrowEventBackend InjectTxBroadcaster eb ) args a (RunID b)
 
+activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m)
+                      => EventBackend m r SynchronizerSelector
+                      -> m ()
+activateSubscriptions eb = withEvent eb ActivateSubscriptions $ \ev -> do
+  -- activate all pending subscriptions with enough credits
+  DB.withDb DB.activateAllPendingSubscriptions >>= addField ev
+
 -- certify all runs of a profile
-certifyProfileRuns :: (MonadIO m, MonadMask m) => CertificationProcess m -> [DB.Run] -> m ()
+certifyProfileRuns :: (MonadIO m, MonadMask m)
+                   => CertificationProcess m
+                   -> [DB.Run]
+                   -> m ()
 certifyProfileRuns certificationProcess runs =
   -- get the profile
   DB.withDb (DB.getProfileAddress pid)
@@ -205,7 +228,8 @@ certifyProfileRuns certificationProcess runs =
     -- calculate the cost of the run
     let cost = run.certificationPrice
     -- if we have enough credits, certify the run
-    when (creditsAvailable >= cost) $ void (certificationProcess pid (run.runId))
+    when (creditsAvailable >= cost) $
+      void (certificationProcess pid (run.runId))
     -- recursively certify the next runs
     certifyRuns' rs (creditsAvailable - cost)
 
@@ -217,15 +241,31 @@ certifyProfileRuns certificationProcess runs =
 startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
                          => EventBackend m r SynchronizerSelector
                          -> WalletArgs
+                         -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
                          -> m b
-startTransactionsMonitor eb args delayInSeconds = withEvent eb InitializingSynchronizer $ \ev -> do
-  addField ev $ WalletArgsField args
-  addField ev $ DelayField delayInSeconds
-  -- TODO maybe a forkIO here will be better than into the calling function
-  -- hence, now, the parent instrumentation event will never terminate 
-  forever $ do
-    monitorWalletTransactions (subEventBackend ev) args
-    liftIO $ threadDelay delayInMicroseconds
+startTransactionsMonitor eb args adaPriceRef delayInSeconds =
+  withEvent eb InitializingSynchronizer $ \ev -> do
+    addField ev $ WalletArgsField args
+    addField ev $ DelayField delayInSeconds
+    -- TODO maybe a forkIO here will be better than into the calling function
+    -- hence, now, the parent instrumentation event will never terminate
+    forever $ do
+      updateAdaPrice (subEventBackend ev) adaPriceRef
+      monitorWalletTransactions (subEventBackend ev) args
+      liftIO $ threadDelay delayInMicroseconds
   where
     delayInMicroseconds = delayInSeconds * 1000000
+
+updateAdaPrice :: (MonadIO m,MonadMask m)
+               => EventBackend m r SynchronizerSelector
+               -> IORef (Maybe DB.AdaUsdPrice)
+               -> m ()
+updateAdaPrice eb ref = withEvent eb UpdateAdaPrice $ \_ -> do
+  -- fetch the ada price from the wallet
+  adaPrice <- getAdaPrice ( narrowEventBackend InjectCoinGeckoClient eb )
+  liftIO $ writeIORef ref $
+    case adaPrice of
+     Left _ -> Nothing
+     Right p -> Just p
+

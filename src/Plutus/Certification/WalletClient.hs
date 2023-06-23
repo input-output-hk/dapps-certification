@@ -34,6 +34,7 @@ import           Network.HTTP.Client.TLS
 import           Plutus.Certification.WalletClient.Transaction
 import           Servant.API
 import           Servant.Client
+import           Data.Int
 
 data TxBody = forall a . (ToJSON a) => TxBody
   { passphrase :: !Text
@@ -95,7 +96,7 @@ data WalletArgs = WalletArgs
   --TODO: this might not be safe to be passed as a
   , walletPassphrase :: !Text
   , walletAPIAddress :: !BaseUrl
-  , walletCertificationPrice :: !Int
+  , walletCertificationPrice :: !Int64
   } deriving Show
 
 data CertificationMetadata = CertificationMetadata
