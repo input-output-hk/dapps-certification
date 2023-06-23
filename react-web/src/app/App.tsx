@@ -33,7 +33,7 @@ const Banner = () => {
       <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
       {/* if not in Mainnet and app-wallet not Mainnet (i.e. in Testnet), show Warning to connect to Preprod. */}
     {network !== null && network !== 1 && networkEnvVar !== '1' ? 
-      <Alert severity="warning">Being in a test network, please make sure you are connected to wallet in <strong>Preprod</strong> to avail services without any issues.</Alert> : null}
+      <Alert severity="warning">Your wallet is connected to a Testnet which is expected while the tool is in Beta. Please ensure that you are connected to the <strong>Preprod</strong> network.</Alert> : null}
   </>)
 }
 
