@@ -12,7 +12,6 @@ export const reportUploadSchema = yup.object().shape({
   disclaimer: yup
     .string()
     .required("This field is required")
-    .max(200, "Please enter less than 200 characters"),
   subject: yup
     .string()
     .required("This field is required")
