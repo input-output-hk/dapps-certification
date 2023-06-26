@@ -128,7 +128,7 @@ const TableComponent: FC<any> = ({
                     <TableCell
                       {...column.getHeaderProps(column.getSortByToggleProps())}
                     >
-                      <div key={index} className="col-header">
+                      <div key={index} className="col-header" data-testid={column.render("Header")}>
                         <span> {column.render("Header")}</span>
 
                         <span>
