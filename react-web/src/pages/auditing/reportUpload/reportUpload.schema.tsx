@@ -75,7 +75,7 @@ export const reportUploadSchema = yup.object().shape({
       scriptHash: yup
         .string()
         .required("This field is required")
-        .matches(/[0-9a-fA-F]{64}/, "Please verify the characters entered"),
+        .matches(/[0-9a-fA-F]{64}/, "Enter a valid script hash."),
       contactAddress: yup
       .string()
       .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address.")
