@@ -76,7 +76,9 @@ export const reportUploadSchema = yup.object().shape({
         .string()
         .required("This field is required")
         .matches(/[0-9a-fA-F]{64}/, "Please verify the characters entered"),
-      contactAddress: yup.string().required("This field is required"),
+      contactAddress: yup
+      .string()
+      .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address.")
       era: yup.string(),
       compiler: yup.string(),
       compilerVersion: yup.string(),
