@@ -16,9 +16,10 @@ const UnitTestFailureCard: React.FC<{
                 <span
                     className={`error-title accordion-title ${isOpen ? 'open' : ''}`}
                     onClick={(_) => toggleAccordion()}
+                    data-testid="accordion-title"
                 >
                     <i>{resultObj.resultShortDescription}</i>
-                    <i className={`arrow ${isOpen ? 'up' : 'down'}`}></i>
+                    <i className={`arrow ${isOpen ? 'up' : 'down'}`} data-testid="arrow"></i>
                 </span>
 
                 <div className={`accordion-content ${isOpen ? '' : 'hidden'}`}>

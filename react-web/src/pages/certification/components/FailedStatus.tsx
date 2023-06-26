@@ -18,9 +18,10 @@ const FailedStatus: React.FC<{
       <span
         className={`error-title accordion-title ${isOpen ? 'open' : ''}`}
         onClick={(_) => toggleAccordion()}
+        data-testid="accordion-title"
       >
         <i>{reason}</i>
-        <i className={`arrow ${isOpen ? 'up' : 'down'}`}></i>
+        <i className={`arrow ${isOpen ? 'up' : 'down'}`} data-testid="arrow"></i>
       </span>
 
       <div className={`accordion-content ${isOpen ? '' : 'hidden'}`}>
@@ -29,7 +30,7 @@ const FailedStatus: React.FC<{
           ? failingTestCase.map((val, index) => <span className="failing-testcase" key={index}>{index + 1}. {val}</span>)
           : null}
 
-        <span className="failure-output">{output}</span>
+        <span className="failure-output" data-testid="failure-output">{output}</span>
       </div>
     </div>
   );

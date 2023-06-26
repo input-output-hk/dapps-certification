@@ -296,7 +296,7 @@ const Certification = () => {
       }
       {formSubmitted && (
         <>
-          <div id="resultContainer">
+          <div id="resultContainer" data-testid="resultContainer">
             {runStatus === "finished" ? (
               <button
                 className="back-btn"
@@ -314,6 +314,7 @@ const Certification = () => {
             <header>
               <h2
                 id="breadcrumb"
+                data-testid="breadcrumb"
                 style={{alignSelf:"center"}}
                 className={runStatus === "finished" ? "" : "hidden"}
               >
