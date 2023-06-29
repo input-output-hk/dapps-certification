@@ -345,6 +345,7 @@ const TestHistory = () => {
       },
     }
     ],
+    // eslint-disable-next-line
     []
   );
 

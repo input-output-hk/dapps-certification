@@ -11,7 +11,7 @@ export interface IButtonProps {
   showLoader?: boolean;
   size?: 'small' | 'medium' | 'thin';
   type?: "button" | "reset" | "submit" | undefined;
-  displayStyle?: "primary" | "primary-outline" | "secondary" | "gradient";
+  displayStyle?: "primary" | "primary-outline" | "secondary" | "gradient" | "secondary-dark";
   onClick?: (e: any) => any;
 }
 

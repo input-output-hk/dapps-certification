@@ -25,7 +25,7 @@ export const useLogs = (
 
     useEffect(() => {
         if (testEnded) { 
-            dispatch(setEnded(ended+1)); 
+            dispatch(setEnded(ended + 1)); 
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [testEnded])
@@ -34,6 +34,7 @@ export const useLogs = (
     useEffect(()=>{
         setLogInfo([])
         dispatch(setEnded(0))
+    // eslint-disable-next-line
     },[uuid])
 
     const captureRunTime = (sTime: string, eTime: string, state: string) => {

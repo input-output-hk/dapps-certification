@@ -37,7 +37,7 @@ const Header = () => {
           dispatch(setSubscribedFeatures(features.data))
           setFeatureList(features.data)
           if (!features.data?.length) {
-            navigate('/subscription')
+            navigate('/profile')
           }
         } catch(e) {
           console.log(e)
@@ -148,9 +148,9 @@ const Header = () => {
         <li>
           <Link to="support">Support</Link>
         </li>        
-        <li>
+        {/* <li>
           <Link to="subscription">Subscription</Link>
-        </li>
+        </li> */}
         {featureList.indexOf('l2-upload-report') !== -1 ? (
           <li>
             <DropoverMenu 

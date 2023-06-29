@@ -13,6 +13,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
 
   useEffect(() => {
     updateColumnOptions(columnDetails);
+  // eslint-disable-next-line
   }, [columnDetails]);
 
   const handleChange = (e: any, id: any) => {

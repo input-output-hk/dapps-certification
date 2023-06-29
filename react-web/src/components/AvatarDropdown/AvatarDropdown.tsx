@@ -26,7 +26,7 @@ const AvatarDropDown = () => {
 
   const AvatarSubMenu = () => {
     return (<>
-      <MenuItem onClick={navigateToProfile}>User Profile</MenuItem>
+      <MenuItem onClick={navigateToProfile}>Profile</MenuItem>
       <MenuItem onClick={handleLogoutClose}>Logout</MenuItem>
     </>)
   }

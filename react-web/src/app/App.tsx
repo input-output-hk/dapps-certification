@@ -14,7 +14,7 @@ const Certification = lazy(() => import("../pages/certification/Certification"))
 const MaintenancePage = lazy(() => import("../pages/maintenance/Maintenance"));
 const Community = lazy(() => import("../pages/community/Community"));
 const TestHistory = lazy(() => import("../pages/testHistory/TestHistory"));
-const UserProfile = lazy(() => import("../pages/userProfile/UserProfile"));
+// const UserProfile = lazy(() => import("../pages/userProfile/UserProfile"));
 const Subscription = lazy(() => import("../pages/subscription/Subscription"));
 const Support = lazy(() => import("../pages/support/Support"));
 const Pricing = lazy(() => import("../pages/pricing/Pricing"));
@@ -22,7 +22,7 @@ const SubscriptionContent = lazy(() => import("../pages/subscription/Subscriptio
 const Payment = lazy(() => import("../pages/subscription/payment/Payment"));
 const ReportUpload = lazy(() => import("../pages/auditing/reportUpload/ReportUpload"))
 const SubscriptionHistory = lazy(() => import("../pages/subscription/history/SubscriptionHistory"));
-
+const ProfileSubscription = lazy(() => import("../pages/profile-subscription/ProfileSubscription"));
 
 const PageLayout = () => {
   const { network } = useAppSelector((state) => state.auth);
@@ -68,14 +68,15 @@ const App = () => {
         <Route path={BASE_URL} element={<PageLayout />}>
           <Route element={<PrivateRoutes />}>
             <Route path="/" element={<Certification />} />
-            <Route path="/subscription" element={<Subscription />}>
+            {/* <Route path="/subscription" element={<Subscription />}>
               <Route path="" element={<SubscriptionContent/>} />  
               <Route path="payment" element={<Payment />} />
               <Route path="history" element={<SubscriptionHistory />} />
-            </Route>
+            </Route> */}
             <Route path="/audit-report-upload" element={<ReportUpload />} />
             <Route path="/history" element={<TestHistory />} />
-            <Route path="/profile/*" element={<UserProfile />} />
+            <Route path="/profile/*" element={<ProfileSubscription />} />
+            {/* <Route path="/profile/*" element={<UserProfile />} /> */}
           </Route>
           <Route path="/" element={<MaintenancePage />} />
           <Route path="/community" element={<Community />} />

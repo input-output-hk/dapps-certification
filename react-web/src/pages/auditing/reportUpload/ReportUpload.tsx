@@ -97,7 +97,7 @@ const ReportUpload = () => {
     fetchData.post("/auditor/reports", payload).then((response) => {
       setShowError("")
       setOpenModal(true)
-    }).catch((errorObj) => {debugger
+    }).catch((errorObj) => {
       let errorMsg = 'Something went wrong. Please try again.'
         if (errorObj?.response?.data) {
           errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 

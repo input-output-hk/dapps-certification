@@ -63,7 +63,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           document.getElementById(id || name || "")?.focus();
         }}
       >
-        <label>
+        <label htmlFor={name}>
           {label} {required ? <span style={{ color: "red" }}>*</span> : null}
         </label>
         <input
