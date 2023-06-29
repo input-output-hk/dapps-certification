@@ -9,16 +9,14 @@ export const reportUploadSchema = yup.object().shape({
   summary: yup
     .string()
     .required("This field is required")
-    .max(200, "Please enter less than 200 characters"),
   disclaimer: yup
     .string()
     .required("This field is required")
-    .max(200, "Please enter less than 200 characters"),
   subject: yup
     .string()
     .required("This field is required")
     .max(64, "Please enter upto 64 characters")
-    .matches(/[0-9a-fA-F_]{64}/, "Please verify the characters entered"),
+    .matches(/[0-9a-zA-Z_]{1,64}/, "Enter a valid subject name (a-z, A-Z or 0-9 characters only)."),
   name: yup.string().required("This field is required"),
   email: yup
     .string()
@@ -77,8 +75,10 @@ export const reportUploadSchema = yup.object().shape({
       scriptHash: yup
         .string()
         .required("This field is required")
-        .matches(/[0-9a-fA-F]{64}/, "Please verify the characters entered"),
-      contactAddress: yup.string().required("This field is required"),
+        .matches(/[0-9a-fA-F]{64}/, "Enter a valid script hash."),
+      contactAddress: yup
+      .string()
+      .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address.")
       era: yup.string(),
       compiler: yup.string(),
       compilerVersion: yup.string(),

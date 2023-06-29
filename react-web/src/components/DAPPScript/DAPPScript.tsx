@@ -79,7 +79,7 @@ const DAPPScript = ({ remove, value, index }: any) => {
           />
 
           <Input
-            label="Optimier Version"
+            label="Optimizer Version"
             type="text"
             id={`optimizerVersion-${value.id}`}
             {...register(`${fieldArrayName}.${index}.optimizerVersion`)}
