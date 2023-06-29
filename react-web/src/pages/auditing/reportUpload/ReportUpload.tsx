@@ -18,6 +18,7 @@ import { useAppSelector } from "store/store";
 import { IScriptObject, OffChainMetadataSchema } from "./reportUpload.interface";
 import { fetchData } from "api/api";
 import Modal from "components/Modal/Modal";
+import { exportObjectToJsonFile } from "utils/utils";
 
 export const fieldArrayName: string = "dAppScripts";
 
@@ -25,6 +26,7 @@ const ReportUpload = () => {
   const navigate = useNavigate();
   const { userDetails }  = useAppSelector((state: any) => state.auth);
   const [openModal, setOpenModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     // to be called only once initially
@@ -60,7 +62,7 @@ const ReportUpload = () => {
     );
   }
 
-  const formHandler = (formData: any) => {
+  const formHandler = async (formData: any) => {
     const {subject, certificationLevel, name, logo, email, website, twitter, reportURL, summary, disclaimer, dAppScripts} = formData;
     const formattedDappScripts: IScriptObject[] = [];
     dAppScripts.forEach((script: any) => {
@@ -94,24 +96,27 @@ const ReportUpload = () => {
       scripts: formattedDappScripts
     }
 
-    fetchData.post("/auditor/reports", payload).then((response) => {
-      setShowError("")
-      setOpenModal(true)
-    }).catch((errorObj) => {debugger
+    setSubmitting(true)
+    const response: any = await fetchData.post("/auditor/reports", payload).catch((errorObj) => {
       let errorMsg = 'Something went wrong. Please try again.'
         if (errorObj?.response?.data) {
           errorMsg = errorObj.response.statusText + ' - ' + errorObj.response.data 
         }
         setShowError(errorMsg);
         const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
-        
+        setSubmitting(false)
     })
+    setShowError("")
+    setOpenModal(true)
+    exportObjectToJsonFile(response.data.offchain, "Off-Chain_" + subject)
+    exportObjectToJsonFile(response.data.onchain, "On-Chain_" + subject)
+    setSubmitting(false)
   };
 
   const initializeFormState = () => {
     const { twitter, website } = userDetails // TBD - subject, name, contact
     let formData: any = { twitter, website }
-
+    setSubmitting(false)
     form.reset(formData)
   }
 
@@ -295,6 +300,7 @@ const ReportUpload = () => {
               disabled={!form.formState.isValid}
               type="submit"
               buttonLabel={"Submit"}
+              showLoader={submitting}
             />
           </div>
         </Form>
@@ -307,7 +313,7 @@ const ReportUpload = () => {
         modalId="subscriptionSuccessModal"
       >
         <p style={{ marginBottom: "2rem" }}>
-          Successfully submitted Auditor Report
+          Successfully submitted Auditor Report. <br/><br/>Both off-chain and on-chain certificates will be downloaded at once now.
         </p>
       </Modal>
     </>
