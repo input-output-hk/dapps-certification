@@ -8,10 +8,10 @@ export const reportUploadSchema = yup.object().shape({
   certificationLevel: yup.string().required("This field is required"),
   summary: yup
     .string()
-    .required("This field is required")
+    .required("This field is required"),
   disclaimer: yup
     .string()
-    .required("This field is required")
+    .required("This field is required"),
   subject: yup
     .string()
     .required("This field is required")
@@ -78,7 +78,7 @@ export const reportUploadSchema = yup.object().shape({
         .matches(/[0-9a-fA-F]{64}/, "Enter a valid script hash."),
       contactAddress: yup
       .string()
-      .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address.")
+      .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address."),
       era: yup.string(),
       compiler: yup.string(),
       compilerVersion: yup.string(),
