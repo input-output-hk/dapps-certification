@@ -43,6 +43,8 @@ import IOHK.Certification.SignatureVerification as SV
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
 import Data.HashSet as HashSet
+import Data.List as List
+import IOHK.Certification.Persistence (FeatureType(L1Run))
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
@@ -59,16 +61,24 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   }
 
 
+data GitHubCredentials = GitHubCredentials
+  { githubClientId :: !Text
+  , githubClientSecret :: !Text
+  } deriving (Show, Eq )
+
 -- | A type for server arguments including the wallet arguments
 -- and the github access token as optional
 data ServerArgs m r = ServerArgs
-  { serverCaps :: ServerCaps m r
-  , serverWalletArgs :: Wallet.WalletArgs
-  , githubToken :: Maybe GitHubAccessToken
-  , serverJWTArgs :: Maybe JWTArgs
-  , serverEventBackend :: EventBackend m r ServerEventSelector
-  , serverSigningTimeout :: Seconds
-  , serverWhitelist :: Maybe Whitelist
+  { serverCaps :: !(ServerCaps m r)
+  , serverWalletArgs :: !Wallet.WalletArgs
+  , githubToken :: !(Maybe GitHubAccessToken)
+  , serverJWTArgs :: !(Maybe JWTArgs)
+  , serverEventBackend :: !(EventBackend m r ServerEventSelector)
+  , serverSigningTimeout :: !Seconds
+  , serverWhitelist :: !(Maybe Whitelist)
+  , serverGitHubCredentials :: !(Maybe GitHubCredentials)
+  , validateSubscriptions :: Bool
+  , adaUsdPrice :: m (Maybe DB.AdaUsdPrice)
   }
 
 type Whitelist = HashSet Text
@@ -98,6 +108,8 @@ server ServerArgs{..} = NamedAPI
   , versionHead = withEvent eb Version . const $ pure NoContent
   , walletAddress = withEvent eb WalletAddress . const $ pure serverWalletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
+      -- ensure the profile has an active feature for L1Run
+      validateFeature L1Run profileId
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
       let githubToken' =  profileAccessToken <|> githubToken
       -- ensure the ref is in the right format before start the job
@@ -147,7 +159,7 @@ server ServerArgs{..} = NamedAPI
       runConduit
          $ getLogs (setAncestor $ reference ev) actionTypeM rid
         .| (dropWhileC dropCond >> sinkList)
-  , getRuns = \(profileId,_) afterM countM -> do
+  , getRuns = \(profileId,_) afterM countM ->
       DB.withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
@@ -163,8 +175,8 @@ server ServerArgs{..} = NamedAPI
                 , twitter=twitter'
                 , linkedin=fmap unLinkedIn linkedin
                 ,..}) dappM
-        -- it's safe to call partial function fromJust
 
+        -- it's safe to call partial function fromJust
         fromJust <$> DB.getProfile profileId
   , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
 
@@ -208,6 +220,7 @@ server ServerArgs{..} = NamedAPI
     addField ev rid
     DB.withDb (DB.getCertification uuid)
       >>= maybeToServerError err404 "Certification not found"
+
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
     addField ev (GetRepoInfoOwner owner)
     addField ev (GetRepoInfoRepo repo)
@@ -216,6 +229,7 @@ server ServerArgs{..} = NamedAPI
         -- provided from arguments
         ghAccessTokenM' =  ghAccessTokenM <|> githubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
+
   , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
       addField ev address
       now <- getNow
@@ -236,8 +250,65 @@ server ServerArgs{..} = NamedAPI
       -- encode jwt with with expiration time
       pure $ jwtEncode jwtSecret expiresAt (DB.fromId pid, userAddress)
   , serverTimestamp = withEvent eb Version (const $ round . utcTimeToPOSIXSeconds <$> getNow)
+
+  , generateGitHubToken = \code -> withEvent eb GenerateGitHubToken \ev -> do
+      case serverGitHubCredentials of
+        Nothing -> throwError err404 { errBody = "GitHub credentials not configured" }
+        Just GitHubCredentials{..} -> do
+          respE <- liftIO $ generateGithubAccessToken githubClientId githubClientSecret code
+          either (\err -> do
+           addField ev (GenerateGitHubTokenError $ show err)
+           -- let's hide the error from the user from security reasons
+           throwError err400 { errBody = "Invalid code or something went wrong" }
+           ) pure respE
+
+  , getGitHubClientId = withEvent eb GetGitHubClientId \_ ->
+      case serverGitHubCredentials of
+        Nothing -> throwError err404 { errBody = "GitHub credentials not configured" }
+        Just GitHubCredentials{..} -> pure githubClientId
+
+  , getProfileSubscriptions = \(profileId,_) justEnabled -> withEvent eb GetProfileSubscriptions \ev -> do
+    addField ev profileId
+    DB.withDb (DB.getProfileSubscriptions profileId (fromMaybe False justEnabled))
+
+  , subscribe = \(profileId,_) tierIdInt -> withEvent eb Subscribe \ev -> do
+    let tierId = DB.toId tierIdInt
+    addField ev $ SubscribeFieldProfileId profileId
+    addField ev $ SubscribeFieldTierId tierId
+    now <- getNow
+    adaUsdPrice' <- getAdaUsdPrice'
+    ret <- DB.withDb (DB.createSubscription now profileId tierId adaUsdPrice')
+    forM_ ret $ \dto -> addField ev $ SubscribeFieldSubscriptionId (dto.subscriptionDtoId)
+    maybeToServerError err404 "Tier not found" ret
+
+  , cancelPendingSubscriptions = \(profileId,_) -> withEvent eb CancelProfilePendingSubscriptions \ev -> do
+    addField ev $ CancelProfilePendingSubscriptionsFieldProfileId profileId
+    DB.withDb (DB.cancelPendingSubscription profileId)
+
+  , getAllTiers = withEvent eb GetAllTiers \ev -> do
+    tiers <- DB.withDb DB.getAllTiers
+    addField ev (List.length tiers)
+    pure tiers
+
+  , getActiveFeatures = \(profileId,_) -> withEvent eb GetActiveFeatures \ev -> do
+    addField ev $ GetActiveFeaturesFieldProfileId profileId
+    featureTypes <- getNow >>= DB.withDb . DB.getCurrentFeatures profileId
+    addField ev $ GetActiveFeaturesFieldFeatures featureTypes
+    pure featureTypes
+  , getAdaUsdPrice = withEvent eb GetAdaUsdPrice \ev -> do
+    adaUsdPrice' <- getAdaUsdPrice'
+    addField ev adaUsdPrice'
+    pure adaUsdPrice'
   }
   where
+    getAdaUsdPrice' =
+      adaUsdPrice >>= maybeToServerError err500 "Can't get ada usd price"
+    validateFeature featureType profileId = do
+      -- ensure the profile has an active feauture for L1Run
+      when validateSubscriptions $ do
+        featureTypes <- getNow >>= DB.withDb . DB.getCurrentFeatures profileId
+        unless (featureType `elem` featureTypes) $
+          throwError err403 { errBody = "You don't have the required subscription" }
     fromClientResponse = \case
       Left err -> throwError $ serverErrorFromClientError err
       Right a -> pure a

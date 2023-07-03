@@ -81,7 +81,10 @@ data CiceroCaps c m r = CiceroCaps
 -- | Implement 'ServerCaps' with Cicero as the job engine
 --
 -- Jobs are submitted as new @plutus-certification/generate-flake@ facts.
-ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API) => EventBackend m r RunClientSelector -> CiceroCaps c m r -> ServerCaps m r
+ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API)
+                 => EventBackend m r RunClientSelector
+                 -> CiceroCaps c m r
+                 -> ServerCaps m r
 ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
   where
     submitJob mods ghAccessTokenM ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req

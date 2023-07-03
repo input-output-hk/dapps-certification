@@ -1,26 +1,38 @@
-module IOHK.Certification.Persistence (module X,toId,fromId) where
-import Database.Selda
+module IOHK.Certification.Persistence (module X) where
 import IOHK.Certification.Persistence.Structure as X
   ( Run(..)
   , Status(..)
   , DApp(..)
-  , Profile(..)
   , Certification(..)
   , ProfileDTO(..)
-  , profiles
   , runs
-  , authors
-  , contacts
   , createTables
-  , ProfileId
   , IpfsCid(..)
   , TxId(..)
   , Transaction(..)
   , TxStatus(..)
   , TransactionEntry(..)
+  , SubscriptionDTO(..)
+  , TierDTO(..)
+  )
+import Database.Selda as X
+  ( fromId
+  , toId
+  )
+import IOHK.Certification.Persistence.Structure.Profile as X
+  ( ProfileId
+  , authors
+  , Profile(..)
+  )
+import IOHK.Certification.Persistence.Structure.Subscription as X
+  ( Subscription(..)
+  , SubscriptionId
+  , FeatureType(..)
+  , TierId
   )
 import IOHK.Certification.Persistence.API as X
-  ( upsertProfile
+  ( AdaUsdPrice
+  , upsertProfile
   , upsertTransaction
   , getProfile
   , getProfileDApp
@@ -43,4 +55,13 @@ import IOHK.Certification.Persistence.API as X
   , getRunsToCertify
   , getAllAmountsForAddress
   , getProfileBalance
+  , addInitialData
+  , getProfileSubscriptions
+  , getPendingSubscriptions
+  , activateSubscription
+  , activateAllPendingSubscriptions
+  , createSubscription
+  , cancelPendingSubscription
+  , getAllTiers
+  , getCurrentFeatures
   )
