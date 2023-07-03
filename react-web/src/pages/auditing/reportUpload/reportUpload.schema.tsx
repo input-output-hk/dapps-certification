@@ -69,7 +69,7 @@ export const reportUploadSchema = yup.object().shape({
   //     );
   //   }),
   reportURL: yup.string().required("This field is required")
-    .matches(/^((^(?!,)|(?!^),\s?)((ipfs:\/\/(Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})([\/?#][-a-zA-Z0-9@:%_+.~#?&\/=]*)*)|((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\.(?:json|pdf))))+$/, "Please enter links to JSON/PDF file and/or the ipfs:// link to the report"),
+    .matches(/^((^(?!,)|(?!^),\s?)((ipfs:\/\/(Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})([\/?#][-a-zA-Z0-9@:%_+.~#?&\/=]*)*)|((https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})\.(?:json|pdf))))+$/, "Please enter website links to JSON/PDF file and/or the ipfs:// link to the report"),
   dAppScripts: yup.array().of(
     yup.object({
       scriptHash: yup
@@ -77,8 +77,8 @@ export const reportUploadSchema = yup.object().shape({
         .required("This field is required")
         .matches(/[0-9a-fA-F]{64}/, "Enter a valid script hash."),
       contactAddress: yup
-      .string()
-      .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address."),
+        .string()
+        .matches(/[0-9a-fA-F]{64]/, "Enter a valid contract address."),
       era: yup.string(),
       compiler: yup.string(),
       compilerVersion: yup.string(),

@@ -114,6 +114,8 @@ const ReportUpload = () => {
   };
 
   const initializeFormState = () => {
+    form.clearErrors(); // clear form errors
+    
     const { twitter, website } = userDetails // TBD - subject, name, contact
     let formData: any = { twitter, website }
     setSubmitting(false)

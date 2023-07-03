@@ -4,6 +4,7 @@ import { FieldError } from "./FieldError";
 import "./Input.scss";
 import { useFormContext } from "react-hook-form";
 import { getObjectByPath } from "utils/utils";
+import HelperText from "components/HelperText/HelperText";
 
 interface InputProps extends ComponentProps<"input"> {
   label: string;
@@ -52,12 +53,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <div
       className={`input-wrapper ${className}`}
       onBlur={(e: any) => !e.target.value && setActive(false)}
-      onClick={(e: any) => setActive(true)}
+      onClick={() => setActive(true)}
     >
       <div
-        className={`input ${active ? "active" : ""} ${error ? "error" : ""} ${
-          disabled ? "disabled" : ""
-        }`}
+        className={`input ${active ? "active" : ""} ${
+          errors?.[name] || error ? "error" : ""
+        } ${disabled ? "disabled" : ""}`}
         onClick={(_) => {
           setActive(true);
           document.getElementById(id || name || "")?.focus();
@@ -79,7 +80,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         />
       </div>
 
-      {error ? <FieldError message={error} /> : <></>}
+      {errors?.[name] && (
+        <div style={{ marginTop: "4px" }}>
+          <HelperText
+            type="error"
+            value={errors[name]?.message as string}
+            showInfoIcon={false}
+          />
+        </div>
+      )}
+
+      {/* Deeply nested errors */}
+      {error && !errors?.[name] ? <FieldError message={error} /> : <></>}
     </div>
   );
 });

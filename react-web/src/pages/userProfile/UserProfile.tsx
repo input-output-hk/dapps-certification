@@ -45,6 +45,8 @@ const UserProfile = () => {
   });
 
   const initializeFormState = () => {
+    form.clearErrors(); // clear form errors
+    
     const { dapp, contacts, authors, linkedin, twitter, vendor, website } = userDetails;
     let formData: {
       contacts?: string;
