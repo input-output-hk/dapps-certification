@@ -39,22 +39,16 @@ export const reportUploadSchema = yup.object().shape({
       }
     ),
   twitter: yup
-    .string()
-    .matches(/^@\w{1,15}$/, {
-      message: "Please verify the characters entered",
-      excludeEmptyString: true 
+    .string().when("twitter", (value) => {
+      if (value) {
+        return yup.string().matches(/^@\w{1,15}$/, {
+          message: "Please verify the characters entered",
+          excludeEmptyString: true 
+        })
+      } else {
+        return yup.string().transform((val, originalVal) => !val ? null : originalVal).nullable().optional()
+      }
     }),
-  // twitter: yup
-  //   .string().when("twitter", (value) => {
-  //     if (value) {
-  //       return yup.string().matches(/^@\w{1,15}$/, {
-  //         message: "Please verify the characters entered",
-  //         excludeEmptyString: true 
-  //       })
-  //     } else {
-  //       return yup.string().transform((val, originalVal) => !val ? null : originalVal).nullable().optional()
-  //     }
-  //   }),
   website: yup
     .string()
     .required("This field is required")
@@ -98,4 +92,4 @@ export const reportUploadSchema = yup.object().shape({
         )
     })
   ),
-});//, [["twitter", "twitter"]]);
+}, [["twitter", "twitter"]]);
