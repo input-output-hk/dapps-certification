@@ -23,6 +23,7 @@ import Data.Swagger as SWG
 import Plutus.Certification.API.Routes
 import Data.Text
 import GHC.TypeLits
+import IOHK.Certification.Persistence ()
 
 -- TODO: separate jwt auth from the plain auth
 type UnnamedApi (auth :: Symbol)
@@ -40,6 +41,14 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute
+  :<|> GenerateGitHubTokenRoute
+  :<|> GetGitHubClientId
+  :<|> GetProfileSubscriptionsRoute auth
+  :<|> SubscribeRoute auth
+  :<|> CancelProfilePendingSubscriptionsRoute auth
+  :<|> GetTiersRoute
+  :<|> GetProfileActiveFeaturesRoute auth
+  :<|> GetAdaUsdPriceRoute
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

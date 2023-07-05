@@ -8,6 +8,8 @@ library
     exposed-modules:  IOHK.Certification.Persistence
     other-modules:    IOHK.Certification.Persistence.Structure
                     , IOHK.Certification.Persistence.API
+                    , IOHK.Certification.Persistence.Structure.Subscription
+                    , IOHK.Certification.Persistence.Structure.Profile
     build-depends: base
                  , selda
                  , selda-sqlite

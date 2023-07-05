@@ -81,6 +81,7 @@
           "Plutus/Certification/TransactionBroadcaster"
           "Plutus/Certification/Server/Internal"
           "Plutus/Certification/Server/Instance"
+          "Plutus/Certification/CoinGeckoClient"
           "Plutus/Certification/API"
           "Plutus/Certification/Cache"
           "Plutus/Certification/Cicero"
