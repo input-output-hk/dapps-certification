@@ -66,7 +66,7 @@ generateFlake backend addLogEntry ghAccessTokenM flakeref output = withEvent bac
     hPutStrLn h "  inputs = {"
     hPutStr   h "    repo = " >> writeNix h lock >> hPutStrLn h ";"
     hPutStrLn h "    plutus-apps = {"
-    hPutStrLn h "      url = \"github:input-output-hk/plutus-apps/1651d36a0f6458e7d2326d57dbc1baa00034d70d\";"
+    hPutStrLn h "      url = \"github:input-output-hk/plutus-apps/68efca7eda4afd1c14698adf697d70acb5a489e2\";"
     hPutStrLn h "      flake = false;"
     hPutStrLn h "    };"
     hPutStrLn h "    dapps-certification = {"
