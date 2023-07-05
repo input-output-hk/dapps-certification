@@ -40,11 +40,11 @@ const DAPPScript = ({ remove, value, index }: any) => {
         />
 
         <Input
-          label="Contact Address"
+          label="Contract Address"
           type="text"
           required={true}
-          id={`contactAddress-${value.id}`}
-          {...register(`${fieldArrayName}.${index}.contactAddress`)}
+          id={`contractAddress-${value.id}`}
+          {...register(`${fieldArrayName}.${index}.contractAddress`)}
         />
 
         <div className="inner-separator-label">SmartContract Information</div>

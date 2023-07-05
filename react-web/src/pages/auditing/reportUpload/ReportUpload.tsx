@@ -56,7 +56,7 @@ const ReportUpload = () => {
     append(
       {
         scriptHash: "",
-        contactAddress: "",
+        contractAddress: "",
       },
       { shouldFocus: true }
     );
@@ -66,10 +66,10 @@ const ReportUpload = () => {
     const {subject, certificationLevel, name, logo, email, website, twitter, reportURL, summary, disclaimer, dAppScripts} = formData;
     const formattedDappScripts: IScriptObject[] = [];
     dAppScripts.forEach((script: any) => {
-      const {scriptHash, contactAddress, ...rest} = script
+      const {scriptHash, contractAddress, ...rest} = script
       formattedDappScripts.push({
         scriptHash: scriptHash,
-        contactAddress: contactAddress,
+        contractAddress: contractAddress,
         smartContractInfo: {
           ...rest
         }
@@ -269,8 +269,8 @@ const ReportUpload = () => {
                   form
                     .getValues(fieldArrayName)
                     ?.some(
-                      (field: { scriptHash: any; contactAddress: any }) =>
-                        !field?.scriptHash || !field?.contactAddress
+                      (field: { scriptHash: any; contractAddress: any }) =>
+                        !field?.scriptHash || !field?.contractAddress
                     ) // prevent addition of new script boxes if the required field is empty
                 }
                 onClick={() => { addNewDappScript() }}

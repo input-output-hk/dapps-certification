@@ -31,11 +31,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   const {
     formState: { errors },
+    getValues
   } = useFormContext();
-
-  useEffect(() => {
-    disablefocus && setActive(true);
-  }, [disablefocus]);
 
   const [active, setActive] = useState(false);
   const [error, setError] = useState("");
@@ -46,8 +43,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   }, [errors]);
 
   useEffect(() => {
-    value ? setActive(true) : setActive(false);
-  }, [value]);
+    if (getValues(name)) {
+      // field has values
+      setActive(true);
+    } else {
+      // set field active if value empty and iff not on focus
+      if (
+        document.activeElement !== document.getElementById(id || name || "")
+      ) {
+        setActive(false);
+      }
+    }
+
+    // catch deeply nested form errors onChange
+    setError(getObjectByPath(errors, name)?.message);
+
+    // eslint-disable-next-line
+  }, [getValues(name)]);
 
   return (
     <div

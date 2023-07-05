@@ -265,7 +265,6 @@ const UserProfile = () => {
               id="name"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("name")}
             />
             <div className="input-wrapper">
@@ -360,7 +359,6 @@ const UserProfile = () => {
               id="version"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("version")}
             />
             <Input
@@ -368,7 +366,6 @@ const UserProfile = () => {
               type="text"
               id="authors"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("authors")}
             />
             <Input
@@ -376,14 +373,12 @@ const UserProfile = () => {
               type="text"
               id="contacts"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("contacts")}
             />
             <Input
               label="Vendor"
               type="text"
               id="vendor"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("vendor")}
             />
@@ -392,14 +387,12 @@ const UserProfile = () => {
               type="text"
               id="website"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("website")}
             />
             <Input
               label="LinkedIn Url"
               type="text"
               id="linkedIn"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("linkedin")}
             />
@@ -408,7 +401,6 @@ const UserProfile = () => {
               type="text"
               id="twitter"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("twitter")}
             />
             <div className="button-wrapper">
