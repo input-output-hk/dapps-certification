@@ -10,7 +10,7 @@
 
   project = origProject.appendModule ({ lib, ... }: {
     cabalProject = lib.mkForce (builtins.readFile "${modifiedCabalProject}/cabal.project");
-    cabalProjectLocal = lib.mkForce (origProject.args.cabalProjectLocal + ''
+    cabalProjectLocal = lib.mkForce ((x : if isNull x then "" else x)(origProject.args.cabalProjectLocal) + ''
       source-repository-package
         type: git
         location: https://github.com/input-output-hk/plutus-apps
