@@ -13,7 +13,7 @@ export interface IScriptObject {
       repository?: string;
     },
     scriptHash: string;
-    contactAddress: string;
+    contractAddress: string;
   }
 
 export interface OffChainMetadataSchema {

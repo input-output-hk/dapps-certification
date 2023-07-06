@@ -17,6 +17,7 @@ import { clearStates,
   verifyRepoAccess,
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
 import Toast from "components/Toast/Toast";
+import useLocalStorage from "hooks/useLocalStorage";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -39,12 +40,21 @@ const UserProfile = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
 
+  const [, setUserDetails] = useLocalStorage(
+    "userDetails",
+    localStorage.getItem("userDetails")
+      ? JSON.parse(localStorage.getItem("userDetails")!)
+      : null
+  );
+
   const form: any = useForm({
     schema: userProfileSchema,
     mode: "onChange",
   });
 
   const initializeFormState = () => {
+    form.clearErrors(); // clear form errors
+    
     const { dapp, contacts, authors, linkedin, twitter, vendor, website } = userDetails;
     let formData: {
       contacts?: string;
@@ -129,11 +139,12 @@ const UserProfile = () => {
       fetchData.put("/profile/current", reqData).then(async () => {
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
-        await dispatch(
+        const response = await dispatch(
           getProfileDetails({address: address, wallet: wallet, walletName: walletName})
           /** For mock */
           // getProfileDetails({url: "static/data/new-profile.json"})
         );
+        setUserDetails(response.payload);
         dispatch(clearAccessToken())
         navigate('/')
       }).catch((errorObj) => {
@@ -143,7 +154,7 @@ const UserProfile = () => {
         }
         setShowError(errorMsg);
         const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
-
+        setUserDetails({ dapp: null });        
       })
     };
     submitProfile();
@@ -254,7 +265,6 @@ const UserProfile = () => {
               id="name"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("name")}
             />
             <div className="input-wrapper">
@@ -349,7 +359,6 @@ const UserProfile = () => {
               id="version"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("version")}
             />
             <Input
@@ -357,7 +366,6 @@ const UserProfile = () => {
               type="text"
               id="authors"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("authors")}
             />
             <Input
@@ -365,14 +373,12 @@ const UserProfile = () => {
               type="text"
               id="contacts"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("contacts")}
             />
             <Input
               label="Vendor"
               type="text"
               id="vendor"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("vendor")}
             />
@@ -381,14 +387,12 @@ const UserProfile = () => {
               type="text"
               id="website"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("website")}
             />
             <Input
               label="LinkedIn Url"
               type="text"
               id="linkedIn"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("linkedin")}
             />
@@ -397,7 +401,6 @@ const UserProfile = () => {
               type="text"
               id="twitter"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("twitter")}
             />
             <div className="button-wrapper">

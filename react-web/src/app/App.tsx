@@ -1,4 +1,4 @@
-import React, { lazy, memo, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { BASE_URL } from "constants/route";
 import Alert from '@mui/material/Alert';
@@ -10,7 +10,7 @@ import NotFound from "components/NotFound/NotFound";
 import Loader from "components/Loader/Loader";
 import { useAppSelector } from "store/store";
 
-const Certification = lazy(() => import("../pages/certification/Certification"));
+const Home = lazy(() => import("../pages/home/Home"));
 const MaintenancePage = lazy(() => import("../pages/maintenance/Maintenance"));
 const Community = lazy(() => import("../pages/community/Community"));
 const TestHistory = lazy(() => import("../pages/testHistory/TestHistory"));
@@ -24,26 +24,26 @@ const ReportUpload = lazy(() => import("../pages/auditing/reportUpload/ReportUpl
 const SubscriptionHistory = lazy(() => import("../pages/subscription/history/SubscriptionHistory"));
 const ProfileSubscription = lazy(() => import("../pages/profile-subscription/ProfileSubscription"));
 
-const PageLayout = () => {
+const Banner = () => {
   const { network } = useAppSelector((state) => state.auth);
+  const networkEnvVar: any = process.env.REACT_APP_WALLET_NETWORK
+
+  return (<>
+    {network !== null && network !== 1 ? 
+      // always show Info if not in Mainnet
+      <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
+      {/* if not in Mainnet and app-wallet not Mainnet (i.e. in Testnet), show Warning to connect to Preprod. */}
+    {network !== null && network !== 1 && networkEnvVar !== '1' ? 
+      <Alert severity="warning">Your wallet is connected to a Testnet which is expected while the tool is in Beta. Please ensure that you are connected to the <strong>Preprod</strong> network.</Alert> : null}
+  </>)
+}
+
+const PageLayout = () => {
 
   // const networkNames:{[x:string]:string} = {
   //   '0': 'Testnet',
   //   '1': 'Mainnet'
   // }
-
-  const Banner = memo(() => {
-    const networkEnvVar: any = process.env.REACT_APP_WALLET_NETWORK
-
-    return (<>
-      {network !== null && network !== 1 ? 
-        // always show Info if not in Mainnet
-        <Alert severity="info" style={{marginBottom: '10px'}}>Your connected wallet is not in Mainnet.</Alert> : null}
-        {/* if not in Mainnet and app-wallet not Mainnet (i.e. in Testnet), show Warning to connect to Preprod. */}
-      {network !== null && network !== 1 && networkEnvVar !== '1' ? 
-        <Alert severity="warning">Being in a test network, please make sure you are connected to wallet in <strong>Preprod</strong> to avail services without any issues.</Alert> : null}
-    </>)
-  })
 
   return (
     <>
@@ -67,9 +67,9 @@ const App = () => {
       <Routes>
         <Route path={BASE_URL} element={<PageLayout />}>
           <Route element={<PrivateRoutes />}>
-            <Route path="/" element={<Certification />} />
+            <Route path="/" element={<Home />} />
             {/* <Route path="/subscription" element={<Subscription />}>
-              <Route path="" element={<SubscriptionContent/>} />  
+              <Route index element={<SubscriptionContent />} />  
               <Route path="payment" element={<Payment />} />
               <Route path="history" element={<SubscriptionHistory />} />
             </Route> */}

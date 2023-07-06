@@ -1,29 +1,38 @@
-import { Outlet, useLocation, Navigate } from "react-router-dom";
-
-import NotAuthorized from "components/NotAuthorized/NotAuthorized";
-
-import { IUserProfile } from "pages/userProfile/userProfile.interface";
+import { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import useLocalStorage from "hooks/useLocalStorage";
 
 const PrivateRoutes = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  const userDetailsLS: string | null = localStorage.getItem("userDetails");
-  const userDetails: IUserProfile | null = userDetailsLS ? JSON.parse(userDetailsLS) : null;
+  const navigate = useNavigate();
   const location = useLocation();
-  const renderNoAuthPage = () => {
-    if (location.pathname === "/") {
-      return <></>;
+
+  const [isLoggedIn] = useLocalStorage(
+    "isLoggedIn",
+    localStorage.getItem("isLoggedIn") === "true" ? true : false
+  );
+
+  const [userDetails] = useLocalStorage(
+    "userDetails",
+    localStorage.getItem("userDetails")
+      ? JSON.parse(localStorage.getItem("userDetails")!)
+      : null
+  );
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate("/"); // navigate to root link if unauthorized
     } else {
-      return <NotAuthorized />;
+      // user profile details are empty --> prompt user to enter details
+      if (!userDetails?.dapp?.owner || !userDetails?.dapp?.repo) {
+        navigate("/profile");
+      } else {
+        navigate(location.pathname); // User details are available. Redirect to intended path
+      }
     }
-  };
-  const renderOutlets = (userDetails: IUserProfile | null) => {
-    if (location.pathname !== "/profile" && (!userDetails?.dapp?.owner || !userDetails?.dapp?.repo)) {
-      return <Navigate replace to="/profile" />;
-    } else {
-      return <Outlet />
-    }
-  }
-  return isLoggedIn ? renderOutlets(userDetails) : renderNoAuthPage();
-}
+    // eslint-disable-next-line
+  }, [isLoggedIn, location.pathname]);
+
+  return isLoggedIn ? <Outlet /> : <></>;
+};
 
 export default PrivateRoutes;
