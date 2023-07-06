@@ -47,7 +47,6 @@ import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
 import Data.Char (isAlphaNum)
 import Text.Regex
-import Control.Lens hiding ((.=))
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -204,6 +203,54 @@ type GetAdaUsdPriceRoute = "ada-usd-price"
   :> Description "Get the current ADA/USD price"
   :> Get '[JSON] DB.AdaUsdPrice
 
+type GetDAppMetadataRoute = "dapp-metadata"
+  :> Description "Get the dapp metadata"
+  :> Capture "subject" Subject
+  :> Get '[JSON] [DAppMetadata]
+
+
+-- TODO: Move to a different module
+type OnchainMetadata = Value
+type OffchainMetadata = Value
+type Subject = Text
+data DAppMetadata = DAppMetadata {
+  onchainMetadata :: OnchainMetadata,
+  offchainMetadata :: OffchainMetadata
+} deriving (Generic,Show)
+
+-- generic instances
+instance ToJSON DAppMetadata where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON DAppMetadata where
+  parseJSON = genericParseJSON defaultOptions
+
+data PhantomOffchainMetadata
+data PhantomOnchainMetadata
+
+instance ToSchema PhantomOffchainMetadata where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "OffchainMetadata ") $ mempty
+      & type_ ?~ SwaggerObject
+
+instance ToSchema PhantomOnchainMetadata where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "OnchainMetadata ") $ mempty
+      & type_ ?~ SwaggerObject
+
+instance ToSchema DAppMetadata where
+  declareNamedSchema _ = do
+    onchainMetadataSchema <- declareSchemaRef (Proxy :: Proxy PhantomOnchainMetadata)
+    offchainMetadataSchema <- declareSchemaRef (Proxy :: Proxy PhantomOffchainMetadata)
+    return $ NamedSchema (Just "DAppMetadata") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [
+            ("onchainMetadata", onchainMetadataSchema),
+            ("offchainMetadata", offchainMetadataSchema)
+          ]
+      & required .~ ["onchainMetadata","offchainMetadata"]
+
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
 
@@ -302,6 +349,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getAllTiers :: mode :- GetTiersRoute
   , getActiveFeatures :: mode :- GetProfileActiveFeaturesRoute auth
   , getAdaUsdPrice :: mode :- GetAdaUsdPriceRoute
+  , getDAppMetadata :: mode :- GetDAppMetadataRoute
   } deriving stock Generic
 
 data DAppBody = DAppBody
@@ -595,7 +643,7 @@ instance ToParamSchema ApiGitHubAccessToken where
     -- we use SL qualified because of an issue
     -- of parsing for the hlint. it seems to be
     -- some kind of bug
-    & pattern ?~ ghAccessTokenPattern
+    & SL.pattern ?~ ghAccessTokenPattern
 
 ghAccessTokenPattern :: Pattern
 ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
@@ -606,7 +654,7 @@ instance ToSchema ApiGitHubAccessToken where
     return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
       & type_ ?~ SwaggerString
       & maxLength ?~ 40
-      & pattern ?~ ghAccessTokenPattern
+      & SL.pattern ?~ ghAccessTokenPattern
 
 instance ToSchema DAppBody where
   declareNamedSchema _ = do

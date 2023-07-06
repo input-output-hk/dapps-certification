@@ -25,6 +25,7 @@ import Plutus.Certification.API.Routes as X
   , LoginBody(..)
   , isTwitterValid
   , linkedInProfilePattern
+  , DAppMetadata(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson

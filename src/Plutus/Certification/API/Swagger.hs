@@ -49,6 +49,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetTiersRoute
   :<|> GetProfileActiveFeaturesRoute auth
   :<|> GetAdaUsdPriceRoute
+  :<|> GetDAppMetadataRoute
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

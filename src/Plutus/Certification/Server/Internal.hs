@@ -95,6 +95,7 @@ data ServerEventSelector f where
   GetAllTiers :: ServerEventSelector Int
   GetActiveFeatures :: ServerEventSelector GetActiveFeaturesField
   GetAdaUsdPrice :: ServerEventSelector DB.AdaUsdPrice
+  GetDAppMetadata :: ServerEventSelector Text
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -142,6 +143,7 @@ renderServerEventSelector GetActiveFeatures = ("get-active-features", \case
     GetActiveFeaturesFieldFeatures features -> ("features", toJSON features)
   )
 renderServerEventSelector GetAdaUsdPrice = ("get-ada-usd-price", \price -> ("price", toJSON price))
+renderServerEventSelector GetDAppMetadata = ("get-dapp-metadata", \subject -> ("dapp-subject", toJSON subject))
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

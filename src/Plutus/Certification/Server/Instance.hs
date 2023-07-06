@@ -3,12 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Plutus.Certification.Server.Instance where
 
@@ -26,6 +28,7 @@ import Control.Monad.Except
 import Data.Time.LocalTime
 import Data.Maybe
 import Data.Aeson
+import Data.Aeson.QQ
 import Network.HTTP.Client hiding (Proxy,parseUrl)
 
 import Network.HTTP.Types
@@ -299,6 +302,48 @@ server ServerArgs{..} = NamedAPI
     adaUsdPrice' <- getAdaUsdPrice'
     addField ev adaUsdPrice'
     pure adaUsdPrice'
+  , getDAppMetadata = \subject -> withEvent eb GetDAppMetadata \ev -> do
+    addField ev subject
+
+    -- TODO: query the indexer
+    let onChain :: Value  = [aesonQQ| {
+        "type": {"action": "REGISTER", "releaseName": "My first release", "releaseNumber": "0.0.1"},
+        "subject": "FakeBlockfrost-003",
+        "metadata": ["http://bit.ly/3mbhf5G"],
+        "rootHash": "bd4bfbb01b5f6ad1bc55d6098230947f852db44c7bec6e2b9e897209b8bcd837",
+        "signature": { 
+          "r": "ea8a05463357939f9449818123c75f42e87be3861deede43414df0f8a66606f9",
+          "s": "9bbc137799681c7ab976c2ee48f1d1013b879d90ddee3bec40d54925cd234c08",
+          "pub": "9b4139c173fd74898d4a562ef38adf56d49985fc749fe41149bad9a74006e55c",
+          "algo": "Ed25519−EdDSA"
+          },
+        "schema_version": "0.0.1"
+        } |]
+    let offChain :: Value = [aesonQQ| {
+        "subject": "FakeBlockfrost-003",
+        "projectName": "FakeBlockfrost 003",
+        "link": "https://fakeblockfrost.testdapp.x/app",
+        "logo": "https://github.com/lucadonazzon/cip72/blob/main/metadata/004/izosb2Ch_400x400.jpg",
+        "category": "Development",
+        "description": {
+          "short": "Short summary that will be shown also on classic view card boards",
+          "long": "This is a dApp description...????"
+        },
+        "screenshots": [
+          "https://github.com/lucadonazzon/cip72/blob/main/metadata/004/FanRKE3WQAADeC1.jpeg",
+          "https://github.com/lucadonazzon/cip72/blob/main/metadata/004/Fg5N8jxWYAQnh8w.jpeg",
+          "https://github.com/lucadonazzon/cip72/blob/main/metadata/004/FVXta6OXEAEAYTU.jpeg"
+        ],
+        "social": {
+          "companyName": "The Test Dapps Company",
+          "companyEmail": "info@testdapp.x",
+          "website": "https://www.testdapp.x"
+        }
+      } |]
+    -- fetch metadata for every result
+
+    -- return the results
+    pure $ [DAppMetadata onChain offChain | subject == "FakeBlockfrost-003"]
   }
   where
     getAdaUsdPrice' =
