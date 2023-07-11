@@ -1,33 +1,28 @@
+# This file is part of the IOGX template and is documented at the link below:
+# https://www.github.com/input-output-hk/iogx#31-flakenix
+
 {
   description = "Certification as a service for Plutus applications";
 
+
   inputs = {
-    haskellNix.url = "github:input-output-hk/haskell.nix";
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    iogx.url = "github:input-output-hk/iogx";
   };
 
+<<<<<<< HEAD
   outputs = { self, nixpkgs, flake-utils, haskellNix }: let
     supportedSystems = [ "aarch64-linux"  "x86_64-linux" "x86_64-darwin" "aarch64-darwin"  ];
   in flake-utils.lib.eachSystem supportedSystems (system: let
     overlays = [ haskellNix.overlay ];
+=======
+>>>>>>> 6220e00 (IOGX Integation)
 
-    pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
+  outputs = inputs: inputs.iogx.lib.mkFlake inputs ./.;
 
-    materializedPath = ./. + "/nix/materialized/${system}";
 
-    project = pkgs.haskell-nix.cabalProject' {
-      src = ./.;
-      compiler-nix-name = "ghc924";
-      shell.tools = {
-          cabal = {};
-          haskell-language-server = {version = "latest";};
-          hlint = {};
-          stylish-haskell = {};
-      };
-      materialized = if builtins.pathExists materializedPath then materializedPath else null;
-    };
+  nixConfig = {
 
+<<<<<<< HEAD
     flake = project.flake {};
 
     dockerApps = import ./docker-files/docker.nix { pkgs = pkgs; flake = flake; };
@@ -56,4 +51,16 @@
       };
     };
   });
+=======
+    extra-substituters = [
+      "https://cache.iog.io"
+    ];
+
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    ];
+
+    allow-import-from-derivation = true;
+  };
+>>>>>>> 6220e00 (IOGX Integation)
 }
