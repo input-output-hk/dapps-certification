@@ -214,6 +214,7 @@ logHandleText :: (MonadUnliftIO m)
 logHandleText backend addLogEntry h = go
   where
     go = do
+      liftIO $ hSetEncoding h utf8
       acqEv <- acquireEvent backend ReadingHandleLog
       join $ with acqEv \ev -> do
         chunk <- liftIO $ hGetChunk h
