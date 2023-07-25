@@ -3,16 +3,11 @@ import { Input } from "compositions/Form/components/Input";
 import "./DAPPScript.scss";
 import { useFormContext } from "react-hook-form";
 import { fieldArrayName } from "pages/auditing/reportUpload/ReportUpload";
-import { useEffect, useState } from "react";
 
 const DAPPScript = ({ remove, value, index }: any) => {
   const { register, watch } = useFormContext();
   const allScripts = watch(fieldArrayName);
-  const [length, setLength] = useState(1);
-
-  useEffect(() => {
-    allScripts && setLength(allScripts.length);
-  }, [allScripts]);
+  const length = !allScripts ? 1 : allScripts.length;
 
   return (
     <div
