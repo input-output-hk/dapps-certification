@@ -1,9 +1,7 @@
-import React, { ComponentProps, forwardRef, useEffect, useState } from "react";
+import { ComponentProps, forwardRef, useEffect, useState } from "react";
 
-import { FieldError } from "./FieldError";
 import "./Input.scss";
 import { useFormContext } from "react-hook-form";
-import { getObjectByPath } from "utils/utils";
 import HelperText from "components/HelperText/HelperText";
 
 interface InputProps extends ComponentProps<"input"> {
@@ -12,6 +10,7 @@ interface InputProps extends ComponentProps<"input"> {
   disablefocus?: boolean;
   name: string;
   required?: boolean;
+  error?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
@@ -25,6 +24,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     required = false,
     value,
     id = "",
+    error,
     ...props
   },
   ref
@@ -35,12 +35,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   } = useFormContext();
 
   const [active, setActive] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    setError(getObjectByPath(errors, name)?.message);
-    // eslint-disable-next-line
-  }, [errors]);
 
   useEffect(() => {
     if (getValues(name)) {
@@ -54,9 +48,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         setActive(false);
       }
     }
-
-    // catch deeply nested form errors onChange
-    setError(getObjectByPath(errors, name)?.message);
 
     // eslint-disable-next-line
   }, [getValues(name)]);
@@ -102,8 +93,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         </div>
       )}
 
-      {/* Deeply nested errors */}
-      {error && !errors?.[name] ? <FieldError message={error} /> : <></>}
+      {/* Custom errors */}
+      {error && !errors?.[name] ? (
+        <div style={{ marginTop: "4px" }}>
+          <HelperText
+            type="error"
+            value={error as string}
+            showInfoIcon={false}
+          />
+        </div>
+      ) : (
+        <></>
+      )}
+      
     </div>
   );
 });

@@ -16,7 +16,7 @@ export const reportUploadSchema = yup.object().shape({
     .string()
     .required("This field is required")
     .max(64, "Please enter upto 64 characters")
-    .matches(/[0-9a-zA-Z_]{1,64}/, "Enter a valid subject name (a-z, A-Z or 0-9 characters only)."),
+    .matches(/^[0-9a-zA-Z_]+$/, "Enter a valid subject name (a-z, A-Z, 0-9 or _ characters only)."),
   name: yup.string().required("This field is required"),
   email: yup
     .string()

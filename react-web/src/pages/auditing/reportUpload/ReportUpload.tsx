@@ -44,7 +44,7 @@ const ReportUpload = () => {
 
   const form = useForm({
     schema: reportUploadSchema,
-    mode: "onChange",
+    mode: "all", // trigger validation for onBlur and onChange events
   });
 
   const { fields, append, remove } = useFieldArray({
