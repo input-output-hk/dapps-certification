@@ -10,6 +10,7 @@ import Loader from "components/Loader/Loader";
 import "./ConnectWallet.scss";
 import { fetchData } from "api/api";
 import useLocalStorage from "hooks/useLocalStorage";
+import { AxiosResponse } from "axios";
 
 const wallets: Array<string> = ["lace", "nami", "yoroi"];
 
@@ -26,11 +27,7 @@ const ConnectWallet = () => {
   const [walletName, setWalletName] = useState("");
   const [address, setAddress] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [errorToast, setErrorToast] = useState<{
-    display: boolean;
-    statusText?: string;
-    message?: string;
-  }>({ display: false });
+  const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string; showRetry?: boolean}>({display: false});
   const [walletLoading, setWalletLoading] = useState(false);
   const [, setIsLoggedIn] = useLocalStorage(
     "isLoggedIn",
@@ -71,72 +68,53 @@ const ConnectWallet = () => {
 
   const handleError = (error: any) => {
     if (error.info) {
-      setErrorToast({ display: true, message: error.info });
-    } else if (error.response) {
       setErrorToast({
-        display: true,
-        statusText: error.response.statusText,
-        message: error.response.data || undefined,
-      });
+          display: true, 
+          message: error.info, 
+          showRetry: error.code === 3})
+    } else if (error.response) {
+        setErrorToast({
+            display: true, 
+            statusText: error.response.statusText, 
+            message: error.response.data || undefined,
+            showRetry: error.status === 403
+        })
     } else {
-      setErrorToast({ display: true });
+      setErrorToast({display: true})
+      setTimeout(() => {
+        setErrorToast({ display: false });
+      }, 3000);
     }
-    setTimeout(() => {
-      setErrorToast({ display: false });
-    }, 3000);
     setIsLoggedIn(false);
     setUserDetails({ dapp: null });
   };
 
-  const initiatePrivateWalletSignature = (
-    currentWallet: any,
-    walletAddr_bech32: any,
-    walletAddr: string
-  ) => {
-    fetchData
-      .get("/server-timestamp")
-      .then(async (res) => {
-        const timestamp = res.data;
-        const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>>`;
-        try {
-          const { key, signature } = await currentWallet.signData(
-            walletAddr,
-            Buffer.from(msgToBeSigned, "utf8").toString("hex")
-          );
-          console.log(key, signature);
+  const catchError = (err: any) => {
+    handleError(err)
+    setWalletLoading(false)
+    dispatch(logout())
+  }
 
-          if (key && signature) {
-            fetchData
-              .post("/login", {
+  const initiatePrivateWalletSignature = async (currentWallet: any, walletAddr_bech32: any, walletAddr: string) => {
+    const timestamp = (await fetchData.get<any,AxiosResponse<number>,any>('/server-timestamp')).data;
+    const msgToBeSigned = `Sign this message if you are the owner of the ${walletAddr_bech32} address. \n Timestamp: <<${timestamp}>> \n Expiry: 60 seconds`;
+    try {
+        const {key, signature} = await currentWallet.signData(walletAddr, Buffer.from(msgToBeSigned, 'utf8').toString('hex'))
+        if (key && signature) {
+            const token = (await fetchData.post<any,AxiosResponse<string>,any>('/login', {
                 address: walletAddr_bech32,
                 key: key,
-                signature: signature,
-              })
-              .then((response: any) => {
-                if (response.data) {
-                  localStorage.setItem("authToken", response.data);
-                  setAddress(walletAddr_bech32);
-                }
-              })
-              .catch((err) => {
-                handleError(err);
-                setWalletLoading(false);
-                dispatch(logout());
-              });
-          }
-        } catch (err) {
-          handleError(err);
-          setWalletLoading(false);
-          setIsOpen(false);
-          dispatch(logout());
+                signature: signature
+            })).data;
+            localStorage.setItem('authToken', token)
+            setAddress(walletAddr_bech32)
+        } else {
+            catchError({ message: "Could not obtain the proper key and signature for the wallet. Please try connecting again." })
         }
-      })
-      .catch((err) => {
-        handleError(err);
-        setWalletLoading(false);
-        dispatch(logout());
-      });
-  };
+    } catch (err) {
+        catchError(err)
+    }
+  }
 
   useEffect(() => {
     if (address) {
@@ -196,16 +174,12 @@ const ConnectWallet = () => {
             })
           )}
           {walletLoading ? <Loader /> : null}
-          {errorToast && errorToast.display ? (
+          {errorToast && errorToast.display ? (<>
             <span className="error">{errorToast.message}</span>
-          ) : null}
+            <span className="link" style={{marginLeft: '5px'}} onClick={openConnectWalletModal}>Retry</span>
+          </>) : null}
         </div>
       </Modal>
-      {/* {(errorToast && errorToast.display) ? (
-                ((errorToast.message && errorToast.statusText) ? 
-                <Toast message={errorToast.message} title={errorToast.statusText}/> :
-                <Toast />))
-            : null} */}
     </>
   );
 };
