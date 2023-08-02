@@ -1,5 +1,4 @@
-export const exportObjectToJsonFile = (objectData: any, filename?: string) => {
-    filename = filename || "Testing Report.json";
+export const exportObjectToJsonFile = (objectData: any, filename: string) => {
     let contentType = "application/json;charset=utf-8;";
     const navigator = window.navigator as any;
     if (window.navigator && navigator.msSaveOrOpenBlob) {

@@ -108,8 +108,8 @@ const ReportUpload = () => {
     })
     setShowError("")
     setOpenModal(true)
-    exportObjectToJsonFile(response.data.offchain, "Off-Chain_" + subject)
-    exportObjectToJsonFile(response.data.onchain, "On-Chain_" + subject)
+    exportObjectToJsonFile(response.data.offchain, "Off-Chain_" + subject + ".json")
+    exportObjectToJsonFile(response.data.onchain, "On-Chain_" + subject + ".json")
     setSubmitting(false)
   };
 
