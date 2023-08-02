@@ -74,6 +74,8 @@ spec:
             name: socat
             image: alpine/socat
             args:
+              - -d
+              - -d
               - UNIX-LISTEN:/ipc/node.socket,fork
               - TCP-CONNECT:cardano-node-preprod.vela-system:8090
             volumes:
