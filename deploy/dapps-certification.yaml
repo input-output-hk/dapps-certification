@@ -55,7 +55,7 @@ spec:
         - type: sidecar
           properties:
             name: cardano-wallet
-            image: inputoutput/cardano-wallet:2022.12.14
+            image: inputoutput/cardano-wallet:dev-master
             args:
               - serve
               - --node-socket
@@ -74,8 +74,6 @@ spec:
             name: socat
             image: alpine/socat
             args:
-              - -d
-              - -d
               - UNIX-LISTEN:/ipc/node.socket,fork
               - TCP-CONNECT:cardano-node-preprod.vela-system:8090
             volumes:
