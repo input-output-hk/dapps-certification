@@ -8,7 +8,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, haskellNix }: let
-    supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    supportedSystems = [ "aarch64-linux"  "x86_64-linux" "x86_64-darwin" "aarch64-darwin"  ];
   in flake-utils.lib.eachSystem supportedSystems (system: let
     overlays = [ haskellNix.overlay ];
 
@@ -29,12 +29,15 @@
     };
 
     flake = project.flake {};
+
+    dockerApps = import ./docker-files/docker.nix { pkgs = pkgs; flake = flake; };
+
   in flake // {
     packages = flake.packages // {
       inherit (project.plan-nix.passthru) generateMaterialized;
     };
     defaultPackage = flake.packages."plutus-certification:exe:plutus-certification";
-    apps = flake.apps // {
+    apps = flake.apps // dockerApps // {
       updateAllMaterialized = {
         type = "app";
         program = (pkgs.writeShellScript "updateAllMaterialized" ''

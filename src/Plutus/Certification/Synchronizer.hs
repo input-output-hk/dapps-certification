@@ -176,7 +176,7 @@ monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
       return []
     handleResponse (Right transactions) = return transactions
 
-type CertificationProcess m = DB.ProfileId -> UUID -> m DB.Certification
+type CertificationProcess m = DB.ProfileId -> UUID -> m DB.L1CertificationDTO
 
 -- certify all runs who have enough credit to be certified
 -- and have not been certified yet
@@ -195,7 +195,7 @@ certifyRuns eb args = do
   -- TODO: parallelize this
   forM_ runsByProfile $ certifyProfileRuns certificationProcess
   where
-  certificationProcess a b = createCertification
+  certificationProcess a b = createL1Certification
     ( narrowEventBackend InjectTxBroadcaster eb ) args a (RunID b)
 
 activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m)

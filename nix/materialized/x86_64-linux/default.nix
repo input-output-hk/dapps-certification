@@ -8,6 +8,8 @@
         "servant-client".revision = (((hackage."servant-client")."0.19").revisions).default;
         "mmorph".revision = (((hackage."mmorph")."1.2.0").revisions).default;
         "postgresql-binary".revision = (((hackage."postgresql-binary")."0.12.5").revisions).default;
+        "http-conduit".revision = (((hackage."http-conduit")."2.3.8").revisions).default;
+        "http-conduit".flags.aeson = true;
         "happy".revision = (((hackage."happy")."1.20.0").revisions).default;
         "streaming-commons".revision = (((hackage."streaming-commons")."0.2.2.5").revisions).default;
         "streaming-commons".flags.use-bytestring-builder = false;
@@ -685,6 +687,7 @@
           "async".components.library.planned = lib.mkOverride 900 true;
           "http-media".components.library.planned = lib.mkOverride 900 true;
           "word8".components.library.planned = lib.mkOverride 900 true;
+          "http-conduit".components.library.planned = lib.mkOverride 900 true;
           "cabal-doctest".components.library.planned = lib.mkOverride 900 true;
           "iproute".components.library.planned = lib.mkOverride 900 true;
           "servant-client".components.library.planned = lib.mkOverride 900 true;

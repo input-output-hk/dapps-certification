@@ -1,16 +1,10 @@
 version: "3.9"
 services:
-  plutus-certification-ws:
-    build:
-      context: .
-      dockerfile: Dockerfile.ws
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "9671:9671"
   plutus-certification-web:
     build:
       context: .
       dockerfile: Dockerfile.web
+    environment:
+      - REACT_APP_BASE_URL=https://google.com:8080
     ports:
       - "3000:3000"
