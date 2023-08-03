@@ -9,7 +9,7 @@ export interface IButtonProps {
   isLoading?: boolean;
   iconUrl?: any;
   showLoader?: boolean;
-  size?: 'small' | 'medium';
+  size?: 'small' | 'medium' | 'thin';
   type?: "button" | "reset" | "submit" | undefined;
   displayStyle?: "primary" | "primary-outline" | "secondary" | "gradient";
   onClick?: (e: any) => any;

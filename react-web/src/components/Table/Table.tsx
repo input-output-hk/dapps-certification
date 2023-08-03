@@ -44,7 +44,6 @@ const TableComponent: FC<any> = ({
     page,
     gotoPage,
     setPageSize,
-    state: { pageIndex, pageSize },
   } = useTable(
     {
       columns,

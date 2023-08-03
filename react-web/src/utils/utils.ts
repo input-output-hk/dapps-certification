@@ -1,5 +1,4 @@
-export const exportObjectToJsonFile = (objectData: any) => {
-    let filename = "Testing Report.json";
+export const exportObjectToJsonFile = (objectData: any, filename: string) => {
     let contentType = "application/json;charset=utf-8;";
     const navigator = window.navigator as any;
     if (window.navigator && navigator.msSaveOrOpenBlob) {
@@ -61,3 +60,18 @@ export const formatTimeToReadable = (duration: number) => {
 // export const convertAdaToLovelace = (fee_ada: number) => {
 //   return BigNum.from_str((fee_ada * 1000000).toString())
 // }
+
+export const getObjectByPath = (object: { [x: string]: any }, path: string): any => {
+  path = path.replace(/\[(\w+)\]/g, ".$1"); // convert indexes to properties
+  path = path.replace(/^\./, ""); // strip a leading dot
+  var a = path.split(".");
+  for (var i = 0, n = a.length; i < n; ++i) {
+    var k = a[i];
+    if (object && k in object) {
+      object = object[k];
+    } else {
+      return;
+    }
+  }
+  return object;
+};

@@ -86,7 +86,7 @@ const PricingCard: React.FC<PriceCardProps> = ( {...props} ) => {
       : <Form form={form} onSubmit={formHandler}>
           <Input label="Name" id="name" name="name" required {...form.register("name")}></Input>
           <Input label="Email" type="email" id="email" name="email" required {...form.register("email")}></Input>
-          <Input label="Subject" id="subject" name="subject" required disabled={true} {...form.register("subject")} disablefocus="true"></Input>
+          <Input label="Subject" id="subject" name="subject" required disabled={true} {...form.register("subject")}></Input>
           <Input label="Message" id="message" name="message" {...form.register("message")}></Input>
           <Button buttonLabel={"Send"} disabled={!form.formState.isValid} type="submit"></Button>
         </Form>

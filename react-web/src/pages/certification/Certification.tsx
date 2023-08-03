@@ -34,6 +34,7 @@ import { clearStates } from "./slices/logRunTime.slice";
 import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
 import { useConfirm } from "material-ui-confirm";
 import { Link } from "react-router-dom";
+import Loader from "components/Loader/Loader";
 
 const TIMEOFFSET = 1000;
 
@@ -191,7 +192,7 @@ const Certification = () => {
   },[form])
 
   const handleDownloadResultData = (resultData: any) => {
-    exportObjectToJsonFile(resultData);
+    exportObjectToJsonFile(resultData, "Testing Report.json");
   };
 
   const abortRun = () => {
@@ -246,6 +247,20 @@ const Certification = () => {
       runStatus === "finished" || runState === "failed",
       handleErrorScenario
   )
+
+  const [render, setRendered] = useState(false);
+
+  useEffect(() => {
+    // Initial load of subscribed features
+    if (subscribedFeatures !== null) {
+      setRendered(true);
+    }
+  }, [subscribedFeatures]);
+
+  // Show loader until subscribed features is fetched
+  if (!render) {
+    return <Loader />;
+  }
 
   return (
     <>
