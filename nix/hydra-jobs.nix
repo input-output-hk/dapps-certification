@@ -3,7 +3,7 @@
 
 { inputs, pkgs, ... }: 
 {
-  includedPaths = pkgs.lib.optional pkgs.system.isLinux [
+  includedPaths = pkgs.lib.optionals (pkgs.system == "x86_64-linux") [
     "dockerApps"
   ];
 }
