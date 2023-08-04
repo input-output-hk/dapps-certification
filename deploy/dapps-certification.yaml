@@ -23,7 +23,7 @@ spec:
               secretKeyRef:
                 key: WALLET_PASSPHRASE
                 name: the-secrets
-          - name: JWT_SECRET2
+          - name: JWT_SECRET
             valueFrom:
               secretKeyRef:
                 key: JWT_SECRET
