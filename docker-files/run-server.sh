@@ -5,4 +5,4 @@
  WALLET_CERTIFICATION_PRICE=1000000 \
  JWT_SECRET2=secret \
  PORT=80 \
- nix run .#runDockerImage
+ nix run .#server.runDockerImage

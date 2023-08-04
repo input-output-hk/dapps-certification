@@ -30,14 +30,15 @@
 
     flake = project.flake {};
 
-    dockerApps = import ./docker-files/docker.nix { pkgs = pkgs; flake = flake; };
+    serverApps = import ./docker-files/server.nix { pkgs = pkgs; flake = flake; };
+    webApps = import ./web.nix { pkgs = pkgs; flake = flake; };
 
   in flake // {
     packages = flake.packages // {
       inherit (project.plan-nix.passthru) generateMaterialized;
     };
     defaultPackage = flake.packages."plutus-certification:exe:plutus-certification";
-    apps = flake.apps // dockerApps // {
+    apps = flake.apps // {server = serverApps; web = webApps;} // {
       updateAllMaterialized = {
         type = "app";
         program = (pkgs.writeShellScript "updateAllMaterialized" ''

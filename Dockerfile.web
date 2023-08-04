@@ -2,17 +2,23 @@ FROM node:16
 
 WORKDIR /app/
 COPY react-web /app
-COPY ./docker-files/.env.local .
-RUN npm install
+#COPY ./docker-files/.env.local .
+RUN npm install --global serve
 
 #"homepage": "https://input-output-hk.github.io/dapps-certification/"
-RUN sed -i 's/https:\/\/input-output-hk.github.io\/dapps-certification/http:\/\/localhost:3000/g' package.json
+RUN sed -i 's/http:\/\/excuse.ro:9672/https:\/\/dapps-certification.scdev.aws.iohkdev.io/g' package.json
 #"proxy": "https://testing.dapps.iog.io/"
-RUN sed -i 's/https:\/\/testing.dapps.iog.io/http:\/\/localhost:3000/g'  package.json
+RUN sed -i 's/http:\/\/localhost:3000/http:\/\/localhost:80/g'  package.json
+
+RUN npm install
+RUN rm ./.env
+#RUN rm ./.env.production
+
+RUN npm run build
 
 COPY ./docker-files/start_web.sh .
 RUN chmod +x ./start_web.sh
 
 ENTRYPOINT [ "./start_web.sh" ]
 #ENTRYPOINT [ "/bin/sh","-c","./start_web.sh"]
-CMD [ "npm","start" ]
+#CMD [ "npm","start" ]
