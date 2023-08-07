@@ -85,14 +85,14 @@ spec:
       properties:
         clusters:
           - local
-        namespace: dapps-certification
+        namespace: dapps-certification-staging
       type: topology
   workflow:
     steps:
-      - meta:
+      - type: deploy
+        meta:
           alias: Deploy To local-dapps-certification
         name: local-dapps-certification
         properties:
           policies:
             - local-dapps-certification
-        type: deploy
