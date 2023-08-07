@@ -53,7 +53,7 @@
         echo $script >&2
         eval "$script"
 
-        script="${inputs'.self.packages.plutus-certification}/bin/plutus-certification $args"
+        script="${inputs'.self.apps.plutus-certification}/bin/plutus-certification $args"
         echo $script >&2
         eval "$script"
       '').outPath;
@@ -65,8 +65,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = inputs'.self.packages.generate-flake;
-    buildFlake = inputs'.self.packages.build-flake;
+    genFlake = inputs'.self.apps.generate-flake;
+    buildFlake = inputs'.self.apps.build-flake;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;

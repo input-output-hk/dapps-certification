@@ -3,7 +3,7 @@
 
 { inputs', pkgs, ... }: 
 {
-  defaultPackage = inputs'.self.packages.plutus-certification;
+  defaultPackage = inputs'.self.apps.plutus-certification;
 
   dockerApps = import ../docker-files/docker.nix { inherit inputs' pkgs; };
 }
