@@ -1,4 +1,4 @@
-{ inputs, pkgs }: let
+{ inputs', pkgs }: let
     pkgsLinux = pkgs // { system = "x86_64-linux"; };
     imgAttributes = {
       name = "plutus-certification";
@@ -53,7 +53,7 @@
         echo $script >&2
         eval "$script"
 
-        script="${inputs.self.packages.plutus-certification-exe-plutus-certification-ghc927}/bin/plutus-certification $args"
+        script="${inputs'.self.packages.plutus-certification}/bin/plutus-certification $args"
         echo $script >&2
         eval "$script"
       '').outPath;
@@ -65,8 +65,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = inputs.self.packages.dapps-certification-helpers-exe-generate-flake-ghc927;
-    buildFlake = inputs.self.packages.dapps-certification-helpers-exe-build-flake-ghc927;
+    genFlake = inputs'.self.packages.generate-flake;
+    buildFlake = inputs'.self.packages.build-flake;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;
