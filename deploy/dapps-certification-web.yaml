@@ -1,0 +1,43 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: dapps-certification-web
+  namespace: dapps-certification-staging
+spec:
+  components:
+    - name: dapps-certification-web
+      type: webservice
+      properties:
+        image: ghcr.io/demoiog/plutus-certification-web:3
+        imagePullPolicy: IfNotPresent
+        ports:
+          - expose: true
+            port: 3000
+            protocol: TCP
+      traits:
+        - type: scaler
+          properties:
+            replicas: 1
+        - type: https-route
+          properties:
+            domains:
+            - dapps-certification-web.scdev.aws.iohkdev.io
+            rules:
+            - port: 3000
+              serviceName: dapps-certification-web
+  policies:
+    - name: local-dapps-certification
+      properties:
+        clusters:
+        - local
+        namespace: dapps-certification-staging
+      type: topology
+  workflow:
+    steps:
+      - type: deploy
+        meta:
+          alias: Deploy To local-dapps-certification
+        name: local-dapps-certification
+        properties:
+          policies:
+          - local-dapps-certification
