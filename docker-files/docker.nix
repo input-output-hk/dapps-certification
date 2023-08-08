@@ -87,7 +87,7 @@
       };
     });
     loadDockerImage = {
-      type= "app";
+      type = "app";
       program = (pkgs.writeShellScript "loadDockerImage" ''
           set -eEuo pipefail
           echo "Loading docker image ${image}" >&2

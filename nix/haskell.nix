@@ -3,5 +3,4 @@
 
 { 
   supportedCompilers = [ "ghc927" ];
-  enableCrossCompilation = false;
 }
