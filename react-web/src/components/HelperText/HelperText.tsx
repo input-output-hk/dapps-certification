@@ -29,7 +29,7 @@ export const fetchHelperTextColor = (type: HelperTextType) => {
     case IconTypes.error:
       return "text-error";
     default:
-      return "";
+      return "text-info";
   }
 };
 
@@ -41,7 +41,10 @@ const HelperText: FC<HelperTextProps> = ({
   showInfoIcon = false,
 }: HelperTextProps) => {
   return (
-    <div className={classNames("helper-text-wrapper", className)}>
+    <div 
+      className={classNames("helper-text-wrapper", className)}
+      data-testid="helper-text-wrapper"
+    >
       {showInfoIcon ? (
         <span className="icon-wrapper">
           <Icons type={type} />

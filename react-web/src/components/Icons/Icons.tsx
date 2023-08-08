@@ -34,7 +34,7 @@ export enum IconTypes {
 
 export interface IconProps {
   className?: string;
-  type: string;
+  type?: string;
   color?: any;
   fontSize?: "inherit" | "large" | "medium" | "small";
   onClick?: (e: any) => any;
@@ -178,7 +178,7 @@ const Icons = ({
         />
       );
     default:
-      return <span></span>;
+      return <span data-testid="default-icon"></span>;
   }
 };
 

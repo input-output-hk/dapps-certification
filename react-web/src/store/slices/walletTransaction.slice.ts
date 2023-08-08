@@ -77,7 +77,7 @@ export const payFromWallet: any = createAsyncThunk("payFromWallet", (data: any, 
                     const txVkeyWitnesses = TransactionWitnessSet.from_bytes(
                         Buffer.from(signed, "hex")
                     );
-                    const txSigned = Transaction.new(txBuilder.build(), txVkeyWitnesses );
+                    const txSigned = Transaction.new(txBuilder.build(), txVkeyWitnesses, { metadata: {"0": {"string":"test" }}} );
                     const encodedSignedTx = Buffer.from(txSigned.to_bytes()).toString("hex");
                     data.wallet.submitTx(encodedSignedTx).then((txnId: string) => {
                         resolve(txnId);

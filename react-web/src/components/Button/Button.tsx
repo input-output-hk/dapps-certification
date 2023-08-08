@@ -26,6 +26,7 @@ const Button: FC<IButtonProps> = ({
   showLoader = false,
   displayStyle = "primary",
   onClick,
+  ...props
 }) => {
   return (
     <button
@@ -33,6 +34,7 @@ const Button: FC<IButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      {...props}
     >
       {showLoader ? (
         <Loader />
