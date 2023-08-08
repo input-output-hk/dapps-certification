@@ -23,12 +23,12 @@ spec:
               secretKeyRef:
                 key: WALLET_PASSPHRASE
                 name: the-secrets
-          - name: JWT_SECRET
-            valueFrom:
-              secretKeyRef:
-                key: JWT_SECRET
-                name: the-secrets
-        image: ghcr.io/demoiog/plutus-certification:8
+          #- name: JWT_SECRET
+            #valueFrom:
+              #secretKeyRef:
+                #key: JWT_SECRET
+                #name: the-secrets
+        image: ghcr.io/demoiog/plutus-certification:9
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
