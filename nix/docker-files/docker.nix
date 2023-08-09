@@ -93,7 +93,7 @@
           ${pkgs.docker}/bin/docker load -i ${image}
       '').outPath;
     };
-in {
+in rec {
     loadDockerImage = loadDockerImage;
 
     runDockerImage = 
