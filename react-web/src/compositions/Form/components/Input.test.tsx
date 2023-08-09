@@ -15,10 +15,10 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByText, getByTestId } = render(<Component />);
-    expect(getByText("test")).toBeInTheDocument();
-    expect(getByTestId("test")).toHaveAttribute("type", "text");
-    expect(getByText("*")).toBeInTheDocument();
+    render(<Component />);
+    expect(screen.getByText("test")).toBeInTheDocument();
+    expect(screen.getByTestId("test")).toHaveAttribute("type", "text");
+    expect(screen.getByText("*")).toBeInTheDocument();
   });
 
   it("renders input field properly with defaults type=number", () => {
@@ -31,9 +31,9 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByText, getByTestId } = render(<Component />);
-    expect(getByText("test")).toBeInTheDocument();
-    expect(getByTestId("test")).toHaveAttribute("type", "number");
+    render(<Component />);
+    expect(screen.getByText("test")).toBeInTheDocument();
+    expect(screen.getByTestId("test")).toHaveAttribute("type", "number");
   });
 
   it("renders disabled input field properly", () => {
@@ -46,8 +46,8 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByTestId } = render(<Component />);
-    const container = getByTestId("test-container");
+    render(<Component />);
+    const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
     expect(container).toHaveClass("disabled");
   });
@@ -62,14 +62,14 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByTestId } = render(<Component />);
-    const container = getByTestId("test-container");
+    render(<Component />);
+    const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
 
     await userEvent.click(container);
 
     expect(container).toHaveClass("active");
-    expect(getByTestId("test")).toHaveFocus();
+    expect(screen.getByTestId("test")).toHaveFocus();
   });
 
   it("should not be active when clicked outside the field", async () => {
@@ -82,16 +82,16 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByTestId } = render(<Component />);
-    const wrapper = getByTestId("test-wrapper");
+    render(<Component />);
+    const wrapper = screen.getByTestId("test-wrapper");
     expect(wrapper).toBeInTheDocument();
 
-    const container = getByTestId("test-container");
+    const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
 
-    await act(() => {
+    // await act(() => {
       fireEvent.blur(wrapper);
-    });
+    // });
     expect(container).not.toHaveClass("active");
   });
 
@@ -132,9 +132,9 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { container, getByText } = render(<Component />);
+    const { container } = render(<Component />);
     expect(container.firstChild?.firstChild).toHaveClass("error");
-    expect(getByText("This field has some error")).toBeInTheDocument();
+    expect(screen.getByText("This field has some error")).toBeInTheDocument();
   });
 
   // Note: useEffect fails to update the input. Time issue? 
@@ -148,8 +148,8 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByTestId } = render(<Component />);
-    const container = getByTestId("test-container");
+    render(<Component />);
+    const container = screen.getByTestId("test-container");
     expect(container).toBeInTheDocument();
 
     expect(container).toHaveClass("active");
@@ -170,8 +170,8 @@ describe("Test cases for FieldError component", () => {
       );
     };
 
-    const { getByTestId } = render(<Component />);
-    expect(getByTestId("test")).toHaveValue("Dummy value");
-    expect(getByTestId("test-container")).toHaveClass("active");
+    render(<Component />);
+    expect(screen.getByTestId("test")).toHaveValue("Dummy value");
+    expect(screen.getByTestId("test-container")).toHaveClass("active");
   });
 });

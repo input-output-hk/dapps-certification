@@ -1,5 +1,4 @@
-import React from "react";
-import { fireEvent, queryByTestId, render } from "@testing-library/react";
+import { fireEvent, screen, render } from "@testing-library/react";
 import InformationTable from "./InformationTable";
 
 const logs = [
@@ -31,11 +30,11 @@ describe("InformationTable", () => {
   });
 
   test("renders the logs correctly", () => {
-    const { getByText } = render(<InformationTable logs={logs} />);
+    render(<InformationTable logs={logs} />);
 
     logs.forEach((log) => {
-      const timeElement = getByText(log.Time, { exact: false });
-      const logElement = getByText(log.Text, { exact: false });
+      const timeElement = screen.getByText(log.Time, { exact: false });
+      const logElement = screen.getByText(log.Text, { exact: false });
 
       expect(timeElement).toBeInTheDocument();
       expect(logElement).toBeInTheDocument();
@@ -62,31 +61,31 @@ describe("InformationTable", () => {
   });
 
   test("shows log view when 'View logs' button is clicked", () => {
-    const { getByText, queryByTestId } = render(
+    render(
       <InformationTable logs={logs} />
     );
 
-    const viewLogsButton = getByText("View logs");
+    const viewLogsButton = screen.getByText("View logs");
     fireEvent.click(viewLogsButton);
 
-    expect(queryByTestId("log-information")).not.toHaveClass("hidden");
+    expect(screen.queryByTestId("log-information")).not.toHaveClass("hidden");
   });
 
   test("hides log view when 'Minimize' button is clicked", () => {
-    const { getByText, queryByTestId } = render(
+    render(
       <InformationTable logs={logs} />
     );
 
-    const viewLogsButton = getByText("View logs");
+    const viewLogsButton = screen.getByText("View logs");
     fireEvent.click(viewLogsButton);
 
-    const minimizeButton = getByText("-");
+    const minimizeButton = screen.getByText("-");
     fireEvent.click(minimizeButton);
 
-    expect(queryByTestId("log-information")).toHaveClass("hidden");
+    expect(screen.queryByTestId("log-information")).toHaveClass("hidden");
   });
 
-  test("renders the logs correctly", () => {
+  test("renders the logs correctly with its texts", () => {
     const logs = [
       {
         Time: "2023-06-26T09:27:09.929228757Z",
@@ -104,11 +103,11 @@ describe("InformationTable", () => {
       },
     ];
 
-    const { getByText } = render(<InformationTable logs={logs} />);
+    render(<InformationTable logs={logs} />);
 
     expect(
-      getByText(/Launch configuration log/i, { exact: false })
+      screen.getByText(/Launch configuration log/i, { exact: false })
     ).toBeInTheDocument();
-    expect(getByText(/Chunk data log/i, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/Chunk data log/i, { exact: false })).toBeInTheDocument();
   });
 });

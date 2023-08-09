@@ -1,7 +1,7 @@
 module.exports = {
     moduleNameMapper: {
       "@emurgo/cardano-serialization-lib-browser":
-        "<rootDir>src/mocks/serializerMock.js",
+        "<rootDir>/src/mocks/serializerMock.js",
       "\\.(scss|sass|css)$": "identity-obj-proxy", // mock all CSS files
       "^pages/(.*)$": "<rootDir>/src/pages/$1",
       "^components/(.*)$": "<rootDir>/src/components/$1",

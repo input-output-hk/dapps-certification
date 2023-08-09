@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent } from "@testing-library/react";
+import { render, fireEvent, screen } from "@testing-library/react";
 import SuccessCard from "./SuccessCard";
 
 describe("SuccessCard component", () => {
@@ -16,11 +16,11 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: null,
     };
-    const { getByText } = render(<SuccessCard {...mockData} />);
+    render(<SuccessCard {...mockData} />);
 
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/2 discarded/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 10 tests/)).toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.getByText(/2 discarded/)).toBeInTheDocument();
+    expect(screen.getByText(/OK, passed 10 tests/)).toBeInTheDocument();
   });
 
   test("renders success card with test results when unit test is not supplied", () => {
@@ -35,11 +35,11 @@ describe("SuccessCard component", () => {
       },
       taskName: "Task 1",
     };
-    const { getByText } = render(<SuccessCard {...mockData} />);
+    render(<SuccessCard {...mockData} />);
 
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/2 discarded/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 10 tests/)).toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.getByText(/2 discarded/)).toBeInTheDocument();
+    expect(screen.getByText(/OK, passed 10 tests/)).toBeInTheDocument();
   });
 
   test("toggles accordion when clicked", () => {
@@ -55,9 +55,9 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: null,
     };
-    const { getByText, container } = render(<SuccessCard {...mockData} />);
+    const { container } = render(<SuccessCard {...mockData} />);
 
-    const accordionTitle = getByText("OK, passed 10 tests");
+    const accordionTitle = screen.getByText("OK, passed 10 tests");
     const accordionContent = container.querySelector(".accordion-content");
 
     // Initially, accordion content is visible
@@ -84,8 +84,8 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: null,
     };
-    const { queryByText } = render(<SuccessCard {...mockData} />);
-    expect(queryByText(/discarded/)).not.toBeInTheDocument();
+    render(<SuccessCard {...mockData} />);
+    expect(screen.queryByText(/discarded/)).not.toBeInTheDocument();
   });
 
   test("renders successfully without tables", () => {
@@ -97,11 +97,11 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: null,
     };
-    const { getByText } = render(<SuccessCard {...mockData} />);
+    render(<SuccessCard {...mockData} />);
 
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/2 discarded/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 10 tests/)).toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.getByText(/2 discarded/)).toBeInTheDocument();
+    expect(screen.getByText(/OK, passed 10 tests/)).toBeInTheDocument();
   });
 
   test("renders successfully with unit test=_certRes_unitTestResults", () => {
@@ -123,10 +123,10 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: "_certRes_unitTestResults",
     };
-    const { getByText } = render(<SuccessCard {...mockData} />);
+    render(<SuccessCard {...mockData} />);
 
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 2\/2 tests/)).toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.getByText(/OK, passed 2\/2 tests/)).toBeInTheDocument();
   });
 
   test("renders successfully with unit test=_certRes_DLTests", () => {
@@ -156,55 +156,15 @@ describe("SuccessCard component", () => {
       taskName: "Task 1",
       unitTest: "_certRes_DLTests",
     };
-    const { getByText, getByTestId } = render(<SuccessCard {...mockData} />);
+    render(<SuccessCard {...mockData} />);
 
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 1\/1 tests/)).toBeInTheDocument();
-
-    // Collapse accordion data
-    const accordionHeader = getByTestId("_certRes_DLTests");
-    fireEvent.click(accordionHeader);
-    expect(getByTestId("_certRes_DLTests-arrow")).toHaveClass("down", {
-      exact: false,
-    });
-  });
-
-  test("renders successfully with unit test=_certRes_DLTests", () => {
-    const mockData = {
-      resultObj: [
-        [
-          "redeem test",
-          {
-            classes: {
-              "Contains Redeem": 100,
-              "Contract instance for W[1] at endpoint pay-escrow": 100,
-              "Contract instance for W[2] at endpoint pay-escrow": 100,
-              "Contract instance for W[3] at endpoint pay-escrow": 100,
-              "Contract instance for W[4] at endpoint redeem-escrow": 100,
-              Redeemable: 100,
-            },
-            labels: [[[], 100]],
-            numDiscarded: -1,
-            numTests: 100,
-            output:
-              "+++ OK, passed 100 tests:\n100% Contains Redeem\n100% Contract instance for W[1] at endpoint pay-escrow\n100% Contract instance for W[2] at endpoint pay-escrow\n100% Contract instance for W[3] at endpoint pay-escrow\n100% Contract instance for W[4] at endpoint redeem-escrow\n100% Redeemable\n\nActions (400 in total):\n75.0% Pay\n25.0% Redeem\n",
-            tables: { Actions: { Pay: 300, Redeem: 100 } },
-            tag: "Success",
-          },
-        ],
-      ],
-      taskName: "Task 1",
-      unitTest: "_certRes_DLTests",
-    };
-    const { getByText, getByTestId } = render(<SuccessCard {...mockData} />);
-
-    expect(getByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(getByText(/OK, passed 1\/1 tests/)).toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.getByText(/OK, passed 1\/1 tests/)).toBeInTheDocument();
 
     // Collapse accordion data
-    const accordionHeader = getByTestId("_certRes_DLTests");
+    const accordionHeader = screen.getByTestId("_certRes_DLTests");
     fireEvent.click(accordionHeader);
-    expect(getByTestId("_certRes_DLTests-arrow")).toHaveClass("down", {
+    expect(screen.getByTestId("_certRes_DLTests-arrow")).toHaveClass("down", {
       exact: false,
     });
   });
@@ -237,8 +197,8 @@ describe("SuccessCard component", () => {
       unitTest: "_certRes_DLTests",
     };
 
-    const { queryByText } = render(<SuccessCard {...mockData} />);
-    expect(queryByText(/discarded/)).not.toBeInTheDocument();
+    render(<SuccessCard {...mockData} />);
+    expect(screen.queryByText(/discarded/)).not.toBeInTheDocument();
   });
 
   test("renders successfully with unit test is not _certRes_unitTestResults or _certRes_DLTests", () => {
@@ -248,11 +208,11 @@ describe("SuccessCard component", () => {
       unitTest: "some_random_type",
     };
 
-    const { queryByText, queryByTestId } = render(
+    render(
       <SuccessCard {...mockData} />
     );
-    expect(queryByText(/Task: Task 1/)).toBeInTheDocument();
-    expect(queryByTestId("_certRes_DLTests")).not.toBeInTheDocument();
-    expect(queryByTestId("_certRes_unitTestResults")).not.toBeInTheDocument();
+    expect(screen.getByText(/Task: Task 1/)).toBeInTheDocument();
+    expect(screen.queryByTestId("_certRes_DLTests")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("_certRes_unitTestResults")).not.toBeInTheDocument();
   });
 });

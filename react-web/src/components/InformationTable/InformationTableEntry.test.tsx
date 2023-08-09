@@ -1,5 +1,4 @@
-import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import InformationTableEntry from "./InformationTableEntry";
 
 describe("InformationTableEntry", () => {
@@ -7,12 +6,12 @@ describe("InformationTableEntry", () => {
     const time = "12:00 PM";
     const log = "Sample log";
 
-    const { getByText } = render(
+    render(
       <InformationTableEntry time={time} log={log} />
     );
 
-    const timeElement = getByText(time);
-    const logElement = getByText(log);
+    const timeElement = screen.getByText(time);
+    const logElement = screen.getByText(log);
 
     expect(timeElement).toBeInTheDocument();
     expect(logElement).toBeInTheDocument();

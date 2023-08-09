@@ -1,6 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import TableComponent from "./Table";
-import { act } from "react-dom/test-utils";
 import userEvent from "@testing-library/user-event";
 
 const data = [
@@ -60,7 +59,7 @@ describe("Table component", () => {
     const updateMyData = jest.fn();
     const skipPageReset = jest.fn();
 
-    const { getByTestId, getByText } = render(
+    render(
       <TableComponent
         dataSet={data}
         columns={columns}
@@ -69,11 +68,11 @@ describe("Table component", () => {
       />
     );
 
-    expect(getByTestId("tableComp")).toBeInTheDocument();
+    expect(screen.getByTestId("tableComp")).toBeInTheDocument();
     columns
       .filter((column) => column.Header.length)
       .forEach((column) => {
-        expect(getByText(column.Header)).toBeInTheDocument();
+        expect(screen.getByText(column.Header)).toBeInTheDocument();
       });
   });
 
@@ -81,7 +80,7 @@ describe("Table component", () => {
     const updateMyData = jest.fn();
     const skipPageReset = jest.fn();
 
-    const { getByTestId, getByText } = render(
+    render(
       <TableComponent
         dataSet={[]}
         columns={columns}
@@ -90,8 +89,8 @@ describe("Table component", () => {
       />
     );
 
-    expect(getByTestId("tableComp")).toBeInTheDocument();
-    expect(getByText("No data found")).toBeInTheDocument();
+    expect(screen.getByTestId("tableComp")).toBeInTheDocument();
+    expect(screen.getByText("No data found")).toBeInTheDocument();
   });
 
   it("show colViz", () => {
@@ -131,7 +130,7 @@ describe("Table component", () => {
     const updateMyData = jest.fn();
     const skipPageReset = jest.fn();
 
-    const { getByTestId } = render(
+    render(
       <TableComponent
         dataSet={data}
         columns={columns}
@@ -141,18 +140,16 @@ describe("Table component", () => {
       />
     );
 
-    const colVizContainer = getByTestId("colviz-container");
+    const colVizContainer = screen.getByTestId("colviz-container");
     expect(colVizContainer.style.display).toBe("none");
 
-    const toggleBtn = getByTestId("colviz-sideBarButton");
-    await act(() => {
-      fireEvent.click(toggleBtn);
-    });
+    const toggleBtn = screen.getByTestId("colviz-sideBarButton");
+    fireEvent.click(toggleBtn);
     expect(colVizContainer.style.display).toBe("block");
   });
 
   it("displays the correct number of rows per page", async () => {
-    const { getAllByRole } = render(
+    render(
       <TableComponent dataSet={Array(20).fill(data[0])} columns={columns} />
     );
 
@@ -165,42 +162,42 @@ describe("Table component", () => {
     // Click on 10 rows per page option
     await userEvent.click(options[1]);
 
-    const rows = getAllByRole("row");
+    const rows = screen.getAllByRole("row");
     expect(rows).toHaveLength(11); // Header row + 10 data rows
   });
 
   it("changes the page when clicking on pagination buttons", () => {
-    const { getByLabelText, getAllByRole } = render(
+    render(
       <TableComponent dataSet={Array(8).fill(data[0])} columns={columns} />
     );
 
-    const nextPageButton = getByLabelText("Go to next page");
-    const previousPageButton = getByLabelText("Go to previous page");
+    const nextPageButton = screen.getByLabelText("Go to next page");
+    const previousPageButton = screen.getByLabelText("Go to previous page");
 
-    const rows = getAllByRole("row");
+    const rows = screen.getAllByRole("row");
     expect(rows).toHaveLength(6); // Header row + 5 data rows
 
     fireEvent.click(nextPageButton);
 
-    const updatedRows = getAllByRole("row");
+    const updatedRows = screen.getAllByRole("row");
     expect(updatedRows).toHaveLength(4); // Header row + 3 data rows
 
     fireEvent.click(previousPageButton);
 
-    const restoredRows = getAllByRole("row");
+    const restoredRows = screen.getAllByRole("row");
     expect(restoredRows).toHaveLength(6); // Header row + 5 data rows
   });
 
   it("should show sort icon on unsorted table column clicks", () => {
-    const { getByTestId, getByAltText } = render(
+    render(
       <TableComponent dataSet={data} columns={columns} />
     );
 
-    const tableHeader = getByTestId("Status");
+    const tableHeader = screen.getByTestId("Status");
     fireEvent.click(tableHeader); // First sort click
-    expect(getByAltText("ascIcon")).toBeInTheDocument();
+    expect(screen.getByAltText("ascIcon")).toBeInTheDocument();
 
     fireEvent.click(tableHeader); // Second sort click --> toggle
-    expect(getByAltText("descIcon")).toBeInTheDocument();
+    expect(screen.getByAltText("descIcon")).toBeInTheDocument();
   });
 });
