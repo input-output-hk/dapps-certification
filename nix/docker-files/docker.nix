@@ -1,5 +1,4 @@
-{ inputs', pkgs }: let
-    pkgsLinux = pkgs // { system = "x86_64-linux"; };
+{ inputs', pkgs, l, ... }: let
     imgAttributes = {
       name = "plutus-certification";
       tag = "8";
@@ -53,7 +52,7 @@
         echo $script >&2
         eval "$script"
 
-        script="${inputs'.self.apps.plutus-certification}/bin/plutus-certification $args"
+        script="${inputs'.self.apps.plutus-certification.program} $args"
         echo $script >&2
         eval "$script"
       '').outPath;
@@ -65,8 +64,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = inputs'.self.apps.generate-flake;
-    buildFlake = inputs'.self.apps.build-flake;
+    genFlake = inputs'.self.packages.dapps-certification-helpers-exe-generate-flake-ghc927;
+    buildFlake = inputs'.self.apps.dapps-certification-helpers-exe-build-flake-ghc927;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;
@@ -96,6 +95,7 @@
     };
 in {
     loadDockerImage = loadDockerImage;
+
     runDockerImage = 
       let addEnvVar = varName: '' 
           if [ -n "${"$"}${varName}" ]; then
@@ -106,7 +106,7 @@ in {
         type = "app";
         program = (pkgs.writeShellScript "runDockerImage" ''
             set -eEo pipefail
-            export PATH="${pkgs.lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+            export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
             echo "Executing ${loadDockerImage.program}..." >&2
             ${loadDockerImage.program}
             docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
@@ -134,13 +134,14 @@ in {
             eval "$script"
         '').outPath;
       };
+
       pushDockerImage = {
         type = "app";
         #usage: nix run .\#apps.x86_64-linux.pushDockerImage  -- <docker registry>
         #E.g. nix run .\#apps.x86_64-linux.pushDockerImage  -- ghcr.io/demoiog
         program = (pkgs.writeShellScript "pushDockerImage" ''
             set -eEuo pipefail
-            export PATH="${pkgs.lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+            export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
             ${loadDockerImage.program}
             echo "Pushing docker image ${image}" >&2
             imageName="${imgAttributes.name}:${imgAttributes.tag}"
@@ -155,4 +156,9 @@ in {
 
         '').outPath;
       };
+
+      evaluation-test = pkgs.writeText ''
+        ${runDockerImage.program}
+        ${pushDockerImage.program}
+      '';
 }

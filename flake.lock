@@ -431,12 +431,10 @@
         "sphinxcontrib-haddock": "sphinxcontrib-haddock"
       },
       "locked": {
-        "lastModified": 1691533306,
-        "narHash": "sha256-xPBQprB9edO8SEcbG316hBiId+rL1hzI6E5QC56+UXg=",
-        "owner": "input-output-hk",
-        "repo": "iogx",
-        "rev": "ea4b683ad0ffc5cd9b7eb05aebdd3a15b66668d3",
-        "type": "github"
+        "lastModified": 1691553129,
+        "narHash": "sha256-HoD3sr9CdEU+VKLnx4g1mIqaFnpxaOf3qlmHX1wVPas=",
+        "type": "git",
+        "url": "file:///Users/zeme/Repos/iogx"
       },
       "original": {
         "owner": "input-output-hk",
