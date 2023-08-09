@@ -93,72 +93,73 @@
           ${pkgs.docker}/bin/docker load -i ${image}
       '').outPath;
     };
-in rec {
-    loadDockerImage = loadDockerImage;
+in 
+rec {
+  loadDockerImage = loadDockerImage;
 
-    runDockerImage = 
-      let addEnvVar = varName: '' 
-          if [ -n "${"$"}${varName}" ]; then
-            docker_args="$docker_args -e ${varName}=${"$"}${varName}" 
+  runDockerImage = 
+    let addEnvVar = varName: '' 
+        if [ -n "${"$"}${varName}" ]; then
+          docker_args="$docker_args -e ${varName}=${"$"}${varName}" 
+        fi
+    '';
+    in {
+      type = "app";
+      program = (pkgs.writeShellScript "runDockerImage" ''
+          set -eEo pipefail
+          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          echo "Executing ${loadDockerImage.program}..." >&2
+          ${loadDockerImage.program}
+          docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
+
+          ${addEnvVar "WALLET_ID"}
+          ${addEnvVar "WALLET_ADDRESS"}
+          ${addEnvVar "WALLET_PASSPHRASE"}
+          ${addEnvVar "JWT_SECRET"}
+          ${addEnvVar "WALLET_URL"}
+          ${addEnvVar "WALLET_CERTIFICATION_PRICE"}
+          ${addEnvVar "GH_ACCESS_TOKEN"}
+          ${addEnvVar "JWT_EXPIRATION"}
+          ${addEnvVar "SIGNATURE_TIMEOUT"}
+          ${addEnvVar "USE_WHITELIST"}
+          ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
+          ${addEnvVar "PORT"}
+
+          if [[ -z "$PORT" ]]; then
+            export PORT=9671
           fi
-      '';
-      in {
-        type = "app";
-        program = (pkgs.writeShellScript "runDockerImage" ''
-            set -eEo pipefail
-            export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
-            echo "Executing ${loadDockerImage.program}..." >&2
-            ${loadDockerImage.program}
-            docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
+          docker_args="$docker_args -p $PORT:$PORT"
+          
+          script="docker run --rm $docker_args ${imgAttributes.name}:${imgAttributes.tag}"
+          echo $script >&2
+          eval "$script"
+      '').outPath;
+    };
 
-            ${addEnvVar "WALLET_ID"}
-            ${addEnvVar "WALLET_ADDRESS"}
-            ${addEnvVar "WALLET_PASSPHRASE"}
-            ${addEnvVar "JWT_SECRET"}
-            ${addEnvVar "WALLET_URL"}
-            ${addEnvVar "WALLET_CERTIFICATION_PRICE"}
-            ${addEnvVar "GH_ACCESS_TOKEN"}
-            ${addEnvVar "JWT_EXPIRATION"}
-            ${addEnvVar "SIGNATURE_TIMEOUT"}
-            ${addEnvVar "USE_WHITELIST"}
-            ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
-            ${addEnvVar "PORT"}
+    pushDockerImage = {
+      type = "app";
+      #usage: nix run .\#apps.x86_64-linux.pushDockerImage  -- <docker registry>
+      #E.g. nix run .\#apps.x86_64-linux.pushDockerImage  -- ghcr.io/demoiog
+      program = (pkgs.writeShellScript "pushDockerImage" ''
+          set -eEuo pipefail
+          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          ${loadDockerImage.program}
+          echo "Pushing docker image ${image}" >&2
+          imageName="${imgAttributes.name}:${imgAttributes.tag}"
 
-            if [[ -z "$PORT" ]]; then
-              export PORT=9671
-            fi
-            docker_args="$docker_args -p $PORT:$PORT"
-            
-            script="docker run --rm $docker_args ${imgAttributes.name}:${imgAttributes.tag}"
-            echo $script >&2
-            eval "$script"
-        '').outPath;
-      };
+          script="docker image tag $imageName $1/$imageName"
+          echo $script >&2
+          eval "$script"
 
-      pushDockerImage = {
-        type = "app";
-        #usage: nix run .\#apps.x86_64-linux.pushDockerImage  -- <docker registry>
-        #E.g. nix run .\#apps.x86_64-linux.pushDockerImage  -- ghcr.io/demoiog
-        program = (pkgs.writeShellScript "pushDockerImage" ''
-            set -eEuo pipefail
-            export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
-            ${loadDockerImage.program}
-            echo "Pushing docker image ${image}" >&2
-            imageName="${imgAttributes.name}:${imgAttributes.tag}"
+          script="docker push $1/$imageName"
+          echo $script >&2
+          eval "$script"
 
-            script="docker image tag $imageName $1/$imageName"
-            echo $script >&2
-            eval "$script"
+      '').outPath;
+    };
 
-            script="docker push $1/$imageName"
-            echo $script >&2
-            eval "$script"
-
-        '').outPath;
-      };
-
-      evaluation-test = pkgs.writeText ''
-        ${runDockerImage.program}
-        ${pushDockerImage.program}
-      '';
+    evaluation-test = pkgs.writeText ''
+      ${runDockerImage.program}
+      ${pushDockerImage.program}
+    '';
 }
