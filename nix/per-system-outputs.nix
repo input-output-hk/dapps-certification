@@ -5,5 +5,5 @@
 {
   defaultPackage = inputs'.self.packages.plutus-certification-exe-plutus-certification-ghc927;
 
-  dockerApps = l.optionals (system == "x86_64-linux") nix.docker-files.docker; 
+  apps.dockerApps = l.optionalAttrs (system == "x86_64-linux") nix.docker-files.docker; 
 }

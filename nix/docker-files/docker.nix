@@ -95,7 +95,7 @@
     };
 in 
 rec {
-  loadDockerImage = loadDockerImage;
+  inherit loadDockerImage;
 
   runDockerImage = 
     let addEnvVar = varName: '' 
@@ -138,8 +138,8 @@ rec {
 
     pushDockerImage = {
       type = "app";
-      #usage: nix run .\#apps.x86_64-linux.pushDockerImage  -- <docker registry>
-      #E.g. nix run .\#apps.x86_64-linux.pushDockerImage  -- ghcr.io/demoiog
+      # Usage: run .\#dockerApps.pushDockerImage -- <docker registry> 
+      # Example: .\#dockerApps.pushDockerImage -- ghcr.io/demoiog
       program = (pkgs.writeShellScript "pushDockerImage" ''
           set -eEuo pipefail
           export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
@@ -158,7 +158,7 @@ rec {
       '').outPath;
     };
 
-    evaluation-test = pkgs.writeText ''
+    evaluation-test = pkgs.writeText "docker-apps-evaluation-test" ''
       ${runDockerImage.program}
       ${pushDockerImage.program}
     '';
