@@ -44,11 +44,11 @@ const SuccessCard: React.FC<{
             <span><i>OK, passed {resultObj.length}/{resultObj.length} tests</i></span>
           </> 
           : unitTest === '_certRes_DLTests' ? <>
-            <span className="accordion-title" onClick={(_) => toggleAccordion()}>
+            <span className="accordion-title" onClick={(_) => toggleAccordion()} data-testid="_certRes_DLTests">
               <i>OK, passed {resultObj.length}/{resultObj.length} tests</i>
-              <i className={`arrow ${isOpen ? "up" : "down"}`}></i>
+              <i className={`arrow ${isOpen ? "up" : "down"}`} data-testid="_certRes_DLTests-arrow"></i>
             </span>
-            <div className={`accordion-content ${isOpen ? "" : "hidden"}`}>
+            <div className={`accordion-content ${isOpen ? "" : "hidden"}`} data-testid="_certRes_DLTests-accordion-content">
               {resultObj.map((item: any, index: number) => {
                 return (
                 <div key={index}>
