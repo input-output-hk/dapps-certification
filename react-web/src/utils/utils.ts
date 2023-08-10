@@ -59,14 +59,15 @@ export const formatTimeToReadable = (duration: number) => {
 export const getObjectByPath = (object: { [x: string]: any }, path: string): any => {
   path = path.replace(/\[(\w+)\]/g, ".$1"); // convert indexes to properties
   path = path.replace(/^\./, ""); // strip a leading dot
-  var a = path.split(".");
-  for (var i = 0, n = a.length; i < n; ++i) {
-    var k = a[i];
-    if (object && k in object) {
-      object = object[k];
+  const a = path.split(".");
+  let tempObj = JSON.parse(JSON.stringify(object))
+  for (let i = 0, n = a.length; i < n; ++i) {
+    const k = a[i];
+    if (tempObj && k in tempObj) {
+      tempObj = tempObj[k];
     } else {
       return;
     }
   }
-  return object;
+  return tempObj;
 };

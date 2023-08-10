@@ -75,7 +75,7 @@ const Header = () => {
             return;
           }
           await dispatch(setSubscribedFeatures(features.data));
-          setFeatureList(features.data)
+          setFeatureList((features.data === null || features.data === undefined) ? [] : features.data)
           if (!features.data?.length) {
             setSubscriptions(false);
           } else setSubscriptions(true);

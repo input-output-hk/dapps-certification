@@ -4,8 +4,7 @@ import classNames from "classnames";
 import Icons, { IconTypes } from "components/Icons/Icons";
 import "./HelperText.scss";
 
-export type HelperTextType =
-  | "info"
+export type HelperTextType = "info"
   | "warning"
   | "error"
   | "success"
@@ -20,13 +19,13 @@ export interface HelperTextProps {
 
 export const fetchHelperTextColor = (type: HelperTextType) => {
   switch (type) {
-    case IconTypes.info:
+    case "info":
       return "text-info";
-    case IconTypes.warning:
+    case "warning":
       return "text-warn";
-    case IconTypes.success:
+    case "success":
       return "text-success";
-    case IconTypes.error:
+    case "error":
       return "text-error";
     default:
       return "";

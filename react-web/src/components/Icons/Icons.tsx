@@ -44,7 +44,7 @@ const Icons = ({
   className = "",
   fontSize = "small",
   type = "info",
-  color = "" || type,
+  color = "inherit",
   onClick,
 }: IconProps) => {
   switch (type) {
@@ -178,7 +178,7 @@ const Icons = ({
         />
       );
     default:
-      return <span></span>;
+      return null;
   }
 };
 

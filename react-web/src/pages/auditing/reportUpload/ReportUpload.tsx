@@ -62,12 +62,11 @@ const ReportUpload = () => {
     );
   }
 
-  const formHandler = async (formData: any) => {
-    const {subject, certificationLevel, name, logo, email, website, twitter, reportURL, summary, disclaimer, dAppScripts} = formData;
-    const formattedDappScripts: IScriptObject[] = [];
-    dAppScripts.forEach((script: any) => {
+  const transformDappScripts = (scripts: []) => {
+    const formattedScripts: IScriptObject[] = []
+    scripts.forEach((script: any) => {
       const {scriptHash, contractAddress, ...rest} = script
-      formattedDappScripts.push({
+      formattedScripts.push({
         scriptHash: scriptHash,
         contractAddress: contractAddress,
         smartContractInfo: {
@@ -75,6 +74,13 @@ const ReportUpload = () => {
         }
       })
     });
+    return formattedScripts;
+  }
+
+  const formHandler = async (formData: any) => {
+    const {subject, certificationLevel, name, logo, email, website, twitter, reportURL, summary, disclaimer, dAppScripts} = formData;
+    const formattedDappScripts: IScriptObject[] = transformDappScripts(dAppScripts);;
+    
     const payload: OffChainMetadataSchema = {
       subject: subject,
       schemaVersion: 1,
@@ -142,6 +148,15 @@ const ReportUpload = () => {
     },
   ];
 
+  const shouldDisableAddScriptButton = () => {
+    return !!form?.formState.errors?.[fieldArrayName] || // disable button if errors associated with dynamic form exists
+      form
+        .getValues(fieldArrayName)
+        ?.some(
+          (field: { scriptHash: any; contractAddress: any }) =>
+            !field?.scriptHash || !field?.contractAddress
+        ); // prevent addition of new script boxes if the required field is empty
+  };
 
   return (
     <>
@@ -264,15 +279,7 @@ const ReportUpload = () => {
                 size="small"
                 buttonLabel="+ Add Script"
                 type="button"
-                disabled={
-                  !!form?.formState.errors?.[fieldArrayName] || // disable button if errors associated with dynamic form exists
-                  form
-                    .getValues(fieldArrayName)
-                    ?.some(
-                      (field: { scriptHash: any; contractAddress: any }) =>
-                        !field?.scriptHash || !field?.contractAddress
-                    ) // prevent addition of new script boxes if the required field is empty
-                }
+                disabled={shouldDisableAddScriptButton()}
                 onClick={() => { addNewDappScript() }}
               />
             </div>
