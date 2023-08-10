@@ -64,9 +64,13 @@ const Header = () => {
             dispatch(setNetwork(data));
           });
 
-          const features = await fetchData.get(
+          const features: any = await fetchData.get(
             "/profile/current/subscriptions/active-features"
           );
+          if (features.error) {
+            console.error('Failed to fetch active features:', features.error);
+            return;
+          }
           await dispatch(setSubscribedFeatures(features.data));
 
           if (!features.data?.length) {

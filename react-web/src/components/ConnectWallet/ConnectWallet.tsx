@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails, logout, setNetwork } from "store/slices/auth.slice";

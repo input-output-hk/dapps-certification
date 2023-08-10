@@ -3,16 +3,16 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 function isValidJSON(text: string) {
   try {
-    JSON.parse(text);
+    const result = JSON.parse(text);
+    return (typeof result === 'object' && result !== null);
   } catch (e) {
     return false;
   }
-  return true;
 }
 
 function useLocalStorage<T>(
   key: string,
-  initialValue: T | (() => T)
+  initialValue: T
 ): [T, Dispatch<SetStateAction<T>>] {
   // Get from local storage then
   // parse stored json or return initialValue
@@ -44,7 +44,7 @@ function useLocalStorage<T>(
   const setValue: Dispatch<SetStateAction<T>> = (value) => {
     // Prevent build error "window is undefined" but keeps working
     // eslint-disable-next-line eqeqeq
-    if (typeof window == "undefined") {
+    if (typeof window === "undefined") {
       console.warn(
         `Tried setting localStorage key “${key}” even though environment is not a client`
       );
@@ -55,8 +55,13 @@ function useLocalStorage<T>(
       const newValue = value instanceof Function ? value(storedValue) : value;
 
       // Save to local storage
-      window.localStorage.setItem(key, JSON.stringify(newValue));
-
+      try {
+        const serializedValue = JSON.stringify(newValue);
+        window.localStorage.setItem(key, serializedValue);
+      } catch (error) {
+        console.warn(`Error serializing localStorage key “${key}”:`, error);
+      }
+      
       // Save state
       setStoredValue(newValue);
 
@@ -69,10 +74,7 @@ function useLocalStorage<T>(
 
   useEffect(() => {
     setStoredValue(readValue());
-    // eslint-disable-next-line
-  }, []);
 
-  useEffect(() => {
     const handleStorageChange = () => {
       setStoredValue(readValue());
     };
