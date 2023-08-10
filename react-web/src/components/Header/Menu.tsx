@@ -4,11 +4,12 @@ import { useAppSelector } from "store/store";
 
 import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
+import { LocalStorageKeys } from "constants/constants";
 
 export const NoAuthMenu = memo(() => {
   const hasCachedAddress =
-    !localStorage.getItem("address")?.length ||
-    !localStorage.getItem("walletName")?.length;
+    !localStorage.getItem(LocalStorageKeys.address)?.length ||
+    !localStorage.getItem(LocalStorageKeys.walletName)?.length;
 
   return (
     <>

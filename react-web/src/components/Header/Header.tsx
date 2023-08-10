@@ -14,6 +14,7 @@ import { useDelayedApi } from "hooks/useDelayedApi";
 import { fetchData } from "api/api";
 import useLocalStorage from "hooks/useLocalStorage";
 import { AuthenticatedMenu, NoAuthMenu } from "./Menu";
+import { LocalStorageKeys } from 'constants/constants';
 
 const Header = () => {
   const { isLoggedIn, address, wallet, network } = useAppSelector(
@@ -24,27 +25,27 @@ const Header = () => {
   const [pollForAddress, setPollForAddress] = useState(false);
   const [pollForNetwork, setPollForNetwork] = useState(false);
   const [isLogged, setIsLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   const [, setUserDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 
   const [, setSubscriptions] = useLocalStorage(
-    "hasSubscriptions",
-    localStorage.getItem("hasSubscriptions") === "true" ? true : false
+    LocalStorageKeys.hasSubscriptions,
+    localStorage.getItem(LocalStorageKeys.hasSubscriptions) === "true" ? true : false
   );
 
   useEffect(() => {
     // check if address, walletName is in localStorage - login user without having to connect to wallet again
-    const addressCache = localStorage.getItem("address");
-    const walletNameCache = localStorage.getItem("walletName");
-    const authToken = localStorage.getItem("authToken");
+    const addressCache = localStorage.getItem(LocalStorageKeys.address);
+    const walletNameCache = localStorage.getItem(LocalStorageKeys.walletName);
+    const authToken = localStorage.getItem(LocalStorageKeys.authToken);
     if (addressCache?.length && walletNameCache?.length && authToken?.length) {
       (async () => {
         try {
