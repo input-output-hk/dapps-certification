@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch } from "store/store";
 import { getProfileDetails, logout, setNetwork } from "store/slices/auth.slice";
@@ -11,6 +11,7 @@ import "./ConnectWallet.scss";
 import { fetchData } from "api/api";
 import useLocalStorage from "hooks/useLocalStorage";
 import { AxiosResponse } from "axios";
+import { LocalStorageKeys } from 'constants/constants';
 
 const wallets: Array<string> = ["lace", "nami", "yoroi"];
 
@@ -30,14 +31,14 @@ const ConnectWallet = () => {
   const [errorToast, setErrorToast] = useState<{display: boolean; statusText?: string; message?: string; showRetry?: boolean}>({display: false});
   const [walletLoading, setWalletLoading] = useState(false);
   const [, setIsLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   const [, setUserDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 
@@ -106,7 +107,7 @@ const ConnectWallet = () => {
                 key: key,
                 signature: signature
             })).data;
-            localStorage.setItem('authToken', token)
+            localStorage.setItem(LocalStorageKeys.authToken, token)
             setAddress(walletAddr_bech32)
         } else {
             catchError({ message: "Could not obtain the proper key and signature for the wallet. Please try connecting again." })

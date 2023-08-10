@@ -18,6 +18,7 @@ import { clearStates,
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
 import Toast from "components/Toast/Toast";
 import useLocalStorage from "hooks/useLocalStorage";
+import { LocalStorageKeys } from "constants/constants";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -41,9 +42,9 @@ const UserProfile = () => {
   const githubAccessCode = searchParams.get("code");
 
   const [, setUserDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 
@@ -69,7 +70,7 @@ const UserProfile = () => {
       version?: string;
     } = { contacts, authors, linkedin, twitter, vendor, website };
 
-    const profileInLS: any = localStorage.getItem('profile')
+    const profileInLS: any = localStorage.getItem(LocalStorageKeys.profile)
     if (profileInLS && profileInLS !== 'undefined') {
       const profileFormData = JSON.parse(profileInLS);
       setOwner(profileFormData.owner);
@@ -218,13 +219,13 @@ const UserProfile = () => {
           clearTimeout(timer)
           setTimer(null)
           await dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
-          localStorage.removeItem('profile')
-          localStorage.removeItem('accessToken')
+          localStorage.removeItem(LocalStorageKeys.profile)
+          localStorage.removeItem(LocalStorageKeys.accessToken)
         }, 0)
       })()
     } else {
       setCanShowConnectModal(false)
-      localStorage.removeItem('profile')
+      localStorage.removeItem(LocalStorageKeys.profile)
     }
     // the enclosed snippet is to be triggered only once right when the component is rendered to check if the url contains code (to validate if it is a redirect from github)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -233,7 +234,7 @@ const UserProfile = () => {
   const connectToGithub = async () => {
     const data = {...form.getValues(), owner: owner, repo: repo}
     // store current form data in localStorage
-    localStorage.setItem('profile', JSON.stringify(data))
+    localStorage.setItem(LocalStorageKeys.profile, JSON.stringify(data))
 
     // fetch CLIENT_ID from api
     const clientId = (await fetchData.get("/github/client-id")).data as string
@@ -419,7 +420,7 @@ const UserProfile = () => {
                     displayStyle="secondary"
                     buttonLabel={"Cancel"}
                     onClick={() => {
-                      localStorage.removeItem('profile')
+                      localStorage.removeItem(LocalStorageKeys.profile)
                       initializeFormState()
                       setIsEdit(false);
                     }}

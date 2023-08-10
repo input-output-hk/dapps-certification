@@ -1,20 +1,21 @@
 import React, { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import useLocalStorage from "hooks/useLocalStorage";
+import { LocalStorageKeys } from 'constants/constants';
 
 const PrivateRoutes = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   const [userDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 

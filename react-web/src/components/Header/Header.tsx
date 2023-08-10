@@ -16,6 +16,7 @@ import useLocalStorage from "hooks/useLocalStorage";
 import ConnectWallet from "components/ConnectWallet/ConnectWallet";
 import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import DropoverMenu from "components/DropoverMenu/DropoverMenu";
+import { LocalStorageKeys } from 'constants/constants';
 
 const Header = () => {
   const { isLoggedIn, address, wallet, network } = useAppSelector(
@@ -27,27 +28,27 @@ const Header = () => {
   const [pollForNetwork, setPollForNetwork] = useState(false);
   const [featureList, setFeatureList] = useState<String[]>([]);
   const [isLogged, setIsLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   const [, setUserDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 
   const [, setSubscriptions] = useLocalStorage(
-    "hasSubscriptions",
-    localStorage.getItem("hasSubscriptions") === "true" ? true : false
+    LocalStorageKeys.hasSubscriptions,
+    localStorage.getItem(LocalStorageKeys.hasSubscriptions) === "true" ? true : false
   );
 
   useEffect(() => {
     // check if address, walletName is in localStorage - login user without having to connect to wallet again
-    const addressCache = localStorage.getItem("address");
-    const walletNameCache = localStorage.getItem("walletName");
-    const authToken = localStorage.getItem("authToken");
+    const addressCache = localStorage.getItem(LocalStorageKeys.address);
+    const walletNameCache = localStorage.getItem(LocalStorageKeys.walletName);
+    const authToken = localStorage.getItem(LocalStorageKeys.authToken);
     if (addressCache?.length && walletNameCache?.length && authToken?.length) {
       (async () => {
         try {
@@ -64,11 +65,15 @@ const Header = () => {
 
           enabledWallet.getNetworkId().then(async (data: number) => {
             dispatch(setNetwork(data));
-          });
+          }).catch((e: any) => console.error('Failed to get network ID:', e));
 
-          const features = await fetchData.get(
+          const features: any = await fetchData.get(
             "/profile/current/subscriptions/active-features"
           );
+          if (features.error) {
+            console.error('Failed to fetch active features:', features.error);
+            return;
+          }
           await dispatch(setSubscribedFeatures(features.data));
           setFeatureList(features.data)
           if (!features.data?.length) {
@@ -109,7 +114,7 @@ const Header = () => {
       setPollForAddress(false);
       let newAddress = "";
       if (wallet) {
-        const response = await wallet.getChangeAddress();
+        const response = await wallet.getChangeAddress().catch((e: any) => console.error('Failed to get change address:', e));
         newAddress = Address.from_bytes(
           Buffer.from(response, "hex")
         ).to_bech32();
@@ -135,7 +140,7 @@ const Header = () => {
         } else {
           setPollForNetwork(true);
         }
-      });
+      }).catch((e: any) => console.error('Failed to get network ID:', e));
     },
     1 * 1000,
     pollForNetwork

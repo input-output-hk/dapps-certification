@@ -51,6 +51,9 @@ library
     jwt ^>=0.11.0,
     unordered-containers,
     regex-compat,
+    vector,
+    http-conduit,
+    cryptonite,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -68,8 +71,10 @@ library
     Plutus.Certification.JWT
     Plutus.Certification.WalletClient
     Plutus.Certification.Synchronizer
+    Plutus.Certification.Metadata
   other-modules:
     Paths_plutus_certification
+    Plutus.Certification.Metadata.Types
     Plutus.Certification.API.Routes
     Plutus.Certification.API.Swagger
     Plutus.Certification.Web3StorageClient
