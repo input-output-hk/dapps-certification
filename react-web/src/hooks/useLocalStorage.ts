@@ -2,20 +2,12 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 function isValidJSON(text: string) {
-  if (
-    /^[\],:{}\s]*$/.test(
-      text
-        .replace(/\\["\\\/bfnrtu]/g, "@")
-        .replace(
-          /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,
-          "]"
-        )
-        .replace(/(?:^|:|,)(?:\s*\[)+/g, "")
-    )
-  ) {
-    return true;
+  try {
+    JSON.parse(text);
+  } catch (e) {
+    return false;
   }
-  return false;
+  return true;
 }
 
 function useLocalStorage<T>(
