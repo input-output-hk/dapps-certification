@@ -7,7 +7,7 @@ import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
 import { LocalStorageKeys } from "constants/constants";
 
 export const NoAuthMenu = memo(() => {
-  const hasCachedAddress =
+  const hasNoCachedAddress =
     !localStorage.getItem(LocalStorageKeys.address)?.length ||
     !localStorage.getItem(LocalStorageKeys.walletName)?.length;
 
@@ -23,7 +23,7 @@ export const NoAuthMenu = memo(() => {
         <Link to="support">Support</Link>
       </li>
       <li className="button-wrap">
-        <>{hasCachedAddress ? <ConnectWallet /> : null}</>
+        <>{hasNoCachedAddress ? <ConnectWallet /> : null}</>
       </li>
     </>
   );
