@@ -45,7 +45,7 @@ const Certification = () => {
   });
 
   const { uuid } = useAppSelector((state) => state.certification);
-  const { userDetails, subscribedFeatures } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, userDetails, subscribedFeatures } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
   const [submitting, setSubmitting] = useState(false);
@@ -248,11 +248,15 @@ const Certification = () => {
       handleErrorScenario
   )
 
+  // if not logged in, prevent loader as well
+  if (!isLoggedIn) {
+    return null;
+  }
   // Show loader until subscribed features is fetched
-  if (!subscribedFeatures) {
+  else if (isLoggedIn && !subscribedFeatures) {
     return <Loader />;
   }
-
+  // else
   return (
     <>
       {subscribedFeatures?.indexOf("l1-run") === -1 ? 

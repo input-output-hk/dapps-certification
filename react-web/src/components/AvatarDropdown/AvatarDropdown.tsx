@@ -41,8 +41,6 @@ const AvatarDropDown = () => {
     setAnchorEl(null);
     logOut();
     navigate("/");
-    setUserDetails({ dapp: null });
-    setIsLoggedIn(false);
   };
 
   return (
