@@ -17,13 +17,12 @@ const DAPPScript = ({ remove, value, index }: any) => {
     >
       <div className="bordered script-item relative">
         <div className="absolute action-button" style={{right: 0}}>
-          <Button
+          {length > 1 && (<Button
             displayStyle="primary-outline"
             size="small"
             buttonLabel="- Remove Script"
             onClick={() => remove(index, { shouldFocus: true })}
-            disabled={length === 1}
-          />
+          />)}
         </div>
 
         <Input
