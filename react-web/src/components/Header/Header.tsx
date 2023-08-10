@@ -62,7 +62,7 @@ const Header = () => {
 
           enabledWallet.getNetworkId().then(async (data: number) => {
             dispatch(setNetwork(data));
-          });
+          }).catch((e: any) => console.error('Failed to get network ID:', e));
 
           const features: any = await fetchData.get(
             "/profile/current/subscriptions/active-features"
@@ -111,7 +111,7 @@ const Header = () => {
       setPollForAddress(false);
       let newAddress = "";
       if (wallet) {
-        const response = await wallet.getChangeAddress();
+        const response = await wallet.getChangeAddress().catch((e: any) => console.error('Failed to get change address:', e));
         newAddress = Address.from_bytes(
           Buffer.from(response, "hex")
         ).to_bech32();
@@ -137,7 +137,7 @@ const Header = () => {
         } else {
           setPollForNetwork(true);
         }
-      });
+      }).catch((e: any) => console.error('Failed to get network ID:', e));
     },
     1 * 1000,
     pollForNetwork
