@@ -248,15 +248,6 @@ const Certification = () => {
       handleErrorScenario
   )
 
-  // const [render, setRendered] = useState(false);
-
-  // useEffect(() => {
-  //   // Initial load of subscribed features
-  //   if (subscribedFeatures !== null) {
-  //     setRendered(true);
-  //   }
-  // }, [subscribedFeatures]);
-
   // Show loader until subscribed features is fetched
   if (!subscribedFeatures) {
     return <Loader />;
