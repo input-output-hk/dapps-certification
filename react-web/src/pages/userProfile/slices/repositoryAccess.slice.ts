@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getRepoAccess, postExternal,fetchData } from "api/api";
 import { AxiosResponse } from "axios";
+import { LocalStorageKeys } from "constants/constants";
 
 interface RepoAccessState {
     verifying: boolean,
@@ -38,7 +39,7 @@ export const repoAccessSlice = createSlice({
   initialState,
   reducers: {
     clearStates: () => {
-        localStorage.removeItem('accessToken')
+        localStorage.removeItem(LocalStorageKeys.accessToken)
         return initialState
     },
     clearAccessToken: (state) => {
@@ -74,7 +75,7 @@ export const repoAccessSlice = createSlice({
       })
       .addCase(getUserAccessToken.fulfilled, (state, actions) => { console.log('payload-', actions.payload)
         const token: string = actions.payload?.data.access_token
-        localStorage.setItem('accessToken', token)
+        localStorage.setItem(LocalStorageKeys.accessToken, token)
         state.accessToken = token;
       });
   },

@@ -1,8 +1,9 @@
 import { AxiosError, AxiosRequestConfig } from "axios";
+import { LocalStorageKeys } from "constants/constants";
 
 // Add a request interceptor
 export function onRequest(config: AxiosRequestConfig) {
-  const address: any = localStorage.getItem('authToken');
+  const address: any = localStorage.getItem(LocalStorageKeys.authToken);
   const TokenAuth = 'Bearer ' + address;
 
   if (address) {
@@ -22,7 +23,7 @@ export function onRequestError(error: AxiosError) {
 
 
 export function onRepoAccessRequest(config: AxiosRequestConfig) {
-  const accessToken: any = localStorage.getItem('accessToken')
+  const accessToken: any = localStorage.getItem(LocalStorageKeys.accessToken)
   const TokenAuth = accessToken;
 
   if (accessToken && accessToken !== 'undefined') {
