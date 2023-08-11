@@ -2,7 +2,7 @@
     pkgsLinux = pkgs // { system = "x86_64-linux"; };
     imgAttributes = {
       name = "plutus-certification-web";
-      tag = "2";
+      tag = "4";
     };
     loadDockerImage = {
       type= "app";
