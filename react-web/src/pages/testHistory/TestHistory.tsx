@@ -187,7 +187,7 @@ const TestHistory = () => {
       const url = `ipfs://${reportData.id}/`
       window.open(url, "_blank");
     } else if (reportData?.raw) {
-      exportObjectToJsonFile(reportData.raw);      
+      exportObjectToJsonFile(reportData.raw, "Testing Report.json");      
     }
   }
   const viewReport = async (runId: string) => {

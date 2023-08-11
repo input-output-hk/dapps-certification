@@ -20,7 +20,7 @@ const Support = lazy(() => import("../pages/support/Support"));
 const Pricing = lazy(() => import("../pages/pricing/Pricing"));
 const SubscriptionContent = lazy(() => import("../pages/subscription/SubscriptionContent"));
 const Payment = lazy(() => import("../pages/subscription/payment/Payment"));
-const Auditor = lazy(() => import("../pages/auditor/Auditor"));
+const ReportUpload = lazy(() => import("../pages/auditing/reportUpload/ReportUpload"))
 const SubscriptionHistory = lazy(() => import("../pages/subscription/history/SubscriptionHistory"));
 
 const Banner = () => {
@@ -67,12 +67,12 @@ const App = () => {
         <Route path={BASE_URL} element={<PageLayout />}>
           <Route element={<PrivateRoutes />}>
             <Route path="/" element={<Home />} />
-            <Route path="/auditor" element={<Auditor />} />
             <Route path="/subscription" element={<Subscription />}>
               <Route index element={<SubscriptionContent />} />  
               <Route path="payment" element={<Payment />} />
               <Route path="history" element={<SubscriptionHistory />} />
             </Route>
+            <Route path="/audit-report-upload" element={<ReportUpload />} />
             <Route path="/history" element={<TestHistory />} />
             <Route path="/profile/*" element={<UserProfile />} />
           </Route>

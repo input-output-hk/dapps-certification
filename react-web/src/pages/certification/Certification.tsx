@@ -192,7 +192,7 @@ const Certification = () => {
   },[form])
 
   const handleDownloadResultData = (resultData: any) => {
-    exportObjectToJsonFile(resultData);
+    exportObjectToJsonFile(resultData, "Testing Report.json");
   };
 
   const abortRun = () => {

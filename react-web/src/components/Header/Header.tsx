@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Address } from "@emurgo/cardano-serialization-lib-browser";
 import { useAppDispatch, useAppSelector } from "store/store";
@@ -13,7 +13,9 @@ import "./Header.scss";
 import { useDelayedApi } from "hooks/useDelayedApi";
 import { fetchData } from "api/api";
 import useLocalStorage from "hooks/useLocalStorage";
-import { AuthenticatedMenu, NoAuthMenu } from "./Menu";
+import ConnectWallet from "components/ConnectWallet/ConnectWallet";
+import AvatarDropDown from "components/AvatarDropdown/AvatarDropdown";
+import DropoverMenu from "components/DropoverMenu/DropoverMenu";
 import { LocalStorageKeys } from 'constants/constants';
 
 const Header = () => {
@@ -24,6 +26,7 @@ const Header = () => {
   const [isActive, setIsActive] = useState(false);
   const [pollForAddress, setPollForAddress] = useState(false);
   const [pollForNetwork, setPollForNetwork] = useState(false);
+  const [featureList, setFeatureList] = useState<String[]>([]);
   const [isLogged, setIsLoggedIn] = useLocalStorage(
     LocalStorageKeys.isLoggedIn,
     localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
@@ -72,7 +75,7 @@ const Header = () => {
             return;
           }
           await dispatch(setSubscribedFeatures(features.data));
-
+          setFeatureList((features.data === null || features.data === undefined) ? [] : features.data)
           if (!features.data?.length) {
             setSubscriptions(false);
           } else setSubscriptions(true);
@@ -141,7 +144,86 @@ const Header = () => {
     },
     1 * 1000,
     pollForNetwork
-  );
+  )
+
+  const hasCachedAddress = () => {
+    return (!localStorage.getItem('address')?.length || !localStorage.getItem('walletName')?.length)
+  }
+
+  const ShowConnectWallet = memo(() => {
+    return (<>
+      {hasCachedAddress() ? <ConnectWallet /> : null}
+    </>)
+  })
+
+  const ShowAvatarDropdown = memo(() => {
+    return (<>
+      {(address && wallet) ? <AvatarDropDown /> : null}
+    </>)
+  })
+
+  const AuditMainMenu = () => <span className="link menu-link">Auditing</span>
+  const AuditSubMenu = () => {
+    return (<>
+      <Link to="audit-report-upload">Report Upload</Link>
+    </>)
+  }
+
+  const NoAuthMenu = memo(() => {
+    return (
+      <>
+        <li>
+          <Link to="community">Community</Link>
+        </li>
+        <li>
+          <Link to="pricing">Pricing</Link>
+        </li>
+        <li>
+          <Link to="support">Support</Link>
+        </li>
+        <li className="button-wrap">
+          <ShowConnectWallet />
+        </li>
+      </>
+    );
+  });
+  const AuthenticatedMenu = memo(() => {
+    return (
+      <>
+        <li>
+          <Link to="support">Support</Link>
+        </li>        
+        <li>
+          <Link to="subscription">Subscription</Link>
+        </li>
+        {featureList.indexOf('l2-upload-report') !== -1 ? (
+          <li>
+            <DropoverMenu 
+              name="auditing" 
+              mainElm={<AuditMainMenu />}
+              listItems={<AuditSubMenu />}></DropoverMenu>
+            
+            
+          </li>
+        ) : null}
+        <li>
+          <Link to="history">Test History</Link>
+        </li>
+        <li>
+          <ShowAvatarDropdown />
+        </li>
+      </>
+    );
+  });
+
+  const ProfileSection = useCallback(() => {
+    return (
+      <ul className={`menu ${isActive ? "active-ul" : ""}`}>
+        {isLoggedIn ? <AuthenticatedMenu /> : <NoAuthMenu />}
+      </ul>
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, isLoggedIn, featureList]);
 
   return (
     <header className="header">
@@ -163,10 +245,7 @@ const Header = () => {
         <span className="navicon"></span>
       </label>
 
-      {/* Profile section */}
-      <ul className={`menu ${isActive ? "active-ul" : ""}`}>
-        {isLoggedIn ? <AuthenticatedMenu /> : <NoAuthMenu />}
-      </ul>
+      <ProfileSection />
     </header>
   );
 };

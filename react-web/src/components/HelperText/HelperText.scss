@@ -1,0 +1,13 @@
+.helper-text-wrapper {
+  display: flex;
+  align-items: center;
+  padding-left: 24px;
+
+  .icon-wrapper {
+    display: inherit;
+  }
+
+  .helper-text {
+    font-size: 12px;
+  }
+}
