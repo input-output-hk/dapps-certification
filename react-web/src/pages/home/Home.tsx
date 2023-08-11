@@ -1,10 +1,11 @@
 import useLocalStorage from "hooks/useLocalStorage";
 import Certification from "pages/certification/Certification";
+import { LocalStorageKeys } from 'constants/constants';
 
 const Home = () => {
   const [isLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   return isLoggedIn ? <Certification /> : <></>;

@@ -1,5 +1,4 @@
-{ pkgs,flake, ... }: let
-    pkgsLinux = pkgs // { system = "x86_64-linux"; };
+{ inputs', pkgs, l, ... }: let
     imgAttributes = {
       name = "plutus-certification";
       tag = "8";
@@ -53,7 +52,7 @@
         echo $script >&2
         eval "$script"
 
-        script="${flake.packages."plutus-certification:exe:plutus-certification"}/bin/plutus-certification $args"
+        script="${inputs'.self.apps.plutus-certification.program} $args"
         echo $script >&2
         eval "$script"
       '').outPath;
@@ -65,8 +64,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = flake.packages."dapps-certification-helpers:exe:generate-flake";
-    buildFlake = flake.packages."dapps-certification-helpers:exe:build-flake";
+    genFlake = inputs'.self.packages.dapps-certification-helpers-exe-generate-flake-ghc927;
+    buildFlake = inputs'.self.apps.dapps-certification-helpers-exe-build-flake-ghc927;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;
@@ -87,72 +86,80 @@
       };
     });
     loadDockerImage = {
-      type= "app";
+      type = "app";
       program = (pkgs.writeShellScript "loadDockerImage" ''
           set -eEuo pipefail
           echo "Loading docker image ${image}" >&2
           ${pkgs.docker}/bin/docker load -i ${image}
       '').outPath;
     };
-in {
-    loadDockerImage = loadDockerImage;
-    runDockerImage = 
-      let addEnvVar = varName: '' 
-          if [ -n "${"$"}${varName}" ]; then
-            docker_args="$docker_args -e ${varName}=${"$"}${varName}" 
+in 
+rec {
+  inherit loadDockerImage;
+
+  runDockerImage = 
+    let addEnvVar = varName: '' 
+        if [ -n "${"$"}${varName}" ]; then
+          docker_args="$docker_args -e ${varName}=${"$"}${varName}" 
+        fi
+    '';
+    in {
+      type = "app";
+      program = (pkgs.writeShellScript "runDockerImage" ''
+          set -eEo pipefail
+          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          echo "Executing ${loadDockerImage.program}..." >&2
+          ${loadDockerImage.program}
+          docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
+
+          ${addEnvVar "WALLET_ID"}
+          ${addEnvVar "WALLET_ADDRESS"}
+          ${addEnvVar "WALLET_PASSPHRASE"}
+          ${addEnvVar "JWT_SECRET"}
+          ${addEnvVar "WALLET_URL"}
+          ${addEnvVar "WALLET_CERTIFICATION_PRICE"}
+          ${addEnvVar "GH_ACCESS_TOKEN"}
+          ${addEnvVar "JWT_EXPIRATION"}
+          ${addEnvVar "SIGNATURE_TIMEOUT"}
+          ${addEnvVar "USE_WHITELIST"}
+          ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
+          ${addEnvVar "PORT"}
+
+          if [[ -z "$PORT" ]]; then
+            export PORT=9671
           fi
-      '';
-      in {
-        type = "app";
-        program = (pkgs.writeShellScript "runDockerImage" ''
-            set -eEo pipefail
-            export PATH="${pkgs.lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
-            echo "Executing ${loadDockerImage.program}..." >&2
-            ${loadDockerImage.program}
-            docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
+          docker_args="$docker_args -p $PORT:$PORT"
+          
+          script="docker run --rm $docker_args ${imgAttributes.name}:${imgAttributes.tag}"
+          echo $script >&2
+          eval "$script"
+      '').outPath;
+    };
 
-            ${addEnvVar "WALLET_ID"}
-            ${addEnvVar "WALLET_ADDRESS"}
-            ${addEnvVar "WALLET_PASSPHRASE"}
-            ${addEnvVar "JWT_SECRET"}
-            ${addEnvVar "WALLET_URL"}
-            ${addEnvVar "WALLET_CERTIFICATION_PRICE"}
-            ${addEnvVar "GH_ACCESS_TOKEN"}
-            ${addEnvVar "JWT_EXPIRATION"}
-            ${addEnvVar "SIGNATURE_TIMEOUT"}
-            ${addEnvVar "USE_WHITELIST"}
-            ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
-            ${addEnvVar "PORT"}
+    pushDockerImage = {
+      type = "app";
+      # Usage: run .\#dockerApps.pushDockerImage -- <docker registry> 
+      # Example: .\#dockerApps.pushDockerImage -- ghcr.io/demoiog
+      program = (pkgs.writeShellScript "pushDockerImage" ''
+          set -eEuo pipefail
+          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          ${loadDockerImage.program}
+          echo "Pushing docker image ${image}" >&2
+          imageName="${imgAttributes.name}:${imgAttributes.tag}"
 
-            if [[ -z "$PORT" ]]; then
-              export PORT=9671
-            fi
-            docker_args="$docker_args -p $PORT:$PORT"
-            
-            script="docker run --rm $docker_args ${imgAttributes.name}:${imgAttributes.tag}"
-            echo $script >&2
-            eval "$script"
-        '').outPath;
-      };
-      pushDockerImage = {
-        type = "app";
-        #usage: nix run .\#apps.x86_64-linux.pushDockerImage  -- <docker registry>
-        #E.g. nix run .\#apps.x86_64-linux.pushDockerImage  -- ghcr.io/demoiog
-        program = (pkgs.writeShellScript "pushDockerImage" ''
-            set -eEuo pipefail
-            export PATH="${pkgs.lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
-            ${loadDockerImage.program}
-            echo "Pushing docker image ${image}" >&2
-            imageName="${imgAttributes.name}:${imgAttributes.tag}"
+          script="docker image tag $imageName $1/$imageName"
+          echo $script >&2
+          eval "$script"
 
-            script="docker image tag $imageName $1/$imageName"
-            echo $script >&2
-            eval "$script"
+          script="docker push $1/$imageName"
+          echo $script >&2
+          eval "$script"
 
-            script="docker push $1/$imageName"
-            echo $script >&2
-            eval "$script"
+      '').outPath;
+    };
 
-        '').outPath;
-      };
+    evaluation-test = pkgs.writeText "docker-apps-evaluation-test" ''
+      ${runDockerImage.program}
+      ${pushDockerImage.program}
+    '';
 }

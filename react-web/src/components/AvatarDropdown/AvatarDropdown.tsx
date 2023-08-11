@@ -7,6 +7,7 @@ import Avatar from "@mui/material/Avatar";
 import "./AvatarDropDown.scss";
 import DropoverMenu from "components/DropoverMenu/DropoverMenu";
 import useLocalStorage from "hooks/useLocalStorage";
+import { LocalStorageKeys } from 'constants/constants';
 
 const AvatarDropDown = () => {
   const navigate = useNavigate();
@@ -15,14 +16,14 @@ const AvatarDropDown = () => {
     dispatch(logout());
   };
   const [, setIsLoggedIn] = useLocalStorage(
-    "isLoggedIn",
-    localStorage.getItem("isLoggedIn") === "true" ? true : false
+    LocalStorageKeys.isLoggedIn,
+    localStorage.getItem(LocalStorageKeys.isLoggedIn) === "true" ? true : false
   );
 
   const [, setUserDetails] = useLocalStorage(
-    "userDetails",
-    localStorage.getItem("userDetails")
-      ? JSON.parse(localStorage.getItem("userDetails")!)
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
       : null
   );
 
@@ -32,8 +33,6 @@ const AvatarDropDown = () => {
   const handleLogoutClose = () => {
     logOut();
     navigate("/");
-    setUserDetails({ dapp: null });
-    setIsLoggedIn(false);
   };
 
   const AvatarMainMenu = () => <Avatar alt="Profile Photo" src="/images/avatar.svg" />

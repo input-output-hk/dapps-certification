@@ -4,26 +4,30 @@ import "./DAPPScript.scss";
 import { useFormContext } from "react-hook-form";
 import { fieldArrayName } from "pages/auditing/reportUpload/ReportUpload";
 
-const DAPPScript = ({ remove, value, index }: any) => {
+interface DAPPScriptProps {
+  remove: (index: number, options?: { shouldFocus: boolean }) => void;
+  value: { id: string };
+  index: number;
+}
+
+const DAPPScript = ({ remove, value, index }: DAPPScriptProps) => {
   const { register, watch } = useFormContext();
   const allScripts = watch(fieldArrayName);
   const length = !allScripts ? 1 : allScripts.length;
 
   return (
     <div
-      className="bordered card-layout"
-      style={{ paddingBottom: "20px", paddingTop: "50px" }}
+      className="bordered card-layout card-padding"
       key={value.id}
     >
       <div className="bordered script-item relative">
         <div className="absolute action-button" style={{right: 0}}>
-          <Button
+          {length > 1 && (<Button
             displayStyle="primary-outline"
             size="small"
             buttonLabel="- Remove Script"
             onClick={() => remove(index, { shouldFocus: true })}
-            disabled={length === 1}
-          />
+          />)}
         </div>
 
         <Input

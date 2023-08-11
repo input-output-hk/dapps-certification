@@ -85,29 +85,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         />
       </div>
 
-      {errors?.[name] && (
+      {(errors?.[name] || error) && (
         <div style={{ marginTop: "4px" }}>
-          <HelperText
-            type="error"
-            value={errors[name]?.message as string}
-            showInfoIcon={false}
-          />
+          {errors?.[name] && (
+            <HelperText
+              type="error"
+              value={errors[name]?.message as string}
+              showInfoIcon={false}
+            />
+          )}
+          {error && (
+            <HelperText
+              type="error"
+              value={error as string}
+              showInfoIcon={false}
+            />
+          )}
         </div>
       )}
-
-      {/* Custom errors */}
-      {error && !errors?.[name] ? (
-        <div style={{ marginTop: "4px" }}>
-          <HelperText
-            type="error"
-            value={error as string}
-            showInfoIcon={false}
-          />
-        </div>
-      ) : (
-        <></>
-      )}
-      
     </div>
   );
 });
