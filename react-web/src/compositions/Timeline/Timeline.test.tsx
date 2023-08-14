@@ -35,6 +35,10 @@ describe("Timeline", () => {
 
     const timelineItems = screen.getAllByRole("listitem");
     expect(timelineItems).toHaveLength(statusConfig.length);
+    statusConfig.forEach((config, index) => {
+      expect(timelineItems[index]).toHaveTextContent(config.status);
+      expect(timelineItems[index]).toHaveTextContent(String(config.runTimeTaken));
+    });
   });
 
   test("sets runTimeTaken property based on the buildInfo runState", () => {

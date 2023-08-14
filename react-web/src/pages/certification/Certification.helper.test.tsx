@@ -20,6 +20,31 @@ import {
   
       expect(filteredKeys).toEqual(expectedKeys);
     });
+
+    describe("filterCertificationTaskKeys", () => {
+      it("should return an empty array when an invalid type is passed", () => {
+        const type = "invalid";
+        const filteredKeys = filterCertificationTaskKeys(type);
+        expect(filteredKeys).toEqual([]);
+      });
+    });
+    
+    describe("isAnyTaskFailure", () => {
+      it("should return false if the result object is empty", () => {
+        const result = {};
+        const hasFailure = isAnyTaskFailure(result);
+        expect(hasFailure).toBe(false);
+      });
+    
+      it("should return false if the result object contains unexpected values", () => {
+        const result = {
+          _certRes_standardPropertyResult: { tag: "Unexpected" },
+          _certRes_doubleSatisfactionResult: { tag: "Unexpected" },
+        };
+        const hasFailure = isAnyTaskFailure(result);
+        expect(hasFailure).toBe(false);
+      });
+    });
   });
   
   describe("isAnyTaskFailure", () => {

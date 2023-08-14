@@ -1,4 +1,6 @@
 import { screen, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
 import { Form } from "./Form";
 import { useForm } from "react-hook-form";
 import { Input } from "./components/Input";

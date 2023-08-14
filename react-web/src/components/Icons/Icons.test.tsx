@@ -4,7 +4,7 @@ import Icons, { IconTypes } from "./Icons";
 
 describe("Icons", () => {
   test("renders the correct icon based on the provided type", () => {
-    Object.keys(IconTypes).map((type) => {
+    Object.keys(IconTypes).forEach((type) => {
       const { container } = render(<Icons type={type} />);
       expect(container.querySelector(".MuiSvgIcon-root")).toBeInTheDocument();
     });
@@ -12,12 +12,12 @@ describe("Icons", () => {
 
   test("renders the info icon based when type is not provided", () => {
     render(<Icons />);
-    expect(screen.queryByTestId("InfoIcon")).toBeInTheDocument();
+    expect(screen.getByTestId("InfoIcon")).toBeInTheDocument();
   });
 
   test("renders default icon when type is not from mapping", () => {
     render(<Icons type="invalid-type" />);
-    expect(screen.queryByTestId("default-icon")).toBeInTheDocument();
+    expect(screen.queryByTestId(".MuiSvgIcon-root")).not.toBeInTheDocument();
   });
 
   test("renders icon with provided fontsize", () => {

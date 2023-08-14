@@ -2,34 +2,15 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import Button from "./Button";
 
 describe("renders the Button component with defaults", () => {
-  it("renders without a class name", () => {
+  it("renders with default properties", () => {
     render(<Button />);
-    expect(screen.getAllByRole("button")[0]).toHaveClass("btn");
-  });
-
-  it("renders without a type", () => {
-    render(<Button />);
-    expect(screen.getAllByRole("button")[0]).toHaveAttribute("type", "submit");
-  });
-
-  it("renders without a size", () => {
-    render(<Button />);
-    expect(screen.getAllByRole("button")[0]).toHaveClass("btn-medium");
-  });
-
-  it("renders without a displayStyle", () => {
-    render(<Button />);
-    expect(screen.getAllByRole("button")[0]).toHaveClass("btn-primary");
-  });
-
-  it("renders without a label", () => {
-    render(<Button />);
-    expect(screen.getAllByRole("button")[0]).toHaveTextContent("Submit");
-  });
-
-  it("renders without class is-loading", () => {
-    render(<Button />);
-    expect(screen.getAllByRole("button")[0]).not.toHaveClass("is-loading");
+    const button = screen.getAllByRole("button")[0];
+    expect(button).toHaveClass("btn");
+    expect(button).toHaveAttribute("type", "submit");
+    expect(button).toHaveClass("btn-medium");
+    expect(button).toHaveClass("btn-primary");
+    expect(button).toHaveTextContent("Submit");
+    expect(button).not.toHaveClass("is-loading");
   });
 });
 
@@ -63,7 +44,7 @@ describe("renders the Button component", () => {
 
   it("successful button click", () => {
     const mockOnClick = jest.fn();
-    render(<Button onClick={mockOnClick()} />);
+    render(<Button onClick={mockOnClick} />);
     const clickIndicator = screen.getByRole("button");
     fireEvent.click(clickIndicator);
     expect(mockOnClick).toHaveBeenCalledTimes(1);
