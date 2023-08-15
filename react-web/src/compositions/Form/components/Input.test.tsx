@@ -77,7 +77,7 @@ describe("Test cases for FieldError component", () => {
       const methods = useForm();
       return (
         <FormProvider {...methods}>
-          <Input label="test" name="test" />
+          <Input label="test" name="test"/>
         </FormProvider>
       );
     };

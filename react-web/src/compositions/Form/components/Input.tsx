@@ -41,7 +41,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       // field has values
       setActive(true);
     } else {
-      // set field active if value empty and iff not on focus
+      // set field active if value empty and if not on focus
       if (
         document.activeElement !== document.getElementById(id || name || "")
       ) {
@@ -77,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           {...props}
           name={name}
-          id={id}
+          id={id || name}
           data-testid={name}
           value={value}
           onFocusCapture={() => setActive(true)}
