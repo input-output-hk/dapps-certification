@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -306,7 +306,7 @@ const Certification = () => {
       }
       {formSubmitted && (
         <>
-          <div id="resultContainer">
+          <div id="resultContainer" data-testid="resultContainer">
             {runStatus === "finished" ? (
               <button
                 className="back-btn"
@@ -324,6 +324,7 @@ const Certification = () => {
             <header>
               <h2
                 id="breadcrumb"
+                data-testid="breadcrumb"
                 style={{alignSelf:"center"}}
                 className={runStatus === "finished" ? "" : "hidden"}
               >

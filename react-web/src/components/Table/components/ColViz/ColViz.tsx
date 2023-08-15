@@ -2,6 +2,7 @@ import React, { FC, useEffect, useState } from "react";
 import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
+import { uniqueId } from "lodash";
 
 const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
   const [columnDetails, setColumnDetails] = useState([]);
@@ -13,6 +14,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
 
   useEffect(() => {
     updateColumnOptions(columnDetails);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columnDetails]);
 
   const handleChange = (e: any, id: any) => {
@@ -27,7 +29,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
     // setColumnDetails(updatedColumns);
   };
   const atLeastOneItemChecked = (colArray: any) => {
-    const find = colArray.filter((column: any) => column.columnVisible === true);
+    const find = colArray.filter((column: any) => column.Header.length && column.columnVisible === true);
     if (find.length === 1) {
       const updatedColumn = colArray.map((column: any) => {
         if (find[0].accessor === column.accessor) {
@@ -56,12 +58,12 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
     });
   };
   return (
-    <div className="colviz-wrapper">
-      <ul>
+    <div className="colviz-wrapper" key={uniqueId("colviz")}>
+      <ul data-testid="colviz-list-wrapper" key={uniqueId("colviz")}>
         {columnDetails.map((column: any, index: any) => {
           if (column.Header.length) {
             return (
-              <li key={index}>
+              <li key={uniqueId("colviz")}>
                 <FormGroup>
                   <FormControlLabel
                     control={
@@ -69,6 +71,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
                         checked={column.columnVisible}
                         onChange={(e) => handleChange(e, column.accessor)}
                         disabled={column.checkBoxDisabled}
+                        data-testid={`${column?.Header}-checkbox`}
                       />
                     }
                     label={column.Header}
@@ -77,7 +80,7 @@ const ColViz: FC<any> = ({ columns, updateColumnOptions }) => {
               </li>
             );
           } else {
-            return <></>
+            return <span key={uniqueId("colviz")}></span>
           }
         })}
       </ul>

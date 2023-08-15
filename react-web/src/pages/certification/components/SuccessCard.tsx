@@ -44,11 +44,11 @@ const SuccessCard: React.FC<{
             <span><i>OK, passed {resultObj.length}/{resultObj.length} tests</i></span>
           </> 
           : unitTest === '_certRes_DLTests' ? <>
-            <span className="accordion-title" onClick={(_) => toggleAccordion()}>
+            <span className="accordion-title" onClick={(_) => toggleAccordion()} data-testid="_certRes_DLTests">
               <i>OK, passed {resultObj.length}/{resultObj.length} tests</i>
-              <i className={`arrow ${isOpen ? "up" : "down"}`}></i>
+              <i className={`arrow ${isOpen ? "up" : "down"}`} data-testid="_certRes_DLTests-arrow"></i>
             </span>
-            <div className={`accordion-content ${isOpen ? "" : "hidden"}`}>
+            <div className={`accordion-content ${isOpen ? "" : "hidden"}`} data-testid="_certRes_DLTests-accordion-content">
               {resultObj.map((item: any, index: number) => {
                 return (
                 <div key={index}>
@@ -67,13 +67,13 @@ const SuccessCard: React.FC<{
             </div>
           </> : null
         : <>
-          <span className="accordion-title" onClick={(_) => toggleAccordion()}>
+          <span className="accordion-title" data-testid="_certRes_DLTests" onClick={(_) => toggleAccordion()}>
             <i>OK, passed {resultObj.numTests} tests</i>
             {resultObj.numDiscarded >= 0 ? <i>; {resultObj.numDiscarded} discarded</i> : null}
-            <i className={`arrow ${isOpen ? "up" : "down"}`}></i>
+            <i className={`arrow ${isOpen ? "up" : "down"}`} data-testid="_certRes_DLTests-arrow"></i>
           </span>
 
-          <div className={`accordion-content ${isOpen ? "" : "hidden"}`}>
+          <div className={`accordion-content ${isOpen ? "" : "hidden"}`} data-testid="_certRes_DLTests-accordion-content">
             <section className="chart-container">
               {renderCharts()}
             </section>

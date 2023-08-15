@@ -13,7 +13,6 @@
     "@mui/material": "5.10.14",
     "@reduxjs/toolkit": "^1.9.0",
     "@testing-library/jest-dom": "^5.16.4",
-    "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.11.45",
@@ -43,8 +42,8 @@
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "build:production": "REACT_APP_ENV=production yarn build",
-    "test": "react-app-rewired test --passWithNoTests",
-    "test:coverage": "react-app-rewired test --coverage --passWithNoTests",
+    "react-test": "react-app-rewired test",
+    "test": "jest --config=jest.config.js --coverage",
     "eject": "react-app-rewired eject"
   },
   "eslintConfig": {
@@ -66,7 +65,13 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@types/jest": "^29.5.2",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
     "react-app-rewired": "^2.2.1",
+    "ts-jest": "^29.1.0",
     "webpack-cli": "^5.0.1"
   }
 }

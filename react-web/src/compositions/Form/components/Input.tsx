@@ -41,7 +41,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       // field has values
       setActive(true);
     } else {
-      // set field active if value empty and iff not on focus
+      // set field active if value empty and if not on focus
       if (
         document.activeElement !== document.getElementById(id || name || "")
       ) {
@@ -57,6 +57,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={`input-wrapper ${className}`}
       onBlur={(e: any) => !e.target.value && setActive(false)}
       onClick={() => setActive(true)}
+      data-testid={`${name}-wrapper`}
     >
       <div
         className={`input ${active ? "active" : ""} ${
@@ -66,6 +67,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           setActive(true);
           document.getElementById(id || name || "")?.focus();
         }}
+        data-testid={`${name}-container`}
       >
         <label>
           {label} {required ? <span style={{ color: "red" }}>*</span> : null}
@@ -75,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ref={ref}
           {...props}
           name={name}
-          id={id}
+          id={id || name}
           data-testid={name}
           value={value}
           onFocusCapture={() => setActive(true)}

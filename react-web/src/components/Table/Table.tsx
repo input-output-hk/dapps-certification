@@ -94,6 +94,7 @@ const TableComponent: FC<any> = ({
                 display: showPivot ? "block" : "none",
               }}
               className="colviz-container"
+              data-testid="colviz-container"
             >
               <ColViz
                 columns={columns}
@@ -102,6 +103,7 @@ const TableComponent: FC<any> = ({
             </div>
             <div className="sidebarButtons">
               <button
+                data-testid="colviz-sideBarButton"
                 className="sideBarButton"
                 onClick={(e) => setShowPivot(!showPivot)}
               >
@@ -112,7 +114,7 @@ const TableComponent: FC<any> = ({
             </div>
           </div>
         )}
-        <TableContainer component={Paper} id="tableComp">
+        <TableContainer component={Paper} id="tableComp" data-testid="tableComp">
           <Table
             sx={{ minWidth: 650 }}
             aria-label="simple table"
@@ -125,7 +127,7 @@ const TableComponent: FC<any> = ({
                     <TableCell
                       {...column.getHeaderProps(column.getSortByToggleProps())}
                     >
-                      <div key={index} className="col-header">
+                      <div key={index} className="col-header" data-testid={column.render("Header")}>
                         <span> {column.render("Header")}</span>
 
                         <span>

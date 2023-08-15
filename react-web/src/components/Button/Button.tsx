@@ -26,6 +26,7 @@ const Button: FC<IButtonProps> = ({
   showLoader = false,
   displayStyle = "primary",
   onClick,
+  ...props
 }) => {
   return (
     <button
@@ -33,13 +34,14 @@ const Button: FC<IButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      {...props}
     >
       {showLoader ? (
         <Loader />
       ) : (
         <>
           {iconUrl && (
-            <img className="icon-image" src={iconUrl} alt="icon-img" />
+            <img data-testid="btn-icon" className="icon-image" src={iconUrl} alt="icon-img" />
           )}
           <span className="button-label">{buttonLabel}</span>
         </>

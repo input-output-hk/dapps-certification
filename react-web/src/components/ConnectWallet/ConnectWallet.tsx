@@ -175,7 +175,7 @@ const ConnectWallet = () => {
             })
           )}
           {walletLoading ? <Loader /> : null}
-          {errorToast && errorToast.display ? (<>
+          {errorToast?.display ? (<>
             <span className="error">{errorToast.message}</span>
             <span className="link" style={{marginLeft: '5px'}} onClick={openConnectWalletModal}>Retry</span>
           </>) : null}

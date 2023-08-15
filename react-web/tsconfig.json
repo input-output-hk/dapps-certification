@@ -30,10 +30,11 @@
       "@assets/*": ["src/assets/*"],
       "@styles/*": ["src/styles/*"],
       "@hooks/*": ["src/hooks/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "@test/*": ["src/test/*"]
     }
   },
   "include": [
     "src"
-  ]
+, "jest.config.js"  ]
 }

@@ -56,6 +56,11 @@ export const formatTimeToReadable = (duration: number) => {
     return timeStr
 }
 
+// unused now
+// export const convertAdaToLovelace = (fee_ada: number) => {
+//   return BigNum.from_str((fee_ada * 1000000).toString())
+// }
+
 export const getObjectByPath = (object: { [x: string]: any }, path: string): any => {
   path = path.replace(/\[(\w+)\]/g, ".$1"); // convert indexes to properties
   path = path.replace(/^\./, ""); // strip a leading dot
