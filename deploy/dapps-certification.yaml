@@ -23,12 +23,9 @@ spec:
               secretKeyRef:
                 key: WALLET_PASSPHRASE
                 name: the-secrets
-          #- name: JWT_SECRET
-            #valueFrom:
-              #secretKeyRef:
-                #key: JWT_SECRET
-                #name: the-secrets
-        image: ghcr.io/demoiog/plutus-certification:9
+          - name: DB_PATH
+            value: "/db/certification.sqlite"
+        image: ghcr.io/demoiog/plutus-certification:10
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
@@ -42,6 +39,15 @@ spec:
             - name: ipc
               mountPath: /ipc
       traits:
+        - type: storage
+          properties:
+            pvc:
+            - name: db
+              mountPath: /db
+              storageClassName: ebs-sc
+              resources:
+                requests:
+                  storage: 10Gi
         - properties:
             replicas: 1
           type: scaler
