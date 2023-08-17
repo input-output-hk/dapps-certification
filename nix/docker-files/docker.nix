@@ -1,7 +1,7 @@
 { inputs', pkgs, l, ... }: let
     imgAttributes = {
       name = "plutus-certification";
-      tag = "11";
+      tag = "12";
     };
     nixConfig = ''
         trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
@@ -13,7 +13,7 @@
         filter-syscalls = false
     '';
     entryPoint =
-      let addParameter = paramName: varName: '' 
+      let addParameter = paramName: varName: ''
           if [ -n "${"$"}${varName}" ]; then
             args="$args --${paramName} ${"$"}${varName}"
           fi
@@ -30,6 +30,7 @@
         ${addParameter "signature-timeout" "SIGNATURE_TIMEOUT"}
         ${addParameter "use-whitelist" "USE_WHITELIST"}
         ${addParameter "port" "PORT"}
+        ${addParameter "db-path" "DB_PATH"}
         if [ -n "$JWT_SECRET" ];
         then
             args="$args --jwt-secret $JWT_SECRET"
@@ -46,11 +47,12 @@
 
         # create a temporary directory for executing flakes
         mkdir -p /tmp
+        mkdir -p /db
 
         # copy the certificate bundle to the right place
         mkdir -p /etc/ssl/certs
         script="cp ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt"
-        
+
         #TODO: change this --unsafe-bypass-subscription-validation
         args="$args --unsafe-bypass-subscription-validation"
 
@@ -61,7 +63,7 @@
         echo $script >&2
         eval "$script"
       '').outPath;
-  
+
     nixImage = pkgs.dockerTools.pullImage {
       imageName = "nixos/nix";
       imageDigest = "sha256:31b808456afccc2a419507ea112e152cf27e9bd2527517b0b6ca8639cc423501";
@@ -98,14 +100,14 @@
           ${pkgs.docker}/bin/docker load -i ${image}
       '').outPath;
     };
-in 
+in
 rec {
   inherit loadDockerImage;
 
-  runDockerImage = 
-    let addEnvVar = varName: '' 
+  runDockerImage =
+    let addEnvVar = varName: ''
         if [ -n "${"$"}${varName}" ]; then
-          docker_args="$docker_args -e ${varName}=${"$"}${varName}" 
+          docker_args="$docker_args -e ${varName}=${"$"}${varName}"
         fi
     '';
     in {
@@ -129,12 +131,13 @@ rec {
           ${addEnvVar "USE_WHITELIST"}
           ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
           ${addEnvVar "PORT"}
+          ${addEnvVar "DB_PATH"}
 
           if [[ -z "$PORT" ]]; then
             export PORT=9671
           fi
           docker_args="$docker_args -p $PORT:$PORT"
-          
+
           script="docker run --rm $docker_args ${imgAttributes.name}:${imgAttributes.tag}"
           echo $script >&2
           eval "$script"
@@ -143,7 +146,7 @@ rec {
 
     pushDockerImage = {
       type = "app";
-      # Usage: run .\#dockerApps.pushDockerImage -- <docker registry> 
+      # Usage: run .\#dockerApps.pushDockerImage -- <docker registry>
       # Example: .\#dockerApps.pushDockerImage -- ghcr.io/demoiog
       program = (pkgs.writeShellScript "pushDockerImage" ''
           set -eEuo pipefail

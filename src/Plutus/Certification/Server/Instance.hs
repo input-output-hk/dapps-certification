@@ -52,6 +52,7 @@ import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
 import Plutus.Certification.Metadata
+import Control.Monad.Reader (ReaderT(runReaderT))
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -80,6 +81,7 @@ data ServerArgs m r = ServerArgs
   , serverGitHubCredentials :: !(Maybe GitHubCredentials)
   , validateSubscriptions :: Bool
   , adaUsdPrice :: m (Maybe DB.AdaUsdPrice)
+  , withDb :: forall a k. (MonadIO k, MonadMask k) => (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> k a
   }
 
 type Whitelist = HashSet Text
@@ -122,11 +124,11 @@ server ServerArgs{..} = NamedAPI
       pure res
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
       ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
-      ) >>= dbSync uuid
+      ) >>= runDbReader . dbSync uuid
   , getRunDetails = \rid@RunID{..} -> withEvent eb GetRunDetails \ev -> do
       addField ev rid
       -- get the run details from the db
-      DB.withDb ( DB.getRun uuid )
+      withDb ( DB.getRun uuid )
         >>= maybeToServerError err404 "Run not found"
   , abortRun = \(profileId,_) rid@RunID{..} deleteRun -> withEvent eb AbortRun \ev -> do
       addField ev rid
@@ -138,18 +140,21 @@ server ServerArgs{..} = NamedAPI
         -- finally abort the run
         abortRuns (setAncestor $ reference ev) rid
         -- if abortion succeeded mark it in the db
-        void (getNow >>= DB.withDb . DB.updateFinishedRun uuid False)
+        now <- getNow
+        void $ withDb $ DB.updateFinishedRun uuid False now
 
       -- depending on the deleteRun flag either ...
       if deleteRun == Just True
          -- delete the run from the db
-         then void (DB.withDb $ DB.deleteRun uuid)
+         then void (withDb $ DB.deleteRun uuid)
          -- or just mark it as aborted
-         else void (getNow >>= DB.withDb . DB.markAsAborted uuid)
+         else do
+           now <- getNow
+           void $ withDb $ DB.markAsAborted uuid now
       pure NoContent
   , getProfileBalance = \(profileId,UserAddress{..}) -> withEvent eb GetProfileBalance \ev -> do
       addField ev profileId
-      fromMaybe 0 <$> DB.withDb (DB.getProfileBalance unUserAddress)
+      fromMaybe 0 <$> withDb (DB.getProfileBalance unUserAddress)
   , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do
       addField ev rid
       let dropCond = case afterM of
@@ -161,7 +166,7 @@ server ServerArgs{..} = NamedAPI
          $ getLogs (setAncestor $ reference ev) actionTypeM rid
         .| (dropWhileC dropCond >> sinkList)
   , getRuns = \(profileId,_) afterM countM ->
-      DB.withDb $ DB.getRuns profileId afterM countM
+      withDb $ DB.getRuns profileId afterM countM
   , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
       let dappId = profileId
           website' = fmap (Text.pack . showBaseUrl) website
@@ -170,7 +175,7 @@ server ServerArgs{..} = NamedAPI
             dappId, dappName,dappOwner,dappVersion,dappRepo,
             dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
           }) dapp
-      DB.withDb $ do
+      withDb $ do
         _ <- DB.upsertProfile (DB.Profile
                 { website=website'
                 , twitter=twitter'
@@ -213,13 +218,13 @@ server ServerArgs{..} = NamedAPI
       throwError err403 { errBody = "Transaction status not fit for certification" }
 
     -- mark the run as ready for certification
-    getNow
-      >>= DB.withDb . DB.markAsReadyForCertification uuid ipfsCid
+    now <- getNow
+    withDb (DB.markAsReadyForCertification uuid ipfsCid now)
       >> pure NoContent -- yep, we don't need to return anything
 
   , getCertification = \rid@RunID{..} -> withEvent eb GetCertification \ev -> do
     addField ev rid
-    DB.withDb (DB.getL1Certification uuid)
+    withDb (DB.getL1Certification uuid)
       >>= maybeToServerError err404 "Certification not found"
 
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
@@ -237,7 +242,7 @@ server ServerArgs{..} = NamedAPI
       -- verify whitelist
       verifyWhiteList serverWhitelist address
       -- ensure the profile exists
-      (pid,UserAddress userAddress) <- ensureProfile $  encodeUtf8 address
+      (pid,UserAddress userAddress) <- runDbReader (ensureProfile $ encodeUtf8 address)
       --verify the wallet signature validation
       verifySignature key signature address
       -- verify the message timestamp
@@ -270,7 +275,7 @@ server ServerArgs{..} = NamedAPI
 
   , getProfileSubscriptions = \(profileId,_) justEnabled -> withEvent eb GetProfileSubscriptions \ev -> do
     addField ev profileId
-    DB.withDb (DB.getProfileSubscriptions profileId (fromMaybe False justEnabled))
+    withDb (DB.getProfileSubscriptions profileId (fromMaybe False justEnabled))
 
   , subscribe = \(profileId,_) tierIdInt -> withEvent eb Subscribe \ev -> do
     let tierId = DB.toId tierIdInt
@@ -278,22 +283,23 @@ server ServerArgs{..} = NamedAPI
     addField ev $ SubscribeFieldTierId tierId
     now <- getNow
     adaUsdPrice' <- getAdaUsdPrice'
-    ret <- DB.withDb (DB.createSubscription now profileId tierId adaUsdPrice')
+    ret <- withDb (DB.createSubscription now profileId tierId adaUsdPrice')
     forM_ ret $ \dto -> addField ev $ SubscribeFieldSubscriptionId (dto.subscriptionDtoId)
     maybeToServerError err404 "Tier not found" ret
 
   , cancelPendingSubscriptions = \(profileId,_) -> withEvent eb CancelProfilePendingSubscriptions \ev -> do
     addField ev $ CancelProfilePendingSubscriptionsFieldProfileId profileId
-    DB.withDb (DB.cancelPendingSubscription profileId)
+    withDb (DB.cancelPendingSubscription profileId)
 
   , getAllTiers = withEvent eb GetAllTiers \ev -> do
-    tiers <- DB.withDb DB.getAllTiers
+    tiers <- withDb DB.getAllTiers
     addField ev (List.length tiers)
     pure tiers
 
   , getActiveFeatures = \(profileId,_) -> withEvent eb GetActiveFeatures \ev -> do
     addField ev $ GetActiveFeaturesFieldProfileId profileId
-    featureTypes <- getNow >>= DB.withDb . DB.getCurrentFeatures profileId
+    now <- getNow
+    featureTypes <- withDb $ DB.getCurrentFeatures profileId now
     addField ev $ GetActiveFeaturesFieldFeatures featureTypes
     pure featureTypes
   , getAdaUsdPrice = withEvent eb GetAdaUsdPrice \ev -> do
@@ -320,7 +326,8 @@ server ServerArgs{..} = NamedAPI
     validateFeature featureType profileId = do
       -- ensure the profile has an active feauture for L1Run
       when validateSubscriptions $ do
-        featureTypes <- getNow >>= DB.withDb . DB.getCurrentFeatures profileId
+        now <- getNow
+        featureTypes <- withDb ( DB.getCurrentFeatures profileId now )
         unless (featureType `elem` featureTypes) $
           throwError err403 { errBody = "You don't have the required subscription" }
     fromClientResponse = \case
@@ -397,9 +404,9 @@ server ServerArgs{..} = NamedAPI
           in throwError err
         Right result -> pure result
     getRunAndSync RunID{..} status = do
-      run <- DB.withDb (DB.getRun uuid)
+      run <- withDb (DB.getRun uuid)
         >>= maybeToServerError err404 "No Run"
-      _ <- dbSync uuid status
+      _ <- runDbReader $ dbSync uuid status
       pure run
 
     getFlakeRefAndAccessToken profileId commitOrBranch =
@@ -425,17 +432,17 @@ server ServerArgs{..} = NamedAPI
 
     forbidden str = throwError $ err403 { errBody = str}
 
-    getProfileDApp profileId = DB.withDb (DB.getProfileDApp profileId)
+    getProfileDApp profileId = withDb (DB.getProfileDApp profileId)
         >>= withDappNotAvailableMsg
 
     withDappNotAvailableMsg = maybeToServerError err403 "DApp profile data not available"
 
-    getProfileDTO profileId = DB.withDb (DB.getProfile profileId)
+    getProfileDTO profileId = withDb (DB.getProfile profileId)
         >>= maybeToServerError err404 "Profile not found"
 
     requireRunIdOwner profileId uuid = do
       -- ensure is the owner of the run
-      isOwner <- (== Just profileId) <$> DB.withDb (DB.getRunOwner uuid)
+      isOwner <- (== Just profileId) <$> withDb (DB.getRunOwner uuid)
       unless isOwner $ throwError err403
 
     getCommitDateAndHash githubToken' FlakeRef{..} = do
@@ -454,5 +461,8 @@ server ServerArgs{..} = NamedAPI
     createDbRun FlakeRef{..} profileId res commitDate commitHash= do
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
-      DB.withDb $ DB.createRun (uuid res) now uriTxt commitDate
+      withDb $ DB.createRun (uuid res) now uriTxt commitDate
         commitHash (serverWalletArgs.walletCertificationPrice) profileId
+    runDbReader :: ReaderT WithDBWrapper m a -> m a
+    runDbReader dbWork = runReaderT dbWork (WithDBWrapper withDb)
+

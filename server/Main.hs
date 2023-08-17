@@ -68,8 +68,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import System.Environment (lookupEnv)
 import Crypto.Random
-
-
+import Control.Monad.Reader (ReaderT(runReaderT))
 
 data Backend
   = Local
@@ -85,6 +84,7 @@ data Args = Args
   , useWhitelist :: !Bool
   , github :: !GitHubArgs
   , bypassSubscriptionValidation :: !Bool
+  , dbPath :: !FilePath
   }
 
 data GitHubArgs = GitHubArgs
@@ -151,6 +151,13 @@ argsParser =  Args
   <*> switch
       ( long "unsafe-bypass-subscription-validation"
      <> help "Bypass subscription validation"
+      )
+  <*> option str
+      ( long "db-path"
+     <> metavar "DB_PATH"
+     <> help "the path to the database. If not specified, \"./certification.sqlite\" is used"
+     <> showDefault
+     <> Opts.value "./certification.sqlite"
       )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
@@ -303,8 +310,8 @@ renderRoot OnAuthMode =
 
 -- | plain address authentication
 -- NOTE: this is for testing only, and should not be used in production
-plainAddressAuthHandler :: Maybe Whitelist -> AuthHandler Request (DB.ProfileId,UserAddress)
-plainAddressAuthHandler whitelist = mkAuthHandler handler
+plainAddressAuthHandler :: WithDB -> Maybe Whitelist -> AuthHandler Request (DB.ProfileId,UserAddress)
+plainAddressAuthHandler withDb whitelist = mkAuthHandler handler
   where
   handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
           => Request
@@ -312,7 +319,7 @@ plainAddressAuthHandler whitelist = mkAuthHandler handler
   handler req = do
      bs <- either throw401 pure $ extractAddress req
      verifyWhiteList whitelist (decodeUtf8 bs)
-     ensureProfile bs
+     runReaderT (ensureProfile bs) (WithDBWrapper withDb)
   maybeToEither e = maybe (Left e) Right
   extractAddress = maybeToEither "Missing Authorization header" . lookup "Authorization" . requestHeaders
 
@@ -358,17 +365,18 @@ whitelisted = do
 throw401 :: MonadError ServerError m => LBS.ByteString -> m a
 throw401 msg = throwError $ err401 { errBody = msg }
 
-genAuthServerContext :: Maybe Whitelist
+genAuthServerContext :: WithDB
+                     -> Maybe Whitelist
                      -> Maybe JWTConfig
                      -> Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
-genAuthServerContext whitelist mSecret = (case mSecret of
-  Nothing -> plainAddressAuthHandler whitelist
+genAuthServerContext withDb whitelist mSecret = (case mSecret of
+  Nothing -> plainAddressAuthHandler withDb whitelist
   Just JWTConfig{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
 -- TODO: replace the try with some versioning mechanism
-initDb :: IO ()
-initDb = void $ try' $
-  DB.withDb do
+initDb :: WithDB -> IO ()
+initDb withDb = void $ try' $
+  withDb do
     DB.createTables
     DB.addInitialData
 
@@ -422,19 +430,19 @@ main = do
       -- get the whitelisted addresses from $WLIST env var
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
-      _ <- initDb
-      jwtConfig <- getJwtArgs eb (args.auth)
-      adaPriceRef <- startSynchronizer eb args
+      _ <- initDb $ withDb' (args.dbPath)
+      jwtConfig <- getJwtArgs eb args
+      adaPriceRef <- startSynchronizer eb scheduleCrash args
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist jwtConfig) .
+        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext (withDb' (args.dbPath)) whitelist jwtConfig) .
         (\r -> swaggerSchemaUIServer (documentation args.auth)
                :<|> server (serverArgs args caps r eb whitelist adaPriceRef jwtConfig))
   exitFailure
   where
-  getJwtArgs eb authMode = withEvent eb OnAuthMode \ev ->
-    case authMode of
+  getJwtArgs eb args = withEvent eb OnAuthMode \ev ->
+    case (args.auth) of
       JWTAuth (JWTArgs mode expiration) -> Just <$> do
         secret <- case mode of
             JWTSecret secret -> do
@@ -442,21 +450,21 @@ main = do
               pure secret
             JWTGenerate -> do
               addField ev OnAuthModeFieldJWTGenerate
-              getJWTSecretFromDB
+              getJWTSecretFromDB args
         pure $ JWTConfig secret expiration
       _ -> do
         addField ev OnAuthModeFieldPlainAddressAuth
         pure Nothing
 
-  getJWTSecretFromDB :: IO String
-  getJWTSecretFromDB = do
+  getJWTSecretFromDB :: Args -> IO String
+  getJWTSecretFromDB args = do
     -- check if the secret is already in the db
-    maybeSecret <- DB.withDb do DB.getJWTSecret
+    maybeSecret <- withDb' args.dbPath DB.getJWTSecret
     case maybeSecret of
       -- if not generate a new one and store it in the db
       Nothing -> do
         secret <- generateSecret
-        DB.withDb do DB.insertJWTSecret (Text.pack secret)
+        withDb' args.dbPath  (DB.insertJWTSecret (Text.pack secret))
         pure secret
       -- if yes return it
       Just secret -> pure (Text.unpack secret)
@@ -469,9 +477,11 @@ main = do
       pure randomText
 
 
-  startSynchronizer eb args = do
+  startSynchronizer eb scheduleCrash args = do
     ref <- newIORef Nothing
-    _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) ref 10
+    _ <- forkIO $ startTransactionsMonitor
+            (narrowEventBackend InjectSynchronizer eb) scheduleCrash
+            (args.wallet) ref 10 (WithDBWrapper (withDb' (args.dbPath)) )
     pure ref
   serverArgs args caps r eb whitelist ref jwtConfig = ServerArgs
     { serverCaps = caps
@@ -484,7 +494,10 @@ main = do
     , validateSubscriptions = not args.bypassSubscriptionValidation
     , serverGitHubCredentials = args.github.credentials
     , adaUsdPrice = liftIO $ readIORef ref
+    , withDb = withDb' (args.dbPath)
     }
+  withDb' :: (MonadIO m, MonadMask m) => FilePath -> (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> m a
+  withDb' = DB.withSQLite'
   documentation PlainAddressAuth = swaggerJson
   documentation (JWTAuth _) = swaggerJsonWithLogin
 

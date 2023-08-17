@@ -30,8 +30,10 @@ import Data.UUID
 import Control.Monad.Except
 import Control.Exception hiding (Handler)
 import Plutus.Certification.WalletClient (WalletAddress)
+import Plutus.Certification.Internal
 
 import qualified IOHK.Certification.Persistence as DB
+import Control.Monad.RWS (MonadReader)
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -178,11 +180,12 @@ toCertificationResult :: RunStatusV1 -> Maybe CertificationResult
 toCertificationResult (Finished rep)= Just rep
 toCertificationResult _ = Nothing
 
-dbSync :: (MonadIO m,MonadMask m) => UUID -> RunStatusV1 -> m RunStatusV1
+dbSync :: (MonadIO m,MonadMask m,MonadReader env m, HasDb env)
+       => UUID -> RunStatusV1 -> m RunStatusV1
 dbSync uuid' status = do
   now <- getNow
   let dbStatus = toDbStatus status
-  void $ DB.withDb $ case dbStatus of
+  void $ withDb $ case dbStatus of
     DB.Queued -> DB.syncRun uuid' now
     -- this will change to failed or succeeded only
     -- if the status is == Queued
@@ -225,18 +228,21 @@ consumeRuns = await >>= \case
   Just s -> pure s
 
 -- | this will create a new profile if there isn't any with the given address
-ensureProfile :: (MonadIO m ,MonadError ServerError m,MonadMask m) => ByteString -> m (DB.ProfileId,UserAddress)
+ensureProfile :: forall m env. ( MonadIO m , MonadError ServerError m, MonadMask m
+                               , MonadReader env m, HasDb env
+                               )
+              => ByteString -> m (DB.ProfileId,UserAddress)
 ensureProfile bs = do
   let address' = decodeUtf8 bs
-  profileIdM <- getProfileFromDb bs
+  profileIdM <- getProfileFromDb
   case profileIdM of
     Just pid -> pure (pid, UserAddress address')
     Nothing -> do
-      pidM <- DB.withDb $ DB.upsertProfile
+      pidM <- withDb $ DB.upsertProfile
         (DB.Profile undefined address' Nothing Nothing Nothing Nothing Nothing Nothing)
         Nothing
       case pidM of
         Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
         Just pid -> pure (pid,UserAddress address')
   where
-  getProfileFromDb = DB.withDb . DB.getProfileId . decodeUtf8
+  getProfileFromDb = withDb $ DB.getProfileId (decodeUtf8 bs)

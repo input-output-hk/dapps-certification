@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Plutus.Certification.Synchronizer
   ( startTransactionsMonitor
@@ -15,12 +16,11 @@ module Plutus.Certification.Synchronizer
 
 import Plutus.Certification.WalletClient.Transaction
 import Plutus.Certification.WalletClient
-import Control.Monad (forever, forM_, void, when)
+import Plutus.Certification.Internal
 import Control.Concurrent (threadDelay)
 import Data.Time (UTCTime)
 import Data.ByteString (toStrict)
 import Data.Text.Encoding (decodeUtf8)
-import Control.Monad.IO.Class ( MonadIO(..) )
 import Control.Monad.Catch (MonadMask)
 import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
@@ -29,21 +29,26 @@ import Data.Aeson
 import Plutus.Certification.TransactionBroadcaster
 import Observe.Event.Render.JSON
 import Control.Exception
+import Observe.Event.Crash
 
 import qualified IOHK.Certification.Persistence as DB
 
 import Data.Function (on)
 import Data.UUID (UUID)
-import Control.Monad.Except (MonadError)
+import Control.Monad.Except
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
 import Data.IORef
 import Data.Void
+import Control.Monad.RWS
+import Control.Monad.Reader (ReaderT(..))
+import Observe.Event.BackendModification (setAncestor)
 
 data InitializingField
   = WalletArgsField WalletArgs
   | DelayField Int
+  | ErrorField IOException
 
 data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
@@ -66,6 +71,7 @@ renderSynchronizerSelector InitializingSynchronizer =
             , "certificationPrice" .= walletCertificationPrice
             ])
       DelayField delay -> ("delay", toJSON delay)
+      ErrorField err -> ("error", toJSON $ show err)
   )
 renderSynchronizerSelector (InjectTxBroadcaster selector) = renderTxBroadcasterSelector selector
 renderSynchronizerSelector (InjectCoinGeckoClient selector) = renderCoinGeckoClientSelector selector
@@ -95,10 +101,10 @@ walletTxStatusToDbStatus (Expired _) = DB.Expired
 walletTxStatusToDbStatus (InLedger _) = DB.InLedger
 walletTxStatusToDbStatus Submitted = DB.Submitted
 
-synchronizeDbTransactions :: (MonadIO m, MonadMask m) => [WalletTransaction] -> m ()
+synchronizeDbTransactions :: (MonadIO m, MonadMask m,MonadReader env m,HasDb env) => [WalletTransaction] -> m ()
 synchronizeDbTransactions transactions = do
   -- filter out the outgoing transactions and sync them with the database
-  DB.withDb $ forM_ incomingTransactions storeTransaction
+  withDb $ forM_ incomingTransactions storeTransaction
   where
   incomingTransactions = filter ((Incoming ==) . walletTxDirection . walletTxData) transactions
   storeTransaction tx@WalletTransaction{..} = void $
@@ -155,7 +161,7 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
   , DB.txEntryInput = True
   }
 
-monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m)
+monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
                           -> m ()
@@ -180,13 +186,13 @@ type CertificationProcess m = DB.ProfileId -> UUID -> m DB.L1CertificationDTO
 
 -- certify all runs who have enough credit to be certified
 -- and have not been certified yet
-certifyRuns :: (MonadIO m, MonadMask m,MonadError IOException m)
+certifyRuns :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
             => EventBackend m r SynchronizerSelector
             -> WalletArgs
             -> m ()
 certifyRuns eb args = do
   -- fetch the list of runs from the database
-  runs <- DB.withDb DB.getRunsToCertify
+  runs <- withDb DB.getRunsToCertify
 
   -- group runs by profileId
   let runsByProfile = groupBy ((==) `on` (.profileId)) runs
@@ -198,28 +204,28 @@ certifyRuns eb args = do
   certificationProcess a b = createL1Certification
     ( narrowEventBackend InjectTxBroadcaster eb ) args a (RunID b)
 
-activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m)
+activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
                       => EventBackend m r SynchronizerSelector
                       -> m ()
 activateSubscriptions eb = withEvent eb ActivateSubscriptions $ \ev -> do
   -- activate all pending subscriptions with enough credits
-  DB.withDb DB.activateAllPendingSubscriptions >>= addField ev
+  withDb DB.activateAllPendingSubscriptions >>= addField ev
 
 -- certify all runs of a profile
-certifyProfileRuns :: (MonadIO m, MonadMask m)
+certifyProfileRuns :: (MonadIO m, MonadMask m,MonadReader env m,HasDb env)
                    => CertificationProcess m
                    -> [DB.Run]
                    -> m ()
 certifyProfileRuns certificationProcess runs =
   -- get the profile
-  DB.withDb (DB.getProfileAddress pid)
+  withDb (DB.getProfileAddress pid)
     -- and certify the runs
     >>= mapM_ certifyProfileRuns'
   where
   pid = (head runs).profileId
   certifyProfileRuns' address = do
     -- calculate the amount of credits available
-    creditsAvailable <- fromMaybe 0 <$> DB.withDb (DB.getProfileBalance address)
+    creditsAvailable <- fromMaybe 0 <$> withDb (DB.getProfileBalance address)
     -- recursively certify the runs until we run out of credits
     certifyRuns' runs creditsAvailable
 
@@ -238,23 +244,44 @@ certifyProfileRuns certificationProcess runs =
 --
 -- The thread will run forever, and will be restarted if it crashes.
 -- The delay between each check is specified in seconds.
-startTransactionsMonitor :: (MonadIO m,MonadMask m,MonadError IOException m)
+startTransactionsMonitor :: (MonadIO m, MonadMask m, MonadError IOException m,HasDb env)
                          => EventBackend m r SynchronizerSelector
+                         -> ScheduleCrash m r
                          -> WalletArgs
                          -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
-                         -> m b
-startTransactionsMonitor eb args adaPriceRef delayInSeconds =
+                         -> env
+                         -> m ()
+startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds = runReaderT reader'
+  where
+  reader' = startTransactionsMonitor' eb' (hoistScheduleCrash (ReaderT . const) scheduleCrash) args adaPriceRef delayInSeconds
+  eb' = hoistEventBackend (ReaderT . const) eb
+
+startTransactionsMonitor' :: (MonadIO m, MonadMask m, MonadError IOException m,MonadReader env m,HasDb env)
+                         => EventBackend m r SynchronizerSelector
+                         -> ScheduleCrash m r
+                         -> WalletArgs
+                         -> IORef (Maybe DB.AdaUsdPrice)
+                         -> Int
+                         -> m ()
+startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds =
   withEvent eb InitializingSynchronizer $ \ev -> do
     addField ev $ WalletArgsField args
     addField ev $ DelayField delayInSeconds
     -- TODO maybe a forkIO here will be better than into the calling function
     -- hence, now, the parent instrumentation event will never terminate
-    forever $ do
+    catchError
+      (doWork ev)
+      (catchAndCrash ev)
+  where
+    catchAndCrash ev e = do
+        addField ev (ErrorField e)
+        let mods = setAncestor $ reference ev
+        schedule scheduleCrash mods
+    doWork ev = void $ forever $ do
       updateAdaPrice (subEventBackend ev) adaPriceRef
       monitorWalletTransactions (subEventBackend ev) args
       liftIO $ threadDelay delayInMicroseconds
-  where
     delayInMicroseconds = delayInSeconds * 1000000
 
 updateAdaPrice :: (MonadIO m,MonadMask m)
