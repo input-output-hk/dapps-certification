@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE OverloadedRecordDot   #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RankNTypes #-}
 
 module IOHK.Certification.Persistence.API where
 
@@ -515,6 +516,6 @@ getAllTiers = do
       , tierDtoTier = Tier{..}
       }
 
---TODO: replace this with a proper configuration
-withDb :: (MonadIO m, MonadMask m) => SeldaT SQLite m a -> m a
-withDb = withSQLite "certification.sqlite"
+-- | Polimorphic function to run a Selda computation with a SQLite database.
+withSQLite' :: (MonadIO m, MonadMask m) => FilePath -> (forall n. (MonadSelda n,MonadMask n) => n a) -> m a
+withSQLite' = withSQLite

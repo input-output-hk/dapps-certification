@@ -3,6 +3,11 @@ module Plutus.Certification.API
   , Cicero.Run.RunLog(..)
   ) where
 
+import Plutus.Certification.Internal as X
+  ( WithDBWrapper(..)
+  , WithDB
+  , HasDb(..)
+  )
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
 import Plutus.Certification.API.Routes as X

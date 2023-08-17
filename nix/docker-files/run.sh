@@ -5,5 +5,6 @@
  WALLET_URL="http://192.168.2.128:8090" \
  WALLET_CERTIFICATION_PRICE=1000000 \
  JWT_SECRET2=secret \
+ DB_PATH=./db/certification2.sqlite \
  PORT=80 \
  nix run .#dockerApps.runDockerImage

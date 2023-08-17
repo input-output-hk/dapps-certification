@@ -1,9 +1,13 @@
-module IOHK.Certification.Persistence (module X) where
-import IOHK.Certification.Persistence.Structure.Run as X 
+module IOHK.Certification.Persistence
+  ( module X
+  , MonadSelda
+  ) where
+import Database.Selda
+import IOHK.Certification.Persistence.Structure.Run as X
   ( Run(..)
   , Status(..)
   )
-import IOHK.Certification.Persistence.Structure.Certification as X 
+import IOHK.Certification.Persistence.Structure.Certification as X
   ( Certification(..)
   , L1Certification(..)
   , CertificationLevel(..)
@@ -46,7 +50,7 @@ import IOHK.Certification.Persistence.API as X
   , getRun
   , updateFinishedRun
   , getRuns
-  , withDb
+  , withSQLite'
   , getProfileId
   , getProfileAddress
   , syncRun

@@ -32,10 +32,12 @@ import Data.Text.Encoding
 import Data.ByteString.Lazy.Char8 qualified as LSB
 import Plutus.Certification.WalletClient (WalletArgs)
 import Plutus.Certification.Server.Internal
+import Plutus.Certification.Internal
 import Observe.Event.Render.JSON
 
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
+import Control.Monad.Reader.Class (MonadReader)
 
 data TxBroadcasterSelector f where
   CreateCertification :: TxBroadcasterSelector CreateCertificationField
@@ -52,7 +54,7 @@ renderTxBroadcasterSelector CreateCertification = ("create-certification", \case
   )
 
 -- caution: this function doesn't verify if the run has the proper status
-createL1Certification :: (MonadMask m,MonadIO m, MonadError IOException m)
+createL1Certification :: (MonadMask m,MonadIO m, MonadError IOException m,MonadReader env m, HasDb env)
                       => EventBackend m r TxBroadcasterSelector
                       -> WalletArgs
                       -> DB.ProfileId
@@ -80,10 +82,13 @@ createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCert
   addField ev (CreateCertificationTxResponse tx)
 
   -- persist it into the db
-  (DB.withDb . DB.createL1Certificate uuid txRespId =<< getNow)
-    >>= maybeToError "Certification couldn't be persisted"
+  createL1Certificate txRespId >>= maybeToError "Certification couldn't be persisted"
   where
-    getRun = DB.withDb (DB.getRun uuid) >>= maybeToError "No Run"
+    createL1Certificate txRespId = do
+      now <- getNow
+      withDb $ DB.createL1Certificate uuid txRespId now
+
+    getRun = withDb (DB.getRun uuid) >>= maybeToError "No Run"
 
     eitherToError f = either
       (throwException .  f)
@@ -107,7 +112,7 @@ createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCert
       dapp' <- withDappNotAvailableMsg dapp
       pure (profile,dapp')
 
-    getProfileDTO = DB.withDb (DB.getProfile profileId)
+    getProfileDTO = withDb (DB.getProfile profileId)
         >>= maybeToError "Profile not found"
 
 maybeToError :: MonadError IOException m => String -> Maybe a -> m a

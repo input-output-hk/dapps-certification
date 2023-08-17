@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingVia                #-}
@@ -18,6 +19,10 @@ import           GHC.Generics
 import           Data.Proxy
 import           GHC.TypeLits
 import           Data.Text as Text
+import           Control.Monad.Catch (MonadMask)
+
+import qualified IOHK.Certification.Persistence as DB
+import Control.Monad.RWS
 
 newtype JSONCustomOptions n a = JSONCustomOptions a deriving Generic
 
@@ -47,4 +52,19 @@ splitString maxChars = toValue . chunksOf maxChars
 
 split64 :: Text -> Value
 split64 = splitString 64
+
+type WithDB = forall a m. (MonadIO m, MonadMask m) => (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> m a
+
+newtype WithDBWrapper = WithDBWrapper WithDB
+
+class HasDb env where
+  getWithDb :: env -> WithDB
+
+instance HasDb WithDBWrapper where
+  getWithDb (WithDBWrapper db') = db'
+
+withDb :: (MonadReader env m,HasDb env, MonadIO m,MonadMask m) => (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> m a
+withDb dbAction = do
+  env <- ask
+  getWithDb env dbAction
 
