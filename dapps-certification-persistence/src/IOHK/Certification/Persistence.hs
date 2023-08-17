@@ -70,4 +70,6 @@ import IOHK.Certification.Persistence.API as X
   , cancelPendingSubscription
   , getAllTiers
   , getCurrentFeatures
+  , getJWTSecret
+  , insertJWTSecret
   )

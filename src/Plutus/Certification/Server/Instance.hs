@@ -38,7 +38,7 @@ import Plutus.Certification.Server.Internal
 
 import Servant.Server.Experimental.Auth (AuthServerData)
 import Data.Time (addUTCTime)
-import Plutus.Certification.JWT (jwtEncode, JWTArgs(..))
+import Plutus.Certification.JWT (jwtEncode, JWTConfig(..))
 import IOHK.Certification.SignatureVerification as SV
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Text.Read (readMaybe)
@@ -73,7 +73,7 @@ data ServerArgs m r = ServerArgs
   { serverCaps :: !(ServerCaps m r)
   , serverWalletArgs :: !Wallet.WalletArgs
   , githubToken :: !(Maybe GitHubAccessToken)
-  , serverJWTArgs :: !(Maybe JWTArgs)
+  , serverJWTConfig :: !(Maybe JWTConfig)
   , serverEventBackend :: !(EventBackend m r ServerEventSelector)
   , serverSigningTimeout :: !Seconds
   , serverWhitelist :: !(Maybe Whitelist)
@@ -231,7 +231,7 @@ server ServerArgs{..} = NamedAPI
         ghAccessTokenM' =  ghAccessTokenM <|> githubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
 
-  , login = \LoginBody{..} -> whenJWTProvided \JWTArgs{..} -> withEvent eb Login \ev -> do
+  , login = \LoginBody{..} -> whenJWTProvided \JWTConfig{..} -> withEvent eb Login \ev -> do
       addField ev address
       now <- getNow
       -- verify whitelist
@@ -376,7 +376,7 @@ server ServerArgs{..} = NamedAPI
       readMaybe $ Text.unpack ts
 
     ServerCaps {..} = serverCaps
-    jwtArgs = serverJWTArgs
+    jwtArgs = serverJWTConfig
     eb = serverEventBackend
     verifySignature key signature address =
       let res = verifyCIP30Signature key signature Nothing (Just $ Bech32Address address)
