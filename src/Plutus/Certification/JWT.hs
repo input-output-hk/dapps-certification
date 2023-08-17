@@ -4,7 +4,7 @@ module Plutus.Certification.JWT
   ( jwtEncode
   ,jwtDecode
   , JWTError(..)
-  , JWTArgs(..)
+  , JWTConfig(..)
   ) where
 
 import           Data.Aeson            (FromJSON (..), Result (..), ToJSON (..),
@@ -18,7 +18,7 @@ import           Web.JWT               as JWT
 
 import Prelude hiding (exp)
 
-data JWTArgs = JWTArgs
+data JWTConfig = JWTConfig
   { jwtSecret :: !String
   , jwtExpirationSeconds :: !Integer
   }

@@ -1,7 +1,7 @@
 { inputs', pkgs, l, ... }: let
     imgAttributes = {
       name = "plutus-certification";
-      tag = "8";
+      tag = "11";
     };
     nixConfig = ''
         trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
@@ -29,14 +29,19 @@
         ${addParameter "gh-access-token" "GH_ACCESS_TOKEN"}
         ${addParameter "signature-timeout" "SIGNATURE_TIMEOUT"}
         ${addParameter "use-whitelist" "USE_WHITELIST"}
-        ${addParameter "unsafe-plain-address-auth" "UNSAFE_PLAIN_ADDRESS_AUTH"}
         ${addParameter "port" "PORT"}
         if [ -n "$JWT_SECRET" ];
         then
             args="$args --jwt-secret $JWT_SECRET"
             ${addParameter "jwt-expiration-seconds" "JWT_EXPIRATION"}
         else 
-          args="$args --unsafe-plain-address-auth"
+          if [ -n "$UNSAFE_PLAIN_ADDRESS_AUTH" ];
+          then
+            args="$args --unsafe-plain-address-auth"
+          else
+            args="$args --jwt-generate"
+            ${addParameter "jwt-expiration-seconds" "JWT_EXPIRATION"}
+          fi
         fi
 
         # create a temporary directory for executing flakes
