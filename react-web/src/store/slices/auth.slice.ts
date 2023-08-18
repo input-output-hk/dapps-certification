@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { fetchData } from "api/api";
+import { LocalStorageKeys } from "constants/constants";
 import { IUserProfile } from "pages/userProfile/userProfile.interface";
 
 // Define a type for the slice state
@@ -10,7 +11,7 @@ interface AuthState {
   userDetails: IUserProfile;
   loading: boolean;
   network: number | null;
-  subscribedFeatures: Array<"l1-run" | "l2-upload-report">;
+  subscribedFeatures: Array<"l1-run" | "l2-upload-report"> | null;
 }
 
 // Define the initial state using that type
@@ -21,7 +22,7 @@ const initialState: AuthState = {
   userDetails: {dapp: null},
   loading: false,
   network: null,
-  subscribedFeatures: [],
+  subscribedFeatures: null,
 };
 
 const clearLSCache = () => {
@@ -29,7 +30,7 @@ const clearLSCache = () => {
 }
 
 export const getProfileDetails: any = createAsyncThunk("getProfileDetails", async (data: any, { rejectWithValue }) => {
-  localStorage.setItem('address', data.address) 
+  localStorage.setItem(LocalStorageKeys.address, data.address) 
   const response = await fetchData.get("/profile/current", data)
   // FOR MOCK - const response = await fetchData.get(data.url || 'static/data/current-profile.json', data)
   return response.data
@@ -61,16 +62,15 @@ export const authSlice = createSlice({
         state.loading = false;
         state.isLoggedIn = true;
         state.userDetails = actions.payload;
-        localStorage.setItem("userDetails", JSON.stringify(actions.payload));
-        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem(LocalStorageKeys.isLoggedIn, "true");
         if (actions?.meta?.arg?.address) {
           state.address = actions.meta.arg.address;
-          localStorage.setItem('address', state.address)
+          localStorage.setItem(LocalStorageKeys.address, state.address)
           if (actions?.meta?.arg?.wallet) {
             state.wallet = actions.meta.arg.wallet;
           }
           if (actions?.meta?.arg?.walletName) {
-            localStorage.setItem('walletName', actions?.meta?.arg?.walletName)
+            localStorage.setItem(LocalStorageKeys.walletName, actions?.meta?.arg?.walletName)
           }
         }
       })

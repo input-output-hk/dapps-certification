@@ -7,7 +7,7 @@ import { fetchData } from "api/api";
 import { Log } from '../pages/certification/Certification.helper'
 import { setStates, setEnded, setBuildInfo } from "pages/certification/slices/logRunTime.slice";
 
-const TIMEOFFSET = 1000;
+const TIME_OFFSET = 1000;
 
 export const useLogs = (
     uuid: string,
@@ -121,7 +121,7 @@ export const useLogs = (
 
     useDelayedApi(
         fetchLog,
-        refetchLogsOffset * TIMEOFFSET,
+        refetchLogsOffset * TIME_OFFSET,
         enabled
     )
     return { logInfo,fetchingLogs}

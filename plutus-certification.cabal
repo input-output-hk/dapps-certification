@@ -115,6 +115,7 @@ executable plutus-certification
     dapps-certification-helpers,
     swagger2,
     servant-swagger-ui,
+    cryptonite,
     unordered-containers,
   main-is: Main.hs
   hs-source-dirs: server

@@ -1,4 +1,5 @@
 @import "styles/colors.scss";
+@import "styles/constants.scss";
 
 .is-show {
   display: block;
@@ -44,8 +45,110 @@
   &-secondary {
     color: $secondary;
   }
+
+  &-warn {
+    color: $yellow;
+  }
+
+  &-success {
+    color: $green;
+  }
+
+  &-error {
+    color: $danger;
+  }
+
+  &-gray {
+    color: $text-gray;
+  }
+
+  &-gray-light {
+    color: $text-gray-light;
+  }
+
+  &-bold {
+    font-weight: bold;
+  }
 }
 
 .danger {
   color: $danger;
+}
+
+.width-fill-available {
+  width: -moz-available; /* WebKit-based browsers will ignore this. */
+  width: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
+  width: stretch;
+}
+
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.flex {
+  display: flex;
+}
+
+.col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-start {
+  justify-content: flex-start;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.vertical-align {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.tooltip-wrapper {
+  right: -25px;
+  @extend .vertical-align;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline {
+  outline: 1.5px solid $border-gray;
+}
+
+.outline-dashed {
+  outline: 1.5px dashed $border-gray;
+}
+
+.rounded {
+  border-radius: $border-radius;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.font-semibold {
+  font-weight: bold;
+}
+
+.pointer-events-none {
+  pointer-events: none;
 }

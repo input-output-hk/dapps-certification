@@ -27,6 +27,8 @@ import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
 import           IOHK.Certification.Persistence.Structure.Certification
 import           IOHK.Certification.Persistence.Structure.Run
+import           Data.Text hiding (index)
+import           Data.Maybe
 
 import qualified Data.Text         as Text
 import qualified Data.Aeson.KeyMap as KM
@@ -197,6 +199,17 @@ data TransactionEntry = TransactionEntry
 instance SqlRow TransactionEntry
 
 --------------------------------------------------------------------------------
+-- | JWT Config
+newtype JWTSecret = JWTSecret
+  { jwtSecret :: Text
+  } deriving (Generic, Show)
+
+instance SqlRow JWTSecret
+
+jwtSecretTable :: Table JWTSecret
+jwtSecretTable = tableFieldMod "jwt-secret" [] (fromJust . stripPrefix "jwt")
+
+--------------------------------------------------------------------------------
 -- | Create Tables
 
 transactions :: Table Transaction
@@ -231,3 +244,4 @@ createTables = do
   createTable tierFeatures
   createTable subscriptions
   createTable l1Certifications
+  createTable jwtSecretTable

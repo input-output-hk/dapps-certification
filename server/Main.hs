@@ -67,6 +67,9 @@ import Data.HashSet as HashSet
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import System.Environment (lookupEnv)
+import Crypto.Random
+
+
 
 data Backend
   = Local
@@ -133,7 +136,7 @@ argsParser =  Args
       )
   <*> (localParser <|> ciceroParser)
   <*> walletParser
-  <*> (jwtArgsParser <|> plainAddressAuthParser)
+  <*> (plainAddressAuthParser <|> jwtArgsParser)
   <*> option auto
       ( long "signature-timeout"
      <> metavar "SIGNATURE_TIMEOUT"
@@ -152,6 +155,12 @@ argsParser =  Args
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
+data JWTArgsMode = JWTSecret !String | JWTGenerate
+data JWTArgs = JWTArgs
+  { jwtMode :: !JWTArgsMode
+  , jwtExpirationSeconds :: !Integer
+  }
+
 plainAddressAuthParser :: Parser AuthMode
 plainAddressAuthParser = flag' PlainAddressAuth
   ( long "unsafe-plain-address-auth"
@@ -160,13 +169,23 @@ plainAddressAuthParser = flag' PlainAddressAuth
 defaultJWTExpiration :: Integer
 defaultJWTExpiration = 60 * 60 * 24 * 30 -- 30 days
 
-jwtArgsParser :: Parser AuthMode
-jwtArgsParser =  JWTAuth <$> (JWTArgs
-  <$> option str
-      ( long "jwt-secret"
+-- Parse JWTMode from command line arguments
+jwtModeParser :: Parser JWTArgsMode
+jwtModeParser =
+  ( JWTSecret <$> option str
+     ( long "jwt-secret"
      <> metavar "JWT_SECRET"
      <> help "the jwt secret key"
-      )
+     )
+  ) <|> flag' JWTGenerate
+        ( long "jwt-generate"
+       <> help "use the jwt token generated within the db"
+        )
+
+
+jwtArgsParser :: Parser AuthMode
+jwtArgsParser =  JWTAuth <$> (JWTArgs
+  <$>  jwtModeParser
   <*> option auto
       ( long "jwt-expiration-seconds"
       <> metavar "JWT_EXPIRATION"
@@ -232,13 +251,15 @@ opts = info (argsParser <**> helper)
  <> header "plutus-certification — Certification as a service for Plutus applications"
   )
 
+data OnAuthModeField = OnAuthModeFieldJWTSecret | OnAuthModeFieldJWTGenerate | OnAuthModeFieldPlainAddressAuth
+
 data InitializingField
   = ArgsField Args
   | VersionField Version
-
 data RootEventSelector f where
   Initializing :: RootEventSelector InitializingField
   OnException :: RootEventSelector OnExceptionField
+  OnAuthMode :: RootEventSelector OnAuthModeField
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
   InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
@@ -246,6 +267,7 @@ data RootEventSelector f where
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
+
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -271,6 +293,13 @@ renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
 renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
+renderRoot OnAuthMode =
+  ( "auth-mode"
+  , \case
+      OnAuthModeFieldJWTSecret -> ("mode","jwt-secret")
+      OnAuthModeFieldJWTGenerate -> ("mode","jwt-generate-secret")
+      OnAuthModeFieldPlainAddressAuth -> ("mode","plain-address-auth")
+  )
 
 -- | plain address authentication
 -- NOTE: this is for testing only, and should not be used in production
@@ -330,11 +359,11 @@ throw401 :: MonadError ServerError m => LBS.ByteString -> m a
 throw401 msg = throwError $ err401 { errBody = msg }
 
 genAuthServerContext :: Maybe Whitelist
-                     -> AuthMode
+                     -> Maybe JWTConfig
                      -> Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
 genAuthServerContext whitelist mSecret = (case mSecret of
-  PlainAddressAuth -> plainAddressAuthHandler whitelist
-  JWTAuth JWTArgs{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
+  Nothing -> plainAddressAuthHandler whitelist
+  Just JWTConfig{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
 -- TODO: replace the try with some versioning mechanism
 initDb :: IO ()
@@ -394,24 +423,61 @@ main = do
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       _ <- initDb
+      jwtConfig <- getJwtArgs eb (args.auth)
       adaPriceRef <- startSynchronizer eb args
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist args.auth) .
+        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext whitelist jwtConfig) .
         (\r -> swaggerSchemaUIServer (documentation args.auth)
-               :<|> server (serverArgs args caps r eb whitelist adaPriceRef))
+               :<|> server (serverArgs args caps r eb whitelist adaPriceRef jwtConfig))
   exitFailure
   where
+  getJwtArgs eb authMode = withEvent eb OnAuthMode \ev ->
+    case authMode of
+      JWTAuth (JWTArgs mode expiration) -> Just <$> do
+        secret <- case mode of
+            JWTSecret secret -> do
+              addField ev OnAuthModeFieldJWTSecret
+              pure secret
+            JWTGenerate -> do
+              addField ev OnAuthModeFieldJWTGenerate
+              getJWTSecretFromDB
+        pure $ JWTConfig secret expiration
+      _ -> do
+        addField ev OnAuthModeFieldPlainAddressAuth
+        pure Nothing
+
+  getJWTSecretFromDB :: IO String
+  getJWTSecretFromDB = do
+    -- check if the secret is already in the db
+    maybeSecret <- DB.withDb do DB.getJWTSecret
+    case maybeSecret of
+      -- if not generate a new one and store it in the db
+      Nothing -> do
+        secret <- generateSecret
+        DB.withDb do DB.insertJWTSecret (Text.pack secret)
+        pure secret
+      -- if yes return it
+      Just secret -> pure (Text.unpack secret)
+    where
+    generateSecret :: IO String
+    generateSecret = do
+      g <- getSystemDRG
+      let (randomBytes,_) = randomBytesGenerate 30 g
+          randomText = BS.unpack randomBytes
+      pure randomText
+
+
   startSynchronizer eb args = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor (narrowEventBackend InjectSynchronizer eb) (args.wallet) ref 10
     pure ref
-  serverArgs args caps r eb whitelist ref = ServerArgs
+  serverArgs args caps r eb whitelist ref jwtConfig = ServerArgs
     { serverCaps = caps
     , serverWalletArgs  = args.wallet
     , githubToken = args.github.accessToken
-    , serverJWTArgs = jwtArgs args.auth
+    , serverJWTConfig = jwtConfig
     , serverEventBackend = be r eb
     , serverSigningTimeout = args.signatureTimeout
     , serverWhitelist = whitelist :: Maybe Whitelist
@@ -419,8 +485,6 @@ main = do
     , serverGitHubCredentials = args.github.credentials
     , adaUsdPrice = liftIO $ readIORef ref
     }
-  jwtArgs PlainAddressAuth = Nothing
-  jwtArgs (JWTAuth args) = Just args
   documentation PlainAddressAuth = swaggerJson
   documentation (JWTAuth _) = swaggerJsonWithLogin
 

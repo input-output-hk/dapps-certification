@@ -15,8 +15,8 @@ import Database.Selda
 import Database.Selda.SQLite
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
-import IOHK.Certification.Persistence.Structure.Run 
-import IOHK.Certification.Persistence.Structure.Certification 
+import IOHK.Certification.Persistence.Structure.Run
+import IOHK.Certification.Persistence.Structure.Certification
 import IOHK.Certification.Persistence.Structure
 import Data.Time.Clock
 import Data.Int
@@ -57,6 +57,17 @@ upsertTransaction tx@Transaction{..} entries = do
         \t -> t { txEntryTxId = txId', txEntryId = def :: ID TransactionEntry }
   forM_ txIdM (insert transactionEntries . updateEntries)
   pure txIdM
+
+getJWTSecret :: MonadSelda m => m (Maybe Text)
+getJWTSecret = fmap listToMaybe $ query $ do
+  select <- select jwtSecretTable
+  pure (select ! #jwtSecret)
+
+
+-- insert jwtToken
+insertJWTSecret :: MonadSelda m => Text -> m ()
+insertJWTSecret secret = do
+  insert_ jwtSecretTable [JWTSecret secret]
 
 -- get all ready for certification runs
 -- in ascending order

@@ -1,0 +1,51 @@
+@import "styles/colors.scss";
+@import "styles/constants.scss";
+
+.file-upload {
+  color: $input-gray;
+  user-select: none;
+  max-width: 400px;
+
+  .preview-pdf {
+    &:not(:last-child) {
+      margin-bottom: 20px;
+    }
+  }
+
+  .delete-btn {
+    right: 20px;
+  }
+
+  .file-icon {
+    margin-right: 12px;
+    padding-top: 2px;
+  }
+
+  .file-upload-text {
+    margin-bottom: 5px;
+    padding: 20px;
+
+    &.error {
+      outline-color: $danger;
+      color: inherit;
+    }
+  }
+
+  .file-size {
+    font-size: 14px;
+  }
+
+  .file-select-wrapper {
+    padding: 20px;
+    background: $secondary;
+  }
+
+  .loader-wrapper {
+    position: absolute;
+    left: 50%;
+  }
+
+  .file-preview-wrapper {
+    margin-top: 15px;
+  }
+}

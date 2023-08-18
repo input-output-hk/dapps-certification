@@ -9,7 +9,7 @@ export interface IButtonProps {
   isLoading?: boolean;
   iconUrl?: any;
   showLoader?: boolean;
-  size?: 'small' | 'medium';
+  size?: 'small' | 'medium' | 'thin';
   type?: "button" | "reset" | "submit" | undefined;
   displayStyle?: "primary" | "primary-outline" | "secondary" | "gradient";
   onClick?: (e: any) => any;
@@ -26,6 +26,7 @@ const Button: FC<IButtonProps> = ({
   showLoader = false,
   displayStyle = "primary",
   onClick,
+  ...props
 }) => {
   return (
     <button
@@ -33,13 +34,14 @@ const Button: FC<IButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      {...props}
     >
       {showLoader ? (
         <Loader />
       ) : (
         <>
           {iconUrl && (
-            <img className="icon-image" src={iconUrl} alt="icon-img" />
+            <img data-testid="btn-icon" className="icon-image" src={iconUrl} alt="icon-img" />
           )}
           <span className="button-label">{buttonLabel}</span>
         </>

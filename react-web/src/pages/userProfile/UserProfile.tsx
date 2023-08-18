@@ -17,6 +17,8 @@ import { clearStates,
   verifyRepoAccess,
   hideConfirmConnection } from "./slices/repositoryAccess.slice";
 import Toast from "components/Toast/Toast";
+import useLocalStorage from "hooks/useLocalStorage";
+import { LocalStorageKeys } from "constants/constants";
 
 const UserProfile = () => {
   const dispatch = useAppDispatch();
@@ -39,12 +41,21 @@ const UserProfile = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const githubAccessCode = searchParams.get("code");
 
+  const [, setUserDetails] = useLocalStorage(
+    LocalStorageKeys.userDetails,
+    localStorage.getItem(LocalStorageKeys.userDetails)
+      ? JSON.parse(localStorage.getItem(LocalStorageKeys.userDetails)!)
+      : null
+  );
+
   const form: any = useForm({
     schema: userProfileSchema,
     mode: "onChange",
   });
 
   const initializeFormState = () => {
+    form.clearErrors(); // clear form errors
+    
     const { dapp, contacts, authors, linkedin, twitter, vendor, website } = userDetails;
     let formData: {
       contacts?: string;
@@ -59,7 +70,7 @@ const UserProfile = () => {
       version?: string;
     } = { contacts, authors, linkedin, twitter, vendor, website };
 
-    const profileInLS: any = localStorage.getItem('profile')
+    const profileInLS: any = localStorage.getItem(LocalStorageKeys.profile)
     if (profileInLS && profileInLS !== 'undefined') {
       const profileFormData = JSON.parse(profileInLS);
       setOwner(profileFormData.owner);
@@ -78,6 +89,13 @@ const UserProfile = () => {
       setIsEdit(true);
     }
   }
+
+  useEffect(() => {
+    if (isEdit) {
+      form.setFocus("name"); // focus on first field on Edit mode
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
 
   useEffect(() => {
     initializeFormState()
@@ -122,11 +140,12 @@ const UserProfile = () => {
       fetchData.put("/profile/current", reqData).then(async () => {
       /** For mock */
       // await fetchData.get("static/data/current-profile.json", formData);
-        await dispatch(
+        const response = await dispatch(
           getProfileDetails({address: address, wallet: wallet, walletName: walletName})
           /** For mock */
           // getProfileDetails({url: "static/data/new-profile.json"})
         );
+        setUserDetails(response.payload);
         dispatch(clearAccessToken())
         navigate('/')
       }).catch((errorObj) => {
@@ -136,7 +155,7 @@ const UserProfile = () => {
         }
         setShowError(errorMsg);
         const timeout = setTimeout(() => { clearTimeout(timeout); setShowError("") }, 5000)
-
+        setUserDetails({ dapp: null });        
       })
     };
     submitProfile();
@@ -200,13 +219,13 @@ const UserProfile = () => {
           clearTimeout(timer)
           setTimer(null)
           await dispatch(verifyRepoAccess({owner: formData.owner, repo: formData.repo}))
-          localStorage.removeItem('profile')
-          localStorage.removeItem('accessToken')
+          localStorage.removeItem(LocalStorageKeys.profile)
+          localStorage.removeItem(LocalStorageKeys.accessToken)
         }, 0)
       })()
     } else {
       setCanShowConnectModal(false)
-      localStorage.removeItem('profile')
+      localStorage.removeItem(LocalStorageKeys.profile)
     }
     // the enclosed snippet is to be triggered only once right when the component is rendered to check if the url contains code (to validate if it is a redirect from github)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,7 +234,7 @@ const UserProfile = () => {
   const connectToGithub = async () => {
     const data = {...form.getValues(), owner: owner, repo: repo}
     // store current form data in localStorage
-    localStorage.setItem('profile', JSON.stringify(data))
+    localStorage.setItem(LocalStorageKeys.profile, JSON.stringify(data))
 
     // fetch CLIENT_ID from api
     const clientId = (await fetchData.get("/github/client-id")).data as string
@@ -247,7 +266,6 @@ const UserProfile = () => {
               id="name"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("name")}
             />
             <div className="input-wrapper">
@@ -342,7 +360,6 @@ const UserProfile = () => {
               id="version"
               required={true}
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("version")}
             />
             <Input
@@ -350,7 +367,6 @@ const UserProfile = () => {
               type="text"
               id="authors"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("authors")}
             />
             <Input
@@ -358,14 +374,12 @@ const UserProfile = () => {
               type="text"
               id="contacts"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("contacts")}
             />
             <Input
               label="Vendor"
               type="text"
               id="vendor"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("vendor")}
             />
@@ -374,14 +388,12 @@ const UserProfile = () => {
               type="text"
               id="website"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("website")}
             />
             <Input
               label="LinkedIn Url"
               type="text"
               id="linkedIn"
-              disablefocus="true"
               disabled={!isEdit}
               {...form.register("linkedin")}
             />
@@ -390,7 +402,6 @@ const UserProfile = () => {
               type="text"
               id="twitter"
               disabled={!isEdit}
-              disablefocus="true"
               {...form.register("twitter")}
             />
             <div className="button-wrapper">
@@ -409,7 +420,7 @@ const UserProfile = () => {
                     displayStyle="secondary"
                     buttonLabel={"Cancel"}
                     onClick={() => {
-                      localStorage.removeItem('profile')
+                      localStorage.removeItem(LocalStorageKeys.profile)
                       initializeFormState()
                       setIsEdit(false);
                     }}

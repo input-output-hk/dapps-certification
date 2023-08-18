@@ -50,7 +50,7 @@ const TimelineItem: FC<ITimelineItem> = ({
       <span className="text" data-testid={text}>
         {text}
       </span>
-      {runTimeTaken ? <span className="small-text">{runTimeTaken}</span> : null}
+      {runTimeTaken ? <span className="small-text" data-testid={`${text}-runTimeTaken`}>{runTimeTaken}</span> : null}
     </li>
   );
 };

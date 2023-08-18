@@ -33,7 +33,7 @@ const InformationTable: FC<{logs: any, }> = ({ logs, }) => {
                     onClick={showLogView}>
                         View logs
                 </span>
-                <section className={`log-information ${showLogs ? "" : "hidden"}`}>
+                <section className={`log-information ${showLogs ? "" : "hidden"}`} data-testid="log-information">
                     <div className="log-header">
                         <h6>Logs</h6>
                         <span 

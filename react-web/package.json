@@ -2,7 +2,7 @@
   "name": "react-web",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://excuse.ro:9672/",
+  "proxy": "https://excuse.ro:443/",
   "homepage": "http://localhost:3000/",
   "dependencies": {
     "@emotion/react": "^11.10.5",
@@ -13,7 +13,6 @@
     "@mui/material": "5.10.14",
     "@reduxjs/toolkit": "^1.9.0",
     "@testing-library/jest-dom": "^5.16.4",
-    "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.11.45",
@@ -22,6 +21,7 @@
     "@types/react-table": "^7.7.12",
     "axios": "^0.27.2",
     "buffer": "^6.0.3",
+    "classnames": "^2.3.2",
     "dayjs": "^1.11.7",
     "html-react-parser": "^3.0.4",
     "material-ui-confirm": "^3.0.7",
@@ -42,8 +42,8 @@
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "build:production": "REACT_APP_ENV=production yarn build",
-    "test": "react-app-rewired test --passWithNoTests",
-    "test:coverage": "react-app-rewired test --coverage --passWithNoTests",
+    "react-test": "react-app-rewired test",
+    "test": "jest --config=jest.config.js --coverage",
     "eject": "react-app-rewired eject"
   },
   "eslintConfig": {
@@ -65,7 +65,13 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@types/jest": "^29.5.2",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
     "react-app-rewired": "^2.2.1",
+    "ts-jest": "^29.1.0",
     "webpack-cli": "^5.0.1"
   }
 }

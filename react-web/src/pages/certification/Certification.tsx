@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { fetchData, postData } from "api/api";
 import Button from "components/Button/Button";
@@ -34,6 +34,7 @@ import { clearStates } from "./slices/logRunTime.slice";
 import { deleteTestHistoryData } from "pages/testHistory/slices/deleteTestHistory.slice";
 import { useConfirm } from "material-ui-confirm";
 import { Link } from "react-router-dom";
+import Loader from "components/Loader/Loader";
 
 const TIMEOFFSET = 1000;
 
@@ -44,7 +45,7 @@ const Certification = () => {
   });
 
   const { uuid } = useAppSelector((state) => state.certification);
-  const { userDetails, subscribedFeatures } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, userDetails, subscribedFeatures } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const confirm = useConfirm();
   const [submitting, setSubmitting] = useState(false);
@@ -191,7 +192,7 @@ const Certification = () => {
   },[form])
 
   const handleDownloadResultData = (resultData: any) => {
-    exportObjectToJsonFile(resultData);
+    exportObjectToJsonFile(resultData, "Testing Report.json");
   };
 
   const abortRun = () => {
@@ -247,6 +248,15 @@ const Certification = () => {
       handleErrorScenario
   )
 
+  // if not logged in, prevent loader as well
+  if (!isLoggedIn) {
+    return null;
+  }
+  // Show loader until subscribed features is fetched
+  else if (isLoggedIn && !subscribedFeatures) {
+    return <Loader />;
+  }
+  // else
   return (
     <>
       {subscribedFeatures?.indexOf("l1-run") === -1 ? 
@@ -296,7 +306,7 @@ const Certification = () => {
       }
       {formSubmitted && (
         <>
-          <div id="resultContainer">
+          <div id="resultContainer" data-testid="resultContainer">
             {runStatus === "finished" ? (
               <button
                 className="back-btn"
@@ -314,6 +324,7 @@ const Certification = () => {
             <header>
               <h2
                 id="breadcrumb"
+                data-testid="breadcrumb"
                 style={{alignSelf:"center"}}
                 className={runStatus === "finished" ? "" : "hidden"}
               >
