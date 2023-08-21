@@ -25,7 +25,7 @@ spec:
                 name: the-secrets
           - name: DB_PATH
             value: "/db/certification.sqlite"
-        image: ghcr.io/demoiog/plutus-certification:10
+        image: ghcr.io/demoiog/plutus-certification:12
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
