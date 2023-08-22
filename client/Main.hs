@@ -223,6 +223,22 @@ currentProfileParser :: Parser ProfileCommand
 currentProfileParser = hsubparser
   ( command "get" (GetCurrentProfile <$> getCurrentProfileInfo)
  <> command "update" (UpdateCurrentProfile <$> updateCurrentProfileInfo)
+ <> command "get-wallet-address" (GetProfileWalletAddress <$> getWalletAddressInfo)
+ <> command "get-balance" (GetProfileBalance <$> getBalanceInfo)
+  )
+
+getBalanceInfo :: ParserInfo Auth
+getBalanceInfo = info authParser
+  ( fullDesc
+  <> header "plutus-certification-client profile get-balance — Get the balance of the current profile"
+  )
+
+
+
+getWalletAddressInfo :: ParserInfo Auth
+getWalletAddressInfo = info authParser
+  ( fullDesc
+  <> header "plutus-certification-client profile get-wallet-address — Get the wallet address of the current profile"
   )
 
 updateCurrentProfileInfo :: ParserInfo UpdateCurrentProfileArgs
@@ -384,6 +400,8 @@ data GetRepositoryInfoArgs = GetGitHubAddressArgs
 data ProfileCommand
     = GetCurrentProfile !Auth
     | UpdateCurrentProfile !UpdateCurrentProfileArgs
+    | GetProfileWalletAddress !Auth
+    | GetProfileBalance !Auth
 
 data UpdateCurrentProfileArgs = UpdateCurrentProfileArgs !Auth !ProfileBody
 
@@ -582,6 +600,10 @@ main = do
       withAuth auth $ \c authKey -> c.getCurrentProfile authKey
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) ->
       withAuth auth $ \c authKey -> c.updateCurrentProfile authKey profileBody
+    CmdCurrentProfile (GetProfileWalletAddress auth) ->
+      withAuth auth $ \c authKey -> c.getProfileWalletAddress authKey
+    CmdCurrentProfile (GetProfileBalance auth) ->
+      withAuth auth $ \c authKey -> c.getProfileBalance authKey
     CmdLogin loginBody -> do
       handle $ apiClient.login loginBody
     CmdServerTimestamp ->

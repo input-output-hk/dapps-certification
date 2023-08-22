@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -34,7 +35,7 @@ import Data.Text as Text hiding (elem,replicate, last,words,replicate)
 import Data.Text.Encoding
 import Plutus.Certification.WalletClient (WalletArgs(walletCertificationPrice))
 import IOHK.Certification.Interface hiding (Status)
-import Plutus.Certification.Server.Internal
+import Plutus.Certification.Server.Internal as I
 
 import Servant.Server.Experimental.Auth (AuthServerData)
 import Data.Time (addUTCTime)
@@ -45,6 +46,8 @@ import Text.Read (readMaybe)
 import Data.HashSet as HashSet
 import Data.List as List
 import IOHK.Certification.Persistence (FeatureType(..))
+import Plutus.Certification.ProfileWallet as PW
+import Data.Functor
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
@@ -53,6 +56,7 @@ import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
 import Plutus.Certification.Metadata
 import Control.Monad.Reader (ReaderT(runReaderT))
+import Control.Concurrent (MVar, takeMVar, putMVar)
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -73,14 +77,16 @@ data GitHubCredentials = GitHubCredentials
 data ServerArgs m r = ServerArgs
   { serverCaps :: !(ServerCaps m r)
   , serverWalletArgs :: !Wallet.WalletArgs
-  , githubToken :: !(Maybe GitHubAccessToken)
+  , serverGithubToken :: !(Maybe GitHubAccessToken)
   , serverJWTConfig :: !(Maybe JWTConfig)
   , serverEventBackend :: !(EventBackend m r ServerEventSelector)
   , serverSigningTimeout :: !Seconds
   , serverWhitelist :: !(Maybe Whitelist)
   , serverGitHubCredentials :: !(Maybe GitHubCredentials)
-  , validateSubscriptions :: Bool
-  , adaUsdPrice :: m (Maybe DB.AdaUsdPrice)
+  , serverValidateSubscriptions :: Bool
+  , serverAdaUsdPrice :: m (Maybe DB.AdaUsdPrice)
+  , serverAddressRotation :: MVar AddressRotation
+  -- TODO: maybe replace the 'server' prefix
   , withDb :: forall a k. (MonadIO k, MonadMask k) => (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> k a
   }
 
@@ -109,12 +115,12 @@ server :: ( MonadMask m
 server ServerArgs{..} = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
-  , walletAddress = withEvent eb WalletAddress . const $ pure serverWalletArgs.walletAddress
+  , walletAddress = withEvent eb I.WalletAddress . const $ pure serverWalletArgs.walletAddress
   , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
       -- ensure the profile has an active feature for L1Run
       validateFeature L1Run profileId
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
-      let githubToken' =  profileAccessToken <|> githubToken
+      let githubToken' =  profileAccessToken <|> serverGithubToken
       -- ensure the ref is in the right format before start the job
       (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
       addField ev $ CreateRunRef fref
@@ -233,7 +239,7 @@ server ServerArgs{..} = NamedAPI
     let ghAccessTokenM = unApiGitHubAccessToken <$> apiGhAccessTokenM
         -- if there is no github access token, we use the default one
         -- provided from arguments
-        ghAccessTokenM' =  ghAccessTokenM <|> githubToken
+        ghAccessTokenM' =  ghAccessTokenM <|> serverGithubToken
     liftIO ( getRepoInfo ghAccessTokenM' owner repo ) >>= fromClientResponse
 
   , login = \LoginBody{..} -> whenJWTProvided \JWTConfig{..} -> withEvent eb Login \ev -> do
@@ -302,10 +308,12 @@ server ServerArgs{..} = NamedAPI
     featureTypes <- withDb $ DB.getCurrentFeatures profileId now
     addField ev $ GetActiveFeaturesFieldFeatures featureTypes
     pure featureTypes
+
   , getAdaUsdPrice = withEvent eb GetAdaUsdPrice \ev -> do
     adaUsdPrice' <- getAdaUsdPrice'
     addField ev adaUsdPrice'
     pure adaUsdPrice'
+
   , createAuditorReport = \dryRun reportInput (profileId,_) -> withEvent eb CreateAuditorReport \ev -> do
     validateFeature L2UploadReport profileId
     addField ev $ CreateAuditorReportFieldProfileId profileId
@@ -316,23 +324,50 @@ server ServerArgs{..} = NamedAPI
         (fullMetadata,ipfs) <- catch (createMetadataAndPushToIpfs reportInput) handleException
         addField ev $ CreateAuditorReportIpfsCid ipfs
         pure fullMetadata
+
+  , getProfileWalletAddress = \(profileId,_) -> withEvent eb GetProfileWalletAddress \ev -> do
+      addField ev profileId
+      -- first check the db
+      walletM <- (id <=< fmap snd) <$> withDb ( DB.getProfileWallet profileId )
+
+      -- second, if there is nothing in the db try to get
+      case walletM of
+        Just (DB.ProfileWallet _ address status _) ->
+          pure $ Just (status, address)
+        Nothing -> do
+          resp <- Wallet.getWalletAddresses serverWalletArgs (Just Wallet.Unused)
+          case resp of
+            Right unusedAddressesInfo -> do
+              let unusedAddresses = fmap (PW.WalletAddress . (.addressId)) unusedAddressesInfo
+              (walletAddressM,newRotation) <- liftIO (takeMVar serverAddressRotation)
+                <&> getTemporarilyWalletAddress unusedAddresses profileId
+              liftIO $ putMVar serverAddressRotation newRotation
+              pure $ fmap ((DB.Overlapping,) . unWalletAddress) walletAddressM
+            Left err -> withEvent eb InternalError $ \ev' -> do
+              addField ev' (show err)
+              throwError $ err500 {errBody = LSB.pack $ show resp}
+
   }
   where
     handleException :: (MonadError ServerError m ) =>  SomeException -> m a
     handleException e = do
       throwError err400 { errBody = LSB.pack $ show e }
+
     getAdaUsdPrice' =
-      adaUsdPrice >>= maybeToServerError err500 "Can't get ada usd price"
+      serverAdaUsdPrice >>= maybeToServerError err500 "Can't get ada usd price"
+
     validateFeature featureType profileId = do
       -- ensure the profile has an active feauture for L1Run
-      when validateSubscriptions $ do
+      when serverValidateSubscriptions $ do
         now <- getNow
         featureTypes <- withDb ( DB.getCurrentFeatures profileId now )
         unless (featureType `elem` featureTypes) $
           throwError err403 { errBody = "You don't have the required subscription" }
+
     fromClientResponse = \case
       Left err -> throwError $ serverErrorFromClientError err
       Right a -> pure a
+
     serverErrorFromClientError :: ClientError -> ServerError
     serverErrorFromClientError clientResponse =
       case clientResponse of
@@ -403,6 +438,7 @@ server ServerArgs{..} = NamedAPI
               err = ServerError code "IPFS gateway error" (LSB.fromStrict msg) []
           in throwError err
         Right result -> pure result
+
     getRunAndSync RunID{..} status = do
       run <- withDb (DB.getRun uuid)
         >>= maybeToServerError err404 "No Run"

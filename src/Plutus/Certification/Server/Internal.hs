@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
@@ -105,6 +106,8 @@ data ServerEventSelector f where
   GetActiveFeatures :: ServerEventSelector GetActiveFeaturesField
   GetAdaUsdPrice :: ServerEventSelector DB.AdaUsdPrice
   CreateAuditorReport :: ServerEventSelector CreateAuditorReportField
+  GetProfileWalletAddress :: ServerEventSelector DB.ProfileId
+  InternalError :: forall a. ToJSON a => ServerEventSelector a
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -121,6 +124,7 @@ renderServerEventSelector GenerateGitHubToken = ("generate-github-token", \
     (GenerateGitHubTokenError err) -> ("error", toJSON err)
   )
 renderServerEventSelector GetGitHubClientId = ("get-github-client-id", absurd)
+renderServerEventSelector GetProfileWalletAddress = ("get-profile-wallet-address", renderProfileId)
 
 renderServerEventSelector GetProfileSubscriptions = ("get-profile-subscriptions", renderProfileId)
 renderServerEventSelector Subscribe = ("subscribe", \case
@@ -157,6 +161,8 @@ renderServerEventSelector CreateAuditorReport = ("create-auditor-report", \case
     CreateAuditorReportDryRun isDryRun -> ("is-dry-run", toJSON isDryRun)
     CreateAuditorReportIpfsCid  cid -> ("cid", toJSON cid)
   )
+renderServerEventSelector InternalError =
+  ("internal-error", ("something-went-wrong",) . toJSON )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

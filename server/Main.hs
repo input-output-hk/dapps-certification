@@ -60,15 +60,20 @@ import IOHK.Certification.Actions
 import Plutus.Certification.JWT
 import Data.Int
 import IOHK.Certification.Persistence (toId)
+import Plutus.Certification.ProfileWallet
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
 import Data.HashSet as HashSet
+import Data.Word
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import System.Environment (lookupEnv)
 import Crypto.Random
 import Control.Monad.Reader (ReaderT(runReaderT))
+
+oneAda :: Word64
+oneAda = 1000000
 
 data Backend
   = Local
@@ -85,6 +90,7 @@ data Args = Args
   , github :: !GitHubArgs
   , bypassSubscriptionValidation :: !Bool
   , dbPath :: !FilePath
+  , minAmountForAddressAssessment :: !Word64
   }
 
 data GitHubArgs = GitHubArgs
@@ -159,6 +165,13 @@ argsParser =  Args
      <> showDefault
      <> Opts.value "./certification.sqlite"
       )
+  <*> option auto
+      ( long "min-amount-for-address-assessment"
+     <> metavar "MIN_AMOUNT"
+     <> help "the minimum amount of Lovelace required to perform an address assessment"
+     <> showDefault
+     <> Opts.value oneAda
+      )
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -188,7 +201,6 @@ jwtModeParser =
         ( long "jwt-generate"
        <> help "use the jwt token generated within the db"
         )
-
 
 jwtArgsParser :: Parser AuthMode
 jwtArgsParser =  JWTAuth <$> (JWTArgs
@@ -274,7 +286,6 @@ data RootEventSelector f where
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
-
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -430,6 +441,7 @@ main = do
       -- get the whitelisted addresses from $WLIST env var
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
+      addressRotation <- liftIO $ newMVar emptyAddressRotation
       _ <- initDb $ withDb' (args.dbPath)
       jwtConfig <- getJwtArgs eb args
       adaPriceRef <- startSynchronizer eb scheduleCrash args
@@ -438,7 +450,7 @@ main = do
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext (withDb' (args.dbPath)) whitelist jwtConfig) .
         (\r -> swaggerSchemaUIServer (documentation args.auth)
-               :<|> server (serverArgs args caps r eb whitelist adaPriceRef jwtConfig))
+               :<|> server (serverArgs args caps r eb whitelist adaPriceRef jwtConfig addressRotation))
   exitFailure
   where
   getJwtArgs eb args = withEvent eb OnAuthMode \ev ->
@@ -481,20 +493,20 @@ main = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor
             (narrowEventBackend InjectSynchronizer eb) scheduleCrash
-            (args.wallet) ref 10 (WithDBWrapper (withDb' (args.dbPath)) )
+            (args.wallet) ref 10 (args.minAmountForAddressAssessment)
+            (WithDBWrapper (withDb' (args.dbPath)) )
     pure ref
-  serverArgs args caps r eb whitelist ref jwtConfig = ServerArgs
-    { serverCaps = caps
-    , serverWalletArgs  = args.wallet
-    , githubToken = args.github.accessToken
-    , serverJWTConfig = jwtConfig
+  serverArgs args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
+    { serverWalletArgs  = args.wallet
+    , serverGithubToken = args.github.accessToken
     , serverEventBackend = be r eb
     , serverSigningTimeout = args.signatureTimeout
-    , serverWhitelist = whitelist :: Maybe Whitelist
-    , validateSubscriptions = not args.bypassSubscriptionValidation
+    , serverWhitelist = whitelist
+    , serverValidateSubscriptions = not args.bypassSubscriptionValidation
     , serverGitHubCredentials = args.github.credentials
-    , adaUsdPrice = liftIO $ readIORef ref
+    , serverAdaUsdPrice = liftIO $ readIORef ref
     , withDb = withDb' (args.dbPath)
+    , ..
     }
   withDb' :: (MonadIO m, MonadMask m) => FilePath -> (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> m a
   withDb' = DB.withSQLite'

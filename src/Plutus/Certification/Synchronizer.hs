@@ -26,7 +26,7 @@ import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
 import Plutus.Certification.CoinGeckoClient
 import Data.Aeson
-import Plutus.Certification.TransactionBroadcaster
+import Plutus.Certification.CertificationBroadcaster
 import Observe.Event.Render.JSON
 import Control.Exception
 import Observe.Event.Crash
@@ -39,11 +39,13 @@ import Control.Monad.Except
 import Data.Maybe (fromMaybe)
 import Observe.Event.Backend
 import Observe.Event
-import Data.IORef
 import Data.Void
 import Control.Monad.RWS
 import Control.Monad.Reader (ReaderT(..))
 import Observe.Event.BackendModification (setAncestor)
+import Plutus.Certification.ProfileWallet
+import Data.IORef
+import Data.Word (Word64)
 
 data InitializingField
   = WalletArgsField WalletArgs
@@ -54,6 +56,7 @@ data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
   InjectCoinGeckoClient :: forall f . !(CoinGeckoClientSelector f) -> SynchronizerSelector f
+  InjectProfileWalletSync :: forall f . !(ProfileWalletSyncSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
   ActivateSubscriptions :: SynchronizerSelector [DB.SubscriptionId]
   UpdateAdaPrice :: SynchronizerSelector Void
@@ -78,12 +81,13 @@ renderSynchronizerSelector (InjectCoinGeckoClient selector) = renderCoinGeckoCli
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
 renderSynchronizerSelector ActivateSubscriptions = ("activate-subscriptions", renderSubscriptions)
 renderSynchronizerSelector UpdateAdaPrice = ("refresh-ada-price", absurd)
-
-renderSubscriptions :: RenderFieldJSON [DB.SubscriptionId]
-renderSubscriptions subscriptions = ("subscriptions", toJSON subscriptions)
+renderSynchronizerSelector (InjectProfileWalletSync selector) = renderProfileWalletSyncSelector selector
 
 renderTransactionsCount :: RenderFieldJSON TransactionsCount
 renderTransactionsCount (TransactionsCount count) = ("transactions-count",toJSON count)
+
+renderSubscriptions :: RenderFieldJSON [DB.SubscriptionId]
+renderSubscriptions subscriptions = ("subscriptions", toJSON subscriptions)
 
 getTimeFromTx :: WalletTransaction -> Maybe UTCTime
 getTimeFromTx (WalletTransaction _ status)=
@@ -103,10 +107,8 @@ walletTxStatusToDbStatus Submitted = DB.Submitted
 
 synchronizeDbTransactions :: (MonadIO m, MonadMask m,MonadReader env m,HasDb env) => [WalletTransaction] -> m ()
 synchronizeDbTransactions transactions = do
-  -- filter out the outgoing transactions and sync them with the database
-  withDb $ forM_ incomingTransactions storeTransaction
+  withDb $ forM_ transactions storeTransaction
   where
-  incomingTransactions = filter ((Incoming ==) . walletTxDirection . walletTxData) transactions
   storeTransaction tx@WalletTransaction{..} = void $
       case getTimeFromTx tx of
         -- if the transaction does not have a time, is submitted
@@ -116,7 +118,9 @@ synchronizeDbTransactions transactions = do
           let dbTx  = DB.Transaction
                     { DB.wtxId         = undefined
                     , DB.wtxExternalId = walletTxData.walletTxId.txId
-                    , DB.wtxAmount = walletTxData.walletTxAmount.quantity
+                    -- IMPORTANT: based on the direction of the transaction
+                    -- we set the amount to be positive or negative
+                    , DB.wtxAmount = amountDirection * fromIntegral ( walletTxData.walletTxAmount.quantity )
                     , DB.wtxTime = time
                     , DB.wtxDepth = maybe (-1) quantity (walletTxData.walletTxDepth)
                     , DB.wtxStatus = walletTxStatusToDbStatus walletTxStatus
@@ -124,6 +128,7 @@ synchronizeDbTransactions transactions = do
                         Nothing -> ""
                         Just val -> decodeUtf8 . toStrict . encode $ val
                     }
+              amountDirection = if walletTxData.walletTxDirection == Incoming then 1 else (-1)
               inputEntries = fromInputsToDbInputs walletTxData.walletTxInputs
               outputEntries = fromOutputsToDbOutputs walletTxData.walletTxOutputs
           -- store the transaction in the database
@@ -139,7 +144,8 @@ fromOutputToDbOutput TxOutput{..} = Just $ DB.TransactionEntry
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
-  , DB.txEntryAmount = txOutputAmount.quantity
+  --TODO: remove conversion after merging with feat/subscription
+  , DB.txEntryAmount = fromIntegral txOutputAmount.quantity
   , DB.txEntryIndex = Nothing
   , DB.txEntryInput = False
   }
@@ -156,7 +162,8 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
   { DB.txEntryId = undefined
   , DB.txEntryTxId = undefined
   , DB.txEntryAddress = txOutputAddress.unPublicAddress
-  , DB.txEntryAmount = txOutputAmount.quantity
+  --TODO: remove conversion after merging with feat/subscription
+  , DB.txEntryAmount = fromIntegral txOutputAmount.quantity
   , DB.txEntryIndex = Just index
   , DB.txEntryInput = True
   }
@@ -164,8 +171,10 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
 monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
+                          -> Word64
+                          -> IORef PrevAssignments
                           -> m ()
-monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
+monitorWalletTransactions eb args minAssignmentAmount refAssignments = withEvent eb MonitorTransactions $ \ev -> do
   -- fetch the list of transactions from the wallet
   -- TODO: fetch only the transactions that are not in the database
   -- or starting from the first pending transaction
@@ -173,6 +182,11 @@ monitorWalletTransactions eb args = withEvent eb MonitorTransactions $ \ev -> do
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions transactions
   activateSubscriptions (subEventBackend ev)
+  -- synchronize wallets
+  liftIO (readIORef refAssignments)
+    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) args minAssignmentAmount
+    >>= liftIO . writeIORef refAssignments
+
   certifyRuns (subEventBackend ev) args
   where
     -- handle the response from the wallet
@@ -232,7 +246,7 @@ certifyProfileRuns certificationProcess runs =
   certifyRuns' [] _ = return ()
   certifyRuns' (run:rs) creditsAvailable = do
     -- calculate the cost of the run
-    let cost = run.certificationPrice
+    let cost = fromIntegral run.certificationPrice
     -- if we have enough credits, certify the run
     when (creditsAvailable >= cost) $
       void (certificationProcess pid (run.runId))
@@ -250,12 +264,15 @@ startTransactionsMonitor :: (MonadIO m, MonadMask m, MonadError IOException m,Ha
                          -> WalletArgs
                          -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
+                         -> Word64
                          -> env
                          -> m ()
-startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds = runReaderT reader'
+startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds minAssignmentAmount = runReaderT reader'
   where
-  reader' = startTransactionsMonitor' eb' (hoistScheduleCrash (ReaderT . const) scheduleCrash) args adaPriceRef delayInSeconds
+  reader' = startTransactionsMonitor' eb' scheduleCrash' args adaPriceRef
+              delayInSeconds minAssignmentAmount
   eb' = hoistEventBackend (ReaderT . const) eb
+  scheduleCrash' = hoistScheduleCrash (ReaderT . const) scheduleCrash
 
 startTransactionsMonitor' :: (MonadIO m, MonadMask m, MonadError IOException m,MonadReader env m,HasDb env)
                          => EventBackend m r SynchronizerSelector
@@ -263,8 +280,9 @@ startTransactionsMonitor' :: (MonadIO m, MonadMask m, MonadError IOException m,M
                          -> WalletArgs
                          -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
+                         -> Word64
                          -> m ()
-startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds =
+startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds minAssignmentAmount =
   withEvent eb InitializingSynchronizer $ \ev -> do
     addField ev $ WalletArgsField args
     addField ev $ DelayField delayInSeconds
@@ -278,10 +296,12 @@ startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds =
         addField ev (ErrorField e)
         let mods = setAncestor $ reference ev
         schedule scheduleCrash mods
-    doWork ev = void $ forever $ do
-      updateAdaPrice (subEventBackend ev) adaPriceRef
-      monitorWalletTransactions (subEventBackend ev) args
-      liftIO $ threadDelay delayInMicroseconds
+    doWork ev = do
+      ref <- liftIO $ newIORef []
+      void $ forever $ do
+        updateAdaPrice (subEventBackend ev) adaPriceRef
+        monitorWalletTransactions (subEventBackend ev) args minAssignmentAmount ref
+        liftIO $ threadDelay delayInMicroseconds
     delayInMicroseconds = delayInSeconds * 1000000
 
 updateAdaPrice :: (MonadIO m,MonadMask m)

@@ -51,6 +51,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetProfileActiveFeaturesRoute auth
   :<|> GetAdaUsdPriceRoute
   :<|> CreateAuditorReport auth
+  :<|> GetProfileWalletAddressRoute auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

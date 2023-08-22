@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -35,7 +35,6 @@ import Data.Swagger
 import IOHK.Certification.Interface
 import Data.Time
 import Data.Proxy
-import Data.Int
 import Text.Read hiding (String)
 import Plutus.Certification.WalletClient
 import Control.Lens hiding ((.=))
@@ -48,6 +47,7 @@ import IOHK.Certification.SignatureVerification
 import Data.Char (isAlphaNum)
 import Text.Regex
 import Plutus.Certification.Metadata as Metadata
+import Data.Int
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -138,6 +138,13 @@ type GetBalanceRoute (auth :: Symbol) = "profile"
 type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
   :> Get '[JSON] WalletAddress
+
+type GetProfileWalletAddressRoute (auth :: Symbol) = "profile"
+  :> Description "Get the wallet address of the profile"
+  :> "current"
+  :> "wallet-address"
+  :> AuthProtect auth
+  :> Get '[JSON] (Maybe (DB.WalletAddressStatus,WalletAddress))
 
 type GitHubRoute = "repo"
   :> Description "Get the github repo information"
@@ -296,6 +303,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
   , createCertification :: mode :- CreateCertificationRoute auth
   , getCertification :: mode :- GetCertificateRoute
+  , getProfileWalletAddress :: mode :- GetProfileWalletAddressRoute auth
   , walletAddress :: mode :- WalletAddressRoute
   , getProfileBalance :: mode :- GetBalanceRoute auth
   , getRunDetails :: mode :- GetRunDetailsRoute

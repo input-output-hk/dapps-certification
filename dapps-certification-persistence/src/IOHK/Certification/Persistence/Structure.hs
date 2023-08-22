@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE LambdaCase                 #-}
 
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -18,10 +19,14 @@ module IOHK.Certification.Persistence.Structure where
 import           Control.Lens         hiding (index, (.=))
 import           Data.Aeson
 import           Data.Proxy
---import           Control.Exception ( throw)
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
 import           Data.Int
+import           Database.Selda.SqlType as Selda
+import           Control.Exception ( throw)
+import           GHC.OverloadedLabels
+import           Data.Char as Char
+import           Data.Int (Int64)
 
 import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
@@ -88,6 +93,57 @@ instance ToSchema TierDTO where
     return $ NamedSchema (Just "TierDTO") $ tierSchema
               & properties %~ (`mappend` [ ("features", featureSchema) ])
               & required %~  (<> [ "features" ])
+
+data WalletAddressStatus = Reserved | Overlapping
+  deriving (Generic, Show, Eq)
+
+instance FromJSON WalletAddressStatus where
+  parseJSON = withText "WalletAddressStatus" $ \case
+    "reserved" -> pure Reserved
+    "overlapping" -> pure Overlapping
+    _ -> fail "WalletAddressStatus must be one of: reserved, overlapping"
+
+instance ToJSON WalletAddressStatus where
+  toJSON = \case
+     Overlapping -> "overlapping"
+     Reserved -> "reserved"
+
+instance ToSchema WalletAddressStatus where
+  declareNamedSchema _ = do
+    let values = [ "reserved", "overlapping" ] :: [Value]
+    return $ NamedSchema (Just "WalletAddressStatus") $ mempty
+      & type_ ?~ SwaggerString
+      & enum_ ?~ values
+
+instance SqlType WalletAddressStatus where
+   mkLit n = LCustom TInt64 (LInt64 (toInt64 n))
+     where
+     toInt64 = \case
+       Overlapping -> 0
+       Reserved -> 1
+   sqlType _ = TInt64
+   fromSql (SqlInt64 0) = Overlapping
+   fromSql (SqlInt64 1) = Reserved
+   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
+   defaultValue = mkLit Overlapping
+
+data ProfileWallet = ProfileWallet
+  { profileWalletId :: ID Profile
+  , profileWalletAddress :: Text
+  , profileWalletStatus :: WalletAddressStatus
+  , profileWalletCredits :: Int64
+  } deriving (Generic, Show, Eq)
+
+instance SqlRow ProfileWallet
+
+instance ToJSON ProfileWallet where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 14 }
+
+instance FromJSON ProfileWallet where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 14 }
+
+instance ToSchema ProfileWallet where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 14 }
 
 --------------------------------------------------------------------------------
 -- | Profile
@@ -220,10 +276,18 @@ transactions = table "transaction"
   ]
 
 transactionEntries :: Table TransactionEntry
-transactionEntries = table "entry"
+transactionEntries = table "transaction_entry"
   [ #txEntryId :- autoPrimary
   , #txEntryTxId :- foreignKey transactions #wtxId
   ]
+
+profileWallets :: Table ProfileWallet
+profileWallets = table "profile_wallet"
+  [ #profileWalletId :- primary
+  , #profileWalletId :- foreignKey profiles #profileId
+  ]
+
+
 dapps :: Table DApp
 dapps = table "dapp"
   [ #dappId :- unique
@@ -235,6 +299,7 @@ createTables = do
   createTable certifications
   createTable onChainCertifications
   createTable profiles
+  createTable profileWallets
   createTable dapps
   createTable runs
   createTable transactions
