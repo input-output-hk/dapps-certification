@@ -14,5 +14,6 @@ docker/
 Makefile
 *.sqlite
 react-web/node_modules/
+.pre-commit-config.yaml
 *.ignore.*
 todo.txt

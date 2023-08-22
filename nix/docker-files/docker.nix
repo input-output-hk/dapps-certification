@@ -69,8 +69,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = inputs'.self.packages.dapps-certification-helpers-exe-generate-flake-ghc927;
-    buildFlake = inputs'.self.apps.dapps-certification-helpers-exe-build-flake-ghc927;
+    genFlake = inputs'.self.packages.generate-flake;
+    buildFlake = inputs'.self.packages.build-flake;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;

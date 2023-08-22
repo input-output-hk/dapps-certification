@@ -3,6 +3,6 @@
 
 {
   includedPaths = [
-    "dockerApps.evaluation-test"
+    "apps.dockerApps.evaluation-test"
   ];
 }
