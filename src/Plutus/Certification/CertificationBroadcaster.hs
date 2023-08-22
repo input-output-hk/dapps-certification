@@ -11,7 +11,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Plutus.Certification.TransactionBroadcaster
+module Plutus.Certification.CertificationBroadcaster
   ( createL1Certification
   , renderTxBroadcasterSelector
   , TxBroadcasterSelector(..)
@@ -76,8 +76,8 @@ createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCert
   let certificate = Wallet.CertificationMetadata uuid (DB.IpfsCid ipfsCid) dappName websiteUrl
                     (profile.twitter) uri dappVersion
 
-  -- broadcast the l1 certification
-  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs 1304 certificate
+  -- broadcast the certification
+  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs Nothing 1304 certificate
     >>= eitherToError show
   addField ev (CreateCertificationTxResponse tx)
 

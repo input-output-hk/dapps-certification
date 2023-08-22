@@ -20,9 +20,13 @@ import IOHK.Certification.Persistence.Structure.Run
 import IOHK.Certification.Persistence.Structure.Certification
 import IOHK.Certification.Persistence.Structure
 import Data.Time.Clock
-import Data.Int
-
 import Data.Fixed
+import Data.Int
+import Data.Bifunctor
+
+import Data.Functor
+
+import qualified Data.Map as Map
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -61,8 +65,8 @@ upsertTransaction tx@Transaction{..} entries = do
 
 getJWTSecret :: MonadSelda m => m (Maybe Text)
 getJWTSecret = fmap listToMaybe $ query $ do
-  select <- select jwtSecretTable
-  pure (select ! #jwtSecret)
+  record <- select jwtSecretTable
+  pure (record ! #jwtSecret)
 
 
 -- insert jwtToken
@@ -138,14 +142,20 @@ getProfileBalance address = do
       -- get all paid subscriptions
       paidSubscriptions <- getAllPaidSubscriptions pid
       -- get all the amounts coming from this address
-      amountsFromAddress <- sum <$> getAllAmountsForAddress address
+      walletIncomingCredits <- getProfileWallet pid <&> getWalletCredits
       -- sum all the costs of the certified runs
       let certifiedCosts = sum $ map certificationPrice certifiedRuns
           -- calculate the amount of credits available for subscriptions
           subscriptionCredits = sum $ map subscriptionPrice paidSubscriptions
           -- calculate the amount of credits available
-          creditsAvailable = amountsFromAddress - certifiedCosts - subscriptionCredits
+          creditsAvailable = walletIncomingCredits - fromIntegral certifiedCosts - fromIntegral subscriptionCredits
       pure $ Just creditsAvailable
+  where
+  getWalletCredits :: Maybe (Profile, Maybe ProfileWallet) -> Int64
+  getWalletCredits Nothing = 0
+  getWalletCredits (Just (_, Nothing)) = 0
+  getWalletCredits (Just (_, Just ProfileWallet{..})) = profileWalletCredits
+
 
 upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
 upsertProfile profile@Profile{..} dappM = do
@@ -204,6 +214,39 @@ getProfileDAppQ pid = do
   restrict (dapp ! #dappId .== literal pid)
   pure dapp
 
+getProfileWalletQ :: ProfileId -> Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
+getProfileWalletQ profileId = do
+  p <- select profiles
+  restrict (p ! #profileId .== literal profileId)
+  profileWallet <- leftJoin  (\pw -> pw ! #profileWalletId .== p ! #profileId) (select profileWallets)
+  pure (p :*: profileWallet)
+
+getProfileWallet :: MonadSelda f => ProfileId -> f (Maybe (Profile , Maybe ProfileWallet))
+getProfileWallet profileId = fmap toTuple . listToMaybe <$> query (getProfileWalletQ profileId)
+
+toTuple ::  a :*: b -> (a, b)
+toTuple (p :*: pw) = (p,pw)
+
+getProfileWalletsQ :: Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
+getProfileWalletsQ = do
+  p <- select profiles
+  profileWallet <- leftJoin  (\pw -> pw ! #profileWalletId .== p ! #profileId) (select profileWallets)
+  pure (p :*: profileWallet)
+
+getProfileWallets :: MonadSelda m => m [(Profile, Maybe ProfileWallet)]
+getProfileWallets = map toTuple <$> query getProfileWalletsQ
+
+upsertProfileWallet :: (MonadSelda m,MonadMask m) => ProfileWallet -> m ()
+upsertProfileWallet ProfileWallet{..} = do
+  void $ upsert profileWallets
+    (\pw -> pw ! #profileWalletId .==  literal profileWalletId)
+    (`with`
+     [ #profileWalletAddress := text profileWalletAddress
+     , #profileWalletStatus := literal profileWalletStatus
+     , #profileWalletCredits := literal profileWalletCredits
+     ])
+    [ProfileWallet{..}]
+
 getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
 getProfile pid = fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
 
@@ -249,14 +292,6 @@ getRunOwnerQ runId = do
     p <- select runs
     restrict (p ! #runId .== literal runId )
     pure (p ! #profileId)
-
-getAllAmountsForAddress :: MonadSelda m => Text -> m [Int64]
-getAllAmountsForAddress address = query $ do
-  input <- select transactionEntries
-  restrict (input ! #txEntryAddress .== literal address .&& input ! #txEntryInput .== literal True)
-  t <- innerJoin (\t -> (t ! #wtxId .== (input ! #txEntryTxId))
-      .&& (t ! #wtxStatus .== literal InLedger)) (select transactions)
-  pure (t ! #wtxAmount)
 
 getRunOwner :: MonadSelda m => UUID -> m (Maybe (ID Profile))
 getRunOwner = fmap listToMaybe . query . getRunOwnerQ
@@ -514,6 +549,51 @@ getAllTiers = do
     pure TierDTO
       { tierDtoFeatures = features'
       , tierDtoTier = Tier{..}
+      }
+
+type JustOutput = Bool
+
+
+data MinimalTransaction = MinimalTransaction
+                        { mtxTxId :: !(ID Transaction)
+                        , mtxAmount :: !Int64
+                        , mtxMetadata :: !Text
+                        }
+data MinimalTransactionEntry = MinimalTransactionEntry
+                        { mteId :: !(ID TransactionEntry)
+                        , mteAddress :: !Text
+                        , mteInput :: !Bool
+                        }
+
+getAllTransactions :: MonadSelda m => JustOutput -> m [(MinimalTransaction,[MinimalTransactionEntry])]
+getAllTransactions justOutput = do
+  tx <- query $ do
+    t <- select transactions
+    order (t ! #wtxTime) ascending
+    pure t
+  entries <- query $ do
+    e <- select transactionEntries
+    when justOutput $
+      restrict (e ! #txEntryInput .== literal justOutput)
+    pure e
+  -- make a map of entries by txId
+  let entriesMap = Map.fromListWith (<>) $ map (\e -> (txEntryTxId e, [e])) entries
+  -- link the entries to the transactions
+  let txs = map (\t -> (t, Map.findWithDefault [] (wtxId t) entriesMap)) tx
+  -- convert to the minimal representation
+  pure $ map (bimap toMinimalTransaction (map toMinimalTransactionEntry)) txs
+    where
+    toMinimalTransactionEntry :: TransactionEntry -> MinimalTransactionEntry
+    toMinimalTransactionEntry TransactionEntry{..} = MinimalTransactionEntry
+      { mteId = txEntryId
+      , mteAddress = txEntryAddress
+      , mteInput = txEntryInput
+      }
+    toMinimalTransaction :: Transaction -> MinimalTransaction
+    toMinimalTransaction Transaction{..} = MinimalTransaction
+      { mtxTxId = wtxId
+      , mtxAmount = wtxAmount
+      , mtxMetadata = wtxMetadata
       }
 
 -- | Polimorphic function to run a Selda computation with a SQLite database.

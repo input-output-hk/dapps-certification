@@ -24,6 +24,8 @@ import IOHK.Certification.Persistence.Structure as X
   , TransactionEntry(..)
   , SubscriptionDTO(..)
   , TierDTO(..)
+  , ProfileWallet(..)
+  , WalletAddressStatus(..)
   )
 import Database.Selda as X
   ( fromId
@@ -41,7 +43,9 @@ import IOHK.Certification.Persistence.Structure.Subscription as X
   , TierId
   )
 import IOHK.Certification.Persistence.API as X
-  ( AdaUsdPrice
+  ( MinimalTransaction(..)
+  , MinimalTransactionEntry(..)
+  , AdaUsdPrice
   , upsertProfile
   , upsertTransaction
   , getProfile
@@ -63,7 +67,6 @@ import IOHK.Certification.Persistence.API as X
   , markAsReadyForCertification
   , getAllCertifiedRunsForAddress
   , getRunsToCertify
-  , getAllAmountsForAddress
   , getProfileBalance
   , addInitialData
   , getProfileSubscriptions
@@ -76,4 +79,8 @@ import IOHK.Certification.Persistence.API as X
   , getCurrentFeatures
   , getJWTSecret
   , insertJWTSecret
+  , getAllTransactions
+  , getProfileWallets
+  , getProfileWallet
+  , upsertProfileWallet
   )

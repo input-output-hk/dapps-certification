@@ -1,0 +1,21 @@
+{
+  "0": {
+    "map": [
+      {
+        "k": {
+          "string": "payer"
+        },
+        "v": {
+          "list": [
+            {
+              "string":"addr_test1qphgqts20fhx0yx7ug42xehcnryukchy5k7hpaksgxax2fzt5w2gu3"
+            },
+            {
+              "string": "3s8wrw3c9tjs97dr5pulsvf39e56v7c9ar39asptcrtp"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
