@@ -48,6 +48,10 @@ spec:
               resources:
                 requests:
                   storage: 10Gi
+        - type: k8s-update-strategy
+          properties:
+            strategy:
+              type: Recreate
         - properties:
             replicas: 1
           type: scaler
