@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE RecordWildCards      #-}
 {-# LANGUAGE QuasiQuotes          #-}
+{-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE OverloadedRecordDot  #-}
 module Plutus.Certification.ProfileWallet
   ( resyncWallets
@@ -18,6 +19,9 @@ module Plutus.Certification.ProfileWallet
   , emptyAddressRotation
   , WalletAddress(..)
   , ProfileAddress(..)
+  -- for testing purposes
+  , fromDbTransaction
+  , Transaction(..)
   ) where
 
 import Prelude as P
@@ -29,22 +33,21 @@ import Data.List
 import Control.Monad as M
 import Control.Lens.Internal.CTypes (Word64)
 import Data.Text (Text)
-import Conduit (MonadIO)
+import Control.Monad.IO.Class
 import Control.Arrow
 import Data.Functor
 import Control.Monad.Catch (MonadMask)
 import Data.Map (Map)
 import Plutus.Certification.Internal
 import Data.Aeson.QQ
-import Plutus.Certification.WalletClient (WalletArgs)
 import Data.Either
 import Observe.Event.Render.JSON
 import Observe.Event
 import Data.Function
+import Plutus.Certification.WalletClient (WalletClient(..))
 
-import qualified Plutus.Certification.WalletClient as Wallet
+import qualified Plutus.Certification.WalletClient as WalletClient
 import qualified IOHK.Certification.Persistence as DB
-import qualified IOHK.Certification.SignatureVerification as Sig
 import qualified Data.Vector as V
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as Map
@@ -70,6 +73,7 @@ data ProfileWallet = ProfileWallet
 data Transaction = SimplePayment WalletAddress Word64
                  | DesignatedPayment ProfileAddress WalletAddress Word64
                  | WalletAddressAssignment ProfileAddress WalletAddress
+                 deriving (Eq,Show)
 
 type ProfileWallets = [ProfileWallet]
 type ExtraMoney = Word64
@@ -154,7 +158,7 @@ data ResyncWalletsArgs = TransactionMappingErrors !Int
 data AssignAddressArgs
   = AssignAddressInputs !(ProfileAddress, WalletAddress, OverlappingAddress)
   | AssignAddressError !String
-  | AssignAddressTxResp !Wallet.TxResponse
+  | AssignAddressTxResp !WalletClient.TxResponse
 
 data ProfileWalletSyncSelector f where
   ResyncWallets :: ProfileWalletSyncSelector ResyncWalletsArgs
@@ -201,11 +205,12 @@ type WalletBackend m r = EventBackend m r ProfileWalletSyncSelector
 
 resyncWallets :: (MonadIO m,MonadMask m,MonadReader env m,HasDb env)
               => WalletBackend m r
-              -> WalletArgs
+              -> WalletClient
+              -> (Text -> Bool)
               -> Word64
               -> PrevAssignments
               -> m PrevAssignments
-resyncWallets eb wargs minAmount prevAssignments = withEvent eb ResyncWallets \ev -> do
+resyncWallets eb walletClient ourAddress minAmount prevAssignments = withEvent eb ResyncWallets \ev -> do
   -- fetch the db transactions and create wallets
   (errors,trans) <- withDb ( DB.getAllTransactions False )
     <&> (lefts &&& rights) . fmap fromDbTransaction'
@@ -219,18 +224,17 @@ resyncWallets eb wargs minAmount prevAssignments = withEvent eb ResyncWallets \e
   syncDbProfileWallets eb profileWallets
 
   -- assign addresses for overlapping wallets
-  reassignOverlappingAddresses eb wargs profileWallets prevAssignments
+  reassignOverlappingAddresses eb walletClient profileWallets prevAssignments
 
   where
-  fromDbTransaction' = uncurry (fromDbTransaction isOurAddress minAmount)
-  mainHash = hash wargs.walletAddress
-  hash = Sig.bech32AddressHash . Sig.Bech32Address
-  isOurAddress = (== mainHash) . hash
+  fromDbTransaction' = uncurry (fromDbTransaction ourAddress minAmount)
+
   countTransactions = foldl' (\(a,b,c) -> \case
     SimplePayment{} -> (a+1,b,c)
     DesignatedPayment{} -> (a,b+1,c)
     WalletAddressAssignment{} -> (a,b,c+1)
     ) (0,0,0)
+
 --------------------------------------------------------------------------------
 -- | ADDRESS ASSIGNMENT DISSEMINATION
 
@@ -244,17 +248,16 @@ type PrevAssignments = [Assignment]
 type OverlappingAddress = WalletAddress
 type DestinationAddress = WalletAddress
 
-
 -- TODO: before calling this verify profileId is not a wallet address
 assignAddress :: (MonadIO m,MonadMask m)
               => WalletBackend m r
-              -> WalletArgs
+              -> (forall metadata. WalletClient.BroadcastTx m metadata)
               -> PrevAssignments
               -> ProfileAddress
               -> OverlappingAddress
               -> DestinationAddress
               -> m (Either String PrevAssignments)
-assignAddress eb wargs prevAssignments profileAddress overlappingAddress destinationAddress =
+assignAddress eb broadcastTx prevAssignments profileAddress overlappingAddress destinationAddress =
   withEvent eb AssignAddress \ev -> do
 
   addField ev $ AssignAddressInputs (profileAddress, destinationAddress, overlappingAddress )
@@ -271,7 +274,7 @@ assignAddress eb wargs prevAssignments profileAddress overlappingAddress destina
     let address = split64 (destinationAddress.unWalletAddress)
     let metadata = [aesonQQ| { "assignment" : #{address} } |]
 
-    resp <- Wallet.broadcastTransaction wargs (Just profileAddress.unProfileAddress) 0 metadata
+    resp <- broadcastTx (Just profileAddress.unProfileAddress) 0 metadata
     case resp of
       Left err -> do
         addField ev $ AssignAddressError (show err)
@@ -290,16 +293,16 @@ assignAddress eb wargs prevAssignments profileAddress overlappingAddress destina
 
 reassignOverlappingAddresses :: forall m r. (MonadIO m,MonadMask m)
                              => WalletBackend m r
-                             -> WalletArgs
+                             -> WalletClient
                              -> ProfileWallets
                              -> PrevAssignments
                              -> m PrevAssignments
-reassignOverlappingAddresses eb wargs profileWallets prevAssignments = do
+reassignOverlappingAddresses eb wc profileWallets prevAssignments = do
   -- filter out non overlapping addresses or addresses that were already assigned
   let overlappingAddress = filter isOverlappingAddress profileWallets
   -- get unused addresses which were not assigned before
   unusedAddresses <- (fmap . filter) (not . wasAssignedBefore) <$>
-    Wallet.getWalletAddresses wargs (Just Wallet.Unused)
+    getWalletAddresses wc (Just WalletClient.Unused)
   case unusedAddresses of
     Left err -> withEvent eb  UnassignAddressListError \ev -> do
       addField ev err
@@ -311,10 +314,10 @@ reassignOverlappingAddresses eb wargs profileWallets prevAssignments = do
   where
   assignAddress' :: (MonadIO m)
                  => PrevAssignments
-                 -> (ProfileWallet, Wallet.WalletAddressInfo)
+                 -> (ProfileWallet, WalletClient.WalletAddressInfo)
                  -> m PrevAssignments
   assignAddress' prevAssignments' (ProfileWallet{..},addressInfo) = do
-    prevAddressE <- assignAddress eb wargs prevAssignments' pwProfileAddress
+    prevAddressE <- assignAddress eb (broadcastTx wc) prevAssignments' pwProfileAddress
       (snd pwAddressReservation) (WalletAddress addressInfo.addressId)
     case prevAddressE of
       Left _ -> return prevAssignments
@@ -327,7 +330,7 @@ reassignOverlappingAddresses eb wargs profileWallets prevAssignments = do
           ) prevAssignments
     in not isAlreadyAssigned
   isOverlappingAddress _ = False
-  wasAssignedBefore :: Wallet.WalletAddressInfo -> Bool
+  wasAssignedBefore :: WalletClient.WalletAddressInfo -> Bool
   wasAssignedBefore info = any (\Assignment{..} ->
     assgnDestinationAddress == WalletAddress info.addressId) prevAssignments
 
@@ -355,12 +358,16 @@ fromDbTransaction isOurAddress minAmount DB.MinimalTransaction{..} entries =
       Left "InternalError: no wallet address found for address assignment"
 
     (Right (PayerMetadata address),_,Just walletAddress)
+      -- payer address is not our address and amount is greater than minAmount
       | mtxAmount >= fromIntegral minAmount && not (isOurAddress address)
           -> Right $ DesignatedPayment (ProfileAddress address)
             walletAddress (fromIntegral mtxAmount)
+      -- payer address is our address
       | isOurAddress address
           -> Left "Payer address should not belong to our wallet"
-
+      -- payer address is not our address but amount is less than minAmount
+      | otherwise
+          -> Left "Transaction amount is less than minimum amount"
     (_,_,Just walletAddress)
       | mtxAmount > 0 -> Right $ SimplePayment walletAddress (fromIntegral mtxAmount)
       | mtxAmount < 0 -> Left "Payment transaction is an outgoing transaction without address assignment"

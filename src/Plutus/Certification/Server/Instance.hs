@@ -335,7 +335,7 @@ server ServerArgs{..} = NamedAPI
         Just (DB.ProfileWallet _ address status _) ->
           pure $ Just (status, address)
         Nothing -> do
-          resp <- Wallet.getWalletAddresses serverWalletArgs (Just Wallet.Unused)
+          resp <- Wallet.getWalletAddresses wallet (Just Wallet.Unused)
           case resp of
             Right unusedAddressesInfo -> do
               let unusedAddresses = fmap (PW.WalletAddress . (.addressId)) unusedAddressesInfo
@@ -349,6 +349,7 @@ server ServerArgs{..} = NamedAPI
 
   }
   where
+    wallet = Wallet.realClient serverWalletArgs
     handleException :: (MonadError ServerError m ) =>  SomeException -> m a
     handleException e = do
       throwError err400 { errBody = LSB.pack $ show e }

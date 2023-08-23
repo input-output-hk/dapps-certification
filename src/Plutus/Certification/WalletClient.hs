@@ -9,21 +9,26 @@
 {-# LANGUAGE QuasiQuotes               #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE Rank2Types                #-}
 
 module Plutus.Certification.WalletClient
   ( TxResponse(..)
   , TxId
   , Amount(..)
   , WalletArgs(..)
-  , broadcastTransaction
-  , getTransactionList
-  , getWalletAddresses
+  , realClient
   , CertificationMetadata(..)
   , WalletAddress
   , WalletTransaction(..)
   , Direction(..)
   , AddressState(..)
   , WalletAddressInfo(..)
+  , API
+  , MetadataKey
+  , WalletClient(..)
+  , BroadcastTx
+  , GetTransactionList
+  , GetWalletAddresses
   ) where
 
 import           Control.Monad.IO.Class
@@ -152,23 +157,23 @@ mkSettings walletAPIAddress = liftIO $ do
   pure (mkClientEnv manager' walletAPIAddress)
 
 type MetadataKey = Int
-broadcastTransaction :: (MonadIO m, ToJSON metadata)
+broadcastTransaction' :: (MonadIO m, ToJSON metadata)
                      => WalletArgs
                      -> Maybe WalletAddress
                      -> MetadataKey
                      -> metadata
                      -> m (Either ClientError TxResponse)
-broadcastTransaction WalletArgs{..} destAddr metadataKey metadata = liftIO $ do
+broadcastTransaction' WalletArgs{..} destAddr metadataKey metadata = liftIO $ do
   settings <- mkSettings walletAPIAddress
   let (broadcastTx :<|> _) :<|> _ = mkClient walletId
       metadataKeyStr = show metadataKey
       body = TxBody walletPassphrase (fromMaybe walletAddress destAddr ) [aesonQQ| { $metadataKeyStr: #{ metadata }} |]
   runClientM (broadcastTx body ) settings
 
-getTransactionList :: (MonadIO m)
-                   => WalletArgs
-                   -> m (Either ClientError [WalletTransaction])
-getTransactionList WalletArgs{..} = liftIO $ do
+getTransactionList' :: (MonadIO m)
+                    => WalletArgs
+                    -> m (Either ClientError [WalletTransaction])
+getTransactionList' WalletArgs{..} = liftIO $ do
   settings <- mkSettings walletAPIAddress
   let (_ :<|> getList) :<|> _ = mkClient walletId
   runClientM getList settings
@@ -184,11 +189,38 @@ instance FromJSON WalletAddressInfo where
     <$> o .: "derivation_path"
     <*> o .: "id"
     <*> o .: "state"
-getWalletAddresses :: (MonadIO m)
+getWalletAddresses' :: (MonadIO m)
                    => WalletArgs
                    -> Maybe AddressState
                    -> m (Either ClientError [WalletAddressInfo])
-getWalletAddresses WalletArgs{..} state = liftIO $ do
+getWalletAddresses' WalletArgs{..} state = liftIO $ do
   settings <- mkSettings walletAPIAddress
   let (_ :<|> _) :<|> getAddressList = mkClient walletId
   runClientM (getAddressList state) settings
+
+data WalletClient = WalletClient
+  { getWalletAddresses :: forall m. GetWalletAddresses m
+  , broadcastTx :: forall m metadata. BroadcastTx m metadata
+  , getTransactionList :: forall m. GetTransactionList m
+  }
+
+type BroadcastTx m metadata
+  = (MonadIO m, ToJSON metadata)
+  => Maybe Text
+  -> MetadataKey
+  -> metadata
+  -> m (Either ClientError TxResponse)
+
+type GetWalletAddresses m
+  = (MonadIO m)
+  => Maybe AddressState
+  -> m (Either ClientError [WalletAddressInfo])
+
+type GetTransactionList m
+  = (MonadIO m) => m (Either ClientError [WalletTransaction])
+
+realClient :: WalletArgs -> WalletClient
+realClient wargs = WalletClient
+  (getWalletAddresses' wargs)
+  (broadcastTransaction' wargs)
+  (getTransactionList' wargs)
