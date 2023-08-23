@@ -30,7 +30,7 @@ import Servant.Client
 import Data.Text as Text hiding (elem,replicate, last)
 import Data.Text.Encoding
 import Data.ByteString.Lazy.Char8 qualified as LSB
-import Plutus.Certification.WalletClient (WalletArgs)
+import Plutus.Certification.WalletClient (WalletClient)
 import Plutus.Certification.Server.Internal
 import Plutus.Certification.Internal
 import Observe.Event.Render.JSON
@@ -56,11 +56,11 @@ renderTxBroadcasterSelector CreateCertification = ("create-certification", \case
 -- caution: this function doesn't verify if the run has the proper status
 createL1Certification :: (MonadMask m,MonadIO m, MonadError IOException m,MonadReader env m, HasDb env)
                       => EventBackend m r TxBroadcasterSelector
-                      -> WalletArgs
+                      -> WalletClient
                       -> DB.ProfileId
                       -> RunIDV1
                       -> m DB.L1CertificationDTO
-createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCertification \ev -> do
+createL1Certification eb wc profileId rid@RunID{..} = withEvent eb CreateCertification \ev -> do
   addField ev (CreateCertificationRunID rid)
 
   -- getting required profile information before further processing
@@ -77,7 +77,7 @@ createL1Certification eb wargs profileId rid@RunID{..} = withEvent eb CreateCert
                     (profile.twitter) uri dappVersion
 
   -- broadcast the certification
-  tx@Wallet.TxResponse{..} <- Wallet.broadcastTransaction wargs Nothing 1304 certificate
+  tx@Wallet.TxResponse{..} <- Wallet.broadcastTx wc Nothing 1304 certificate
     >>= eitherToError show
   addField ev (CreateCertificationTxResponse tx)
 

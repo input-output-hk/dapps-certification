@@ -148,3 +148,18 @@ executable plutus-certification-client
   main-is: Main.hs
   hs-source-dirs: client
   default-language: Haskell2010
+
+test-suite plutus-certification-test
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:
+    ProfileWalletSpec
+    ProfileWallet.Data
+  build-depends:
+      base >= 4.14.3 && < 4.18
+    , hspec
+    , plutus-certification
+    , dapps-certification-persistence
+    , text
+    , raw-strings-qq

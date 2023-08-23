@@ -30,9 +30,6 @@ import Plutus.Certification.CertificationBroadcaster
 import Observe.Event.Render.JSON
 import Control.Exception
 import Observe.Event.Crash
-
-import qualified IOHK.Certification.Persistence as DB
-
 import Data.Function (on)
 import Data.UUID (UUID)
 import Control.Monad.Except
@@ -46,6 +43,10 @@ import Observe.Event.BackendModification (setAncestor)
 import Plutus.Certification.ProfileWallet
 import Data.IORef
 import Data.Word (Word64)
+import qualified Data.HashSet as HashSet
+
+import qualified Plutus.Certification.WalletClient as Wallet
+import qualified IOHK.Certification.Persistence as DB
 
 data InitializingField
   = WalletArgsField WalletArgs
@@ -178,23 +179,31 @@ monitorWalletTransactions eb args minAssignmentAmount refAssignments = withEvent
   -- fetch the list of transactions from the wallet
   -- TODO: fetch only the transactions that are not in the database
   -- or starting from the first pending transaction
-  transactions <- getTransactionList args >>= handleResponse
+  transactions <-  getTransactionList wc >>= handleResponse
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions transactions
   activateSubscriptions (subEventBackend ev)
   -- synchronize wallets
+  isOurAddress <- getIsOurAddress
   liftIO (readIORef refAssignments)
-    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) args minAssignmentAmount
+    >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) wc isOurAddress minAssignmentAmount
     >>= liftIO . writeIORef refAssignments
 
-  certifyRuns (subEventBackend ev) args
+  certifyRuns (subEventBackend ev) wc
   where
+    wc :: WalletClient
+    wc = realClient args
     -- handle the response from the wallet
-    -- TODO: crash the server if the connection with the wallet is lost
     handleResponse (Left err) = do
-      liftIO $ putStrLn $ "Error while fetching transactions: " ++ show err
-      return []
+      throwError (userError $ "Error while fetching transactions: " ++ show err)
     handleResponse (Right transactions) = return transactions
+    getIsOurAddress = do
+      resp <- liftIO $ Wallet.getWalletAddresses wc Nothing
+      case resp of
+        Left err -> throwError (userError $ "Error while fetching addresses: " ++ show err)
+        Right addresses -> do
+          let set = HashSet.fromList $ map addressId addresses
+          return $ \addr -> HashSet.member addr set
 
 type CertificationProcess m = DB.ProfileId -> UUID -> m DB.L1CertificationDTO
 
@@ -202,9 +211,9 @@ type CertificationProcess m = DB.ProfileId -> UUID -> m DB.L1CertificationDTO
 -- and have not been certified yet
 certifyRuns :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
             => EventBackend m r SynchronizerSelector
-            -> WalletArgs
+            -> WalletClient
             -> m ()
-certifyRuns eb args = do
+certifyRuns eb wc = do
   -- fetch the list of runs from the database
   runs <- withDb DB.getRunsToCertify
 
@@ -216,7 +225,7 @@ certifyRuns eb args = do
   forM_ runsByProfile $ certifyProfileRuns certificationProcess
   where
   certificationProcess a b = createL1Certification
-    ( narrowEventBackend InjectTxBroadcaster eb ) args a (RunID b)
+    ( narrowEventBackend InjectTxBroadcaster eb ) wc a (RunID b)
 
 activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
                       => EventBackend m r SynchronizerSelector

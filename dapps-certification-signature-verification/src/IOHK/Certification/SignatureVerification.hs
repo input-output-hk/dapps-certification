@@ -9,6 +9,7 @@ module IOHK.Certification.SignatureVerification
   , encodeHex
   , decodeHex
   , bech32AddressHash
+  , HashError(..)
   ) where
 
 import IOHK.Certification.SignatureVerification.CBOR as CBOR
