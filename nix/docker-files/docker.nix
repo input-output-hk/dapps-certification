@@ -1,7 +1,7 @@
 { inputs', pkgs, l, ... }: let
     imgAttributes = {
       name = "plutus-certification";
-      tag = "12";
+      tag = "13";
     };
     nixConfig = ''
         trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
@@ -31,6 +31,8 @@
         ${addParameter "use-whitelist" "USE_WHITELIST"}
         ${addParameter "port" "PORT"}
         ${addParameter "db-path" "DB_PATH"}
+        ${addParameter "min-amount-for-address-reservation" "MIN_AMOUNT_FOR_ADDRESS_RESERVATION"}
+
         if [ -n "$JWT_SECRET" ];
         then
             args="$args --jwt-secret $JWT_SECRET"
@@ -132,6 +134,7 @@ rec {
           ${addEnvVar "UNSAFE_PLAIN_ADDRESS_AUTH"}
           ${addEnvVar "PORT"}
           ${addEnvVar "DB_PATH"}
+          ${addEnvVar "MIN_AMOUNT_FOR_ADDRESS_RESERVATION"}
 
           if [[ -z "$PORT" ]]; then
             export PORT=9671
