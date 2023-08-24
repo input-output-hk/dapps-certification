@@ -7,4 +7,5 @@
  JWT_SECRET2=secret \
  DB_PATH=./db/certification2.sqlite \
  PORT=80 \
+ MIN_AMOUNT_FOR_ADDRESS_RESERVATION=1000000 \
  nix run .#dockerApps.runDockerImage

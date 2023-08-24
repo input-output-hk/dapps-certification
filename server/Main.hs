@@ -90,7 +90,7 @@ data Args = Args
   , github :: !GitHubArgs
   , bypassSubscriptionValidation :: !Bool
   , dbPath :: !FilePath
-  , minAmountForAddressAssessment :: !Word64
+  , minAmountForAddressAssignment :: !Word64
   }
 
 data GitHubArgs = GitHubArgs
@@ -166,9 +166,11 @@ argsParser =  Args
      <> Opts.value "./certification.sqlite"
       )
   <*> option auto
-      ( long "min-amount-for-address-assessment"
+      ( long "min-amount-for-address-reservation"
      <> metavar "MIN_AMOUNT"
-     <> help "the minimum amount of Lovelace required to perform an address assessment"
+     <> help ( "the minimum amount of Lovelace required to perform an address reservation. "
+            <> "CAUTION: don't use different values once one was chosen, as this will affect the previously reserved addresses too"
+             )
      <> showDefault
      <> Opts.value oneAda
       )
@@ -493,7 +495,7 @@ main = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor
             (narrowEventBackend InjectSynchronizer eb) scheduleCrash
-            (args.wallet) ref 10 (args.minAmountForAddressAssessment)
+            (args.wallet) ref 10 (args.minAmountForAddressAssignment)
             (WithDBWrapper (withDb' (args.dbPath)) )
     pure ref
   serverArgs args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
