@@ -21,7 +21,7 @@ import Control.Concurrent (threadDelay)
 import Data.Time (UTCTime)
 import Data.ByteString (toStrict)
 import Data.Text.Encoding (decodeUtf8)
-import Control.Monad.Catch (MonadMask)
+import Control.Monad.Catch (MonadMask, catchAll)
 import Data.List (groupBy)
 import Plutus.Certification.API.Routes (RunIDV1(..))
 import Plutus.Certification.CoinGeckoClient
@@ -51,7 +51,7 @@ import qualified IOHK.Certification.Persistence as DB
 data InitializingField
   = WalletArgsField WalletArgs
   | DelayField Int
-  | ErrorField IOException
+  | ErrorField SomeException
 
 data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
@@ -297,11 +297,11 @@ startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds minAs
     addField ev $ DelayField delayInSeconds
     -- TODO maybe a forkIO here will be better than into the calling function
     -- hence, now, the parent instrumentation event will never terminate
-    catchError
+    catchAll
       (doWork ev)
       (catchAndCrash ev)
   where
-    catchAndCrash ev e = do
+    catchAndCrash ev (e :: SomeException) = do
         addField ev (ErrorField e)
         let mods = setAncestor $ reference ev
         schedule scheduleCrash mods
