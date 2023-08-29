@@ -1,10 +1,6 @@
 dist-newstyle
 result
 
-react-web/coverage
-react-web/node_modules
-react-web/build
-
 flake
 .vim/
 .pre-commit-config.yaml
@@ -13,7 +9,6 @@ tags
 docker/
 Makefile
 *.sqlite
-react-web/node_modules/
 .pre-commit-config.yaml
 *.ignore.*
 todo.txt
