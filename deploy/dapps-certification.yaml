@@ -16,6 +16,8 @@ spec:
             value: http://localhost:8090
           - name: WALLET_CERTIFICATION_PRICE
             value: "1000000"
+          - name: MIN_AMOUNT_FOR_ADDRESS_RESERVATION
+            value: "1000000"
           - name: PORT
             value: "80"
           - name: WALLET_PASSPHRASE
@@ -25,7 +27,7 @@ spec:
                 name: the-secrets
           - name: DB_PATH
             value: "/db/certification.sqlite"
-        image: ghcr.io/demoiog/plutus-certification:12
+        image: ghcr.io/demoiog/plutus-certification:13
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
