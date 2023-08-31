@@ -1,5 +1,5 @@
 { plutus-apps, dapps-certification, repo, ... }: let
-  origProject = repo.iog.dapp;
+  origProject = repo.iog.x86_64-linux.dapp;
 
   inherit (origProject) pkgs;
 
