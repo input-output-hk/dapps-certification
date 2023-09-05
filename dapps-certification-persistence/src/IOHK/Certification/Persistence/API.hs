@@ -417,14 +417,16 @@ addInitialData = void $ do
   let usdPrice = 2
   -- TODO: subscription duration should be configurable
   let developer =
-        [ Tier def "Standard" "Minimal Features to get L1 certificate"
-          "This tier is perfect for developers who are just starting out with securing their software.\
-          \ With this tier, you will have access to our basic features, which will help you get a L1 certificate."
+        [ Tier def "Standard" "All Testing Features"
+          "This tier is suited for developers that want to test one DApp.\
+          \ With this tier, you will have access to our testing tool and all its features as described in the documentation."
           Developer usdPrice 365 True ]
       auditor  =
-        [Tier def "Standard" "All Features and customizations + upload of a report on chain"
-         "This tier is perfect for auditors who want full access to all of our features.\
-         \ With this tier, you will have access to our full suite of tools, which will help you ensure that your clients' software is fully compliant with industry standards."
+        [Tier def "Standard" "All Testing Features \
+        \and CIP-0096 formatting of Reports "
+         "This tier is suited for auditors who want to test multiple DApps and format reports to be CIP-0096 compliant.\
+         \ With this tier, you will have access to our testing tool and all its features as described in the documentation.\
+         \ You will also be able to format your reports to be CIP-0096 compliant."
         Auditor usdPrice 365 True]
   developerId <- insertWithPK tiers developer
   auditorId <- insertWithPK tiers auditor
