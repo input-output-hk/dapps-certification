@@ -1,4 +1,5 @@
 #UNSAFE_PLAIN_ADDRESS_AUTH=1 \
+NIX_CONFIG="system = x86_64-linux" \
  WALLET_ADDRESS=addr_test1qphgqts20fhx0yx7ug42xehcnryukchy5k7hpaksgxax2fzt5w2gu33s8wrw3c9tjs97dr5pulsvf39e56v7c9ar39asptcrtp \
  WALLET_ID=73857344a0cf884fe044abfe85660cc9a81f6366 \
  WALLET_PASSPHRASE=test123456 \

@@ -161,5 +161,7 @@ test-suite plutus-certification-test
     , hspec
     , plutus-certification
     , dapps-certification-persistence
+    , dapps-certification-signature-verification
     , text
     , raw-strings-qq
+    , aeson

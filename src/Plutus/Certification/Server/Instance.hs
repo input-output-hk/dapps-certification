@@ -423,7 +423,11 @@ server ServerArgs{..} = NamedAPI
     eb = serverEventBackend
     verifySignature key signature address =
       let res = verifyCIP30Signature key signature Nothing (Just $ Bech32Address address)
-      in either (\err ->throwError err403 { errBody = LSB.pack err}) (const $ pure ()) res
+      in either (\err -> throwError err401 { errBody = LSB.pack err })
+        pure $ case res of
+          Left err -> Left err
+          Right False -> Left  "Signature verification failed"
+          Right True -> Right ()
 
     whenJWTProvided handler = case jwtArgs of
       Nothing -> throwError err404
