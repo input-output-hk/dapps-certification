@@ -56,9 +56,12 @@ fromDbTransactionSpec =
                 False
             ]
       let resp = fromDbTransaction isOurAddress 0 tx entries
+      payer' <- case mkPatternedText payer :: Either String ProfileWalletAddress of
+            Right x -> pure x
+            Left _ -> fail "Failed to create ProfileWalletAddress"
       resp `shouldBe`
         Right (DesignatedPayment
-                (ProfileAddress payer)
+                payer'
                 (WalletAddress walletAddress)
                 (fromIntegral amount))
 

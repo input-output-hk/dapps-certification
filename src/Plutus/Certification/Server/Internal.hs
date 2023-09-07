@@ -170,10 +170,8 @@ renderRunIDV1 rid = ("run-id",toJSON rid)
 renderProfileId :: RenderFieldJSON DB.ProfileId
 renderProfileId pid = ("profile-id",toJSON (show pid))
 
-newtype UserAddress = UserAddress { unUserAddress :: Text}
-
-type instance AuthServerData (AuthProtect "public-key") = (DB.ProfileId,UserAddress)
-type instance AuthServerData (AuthProtect "jwt-token") = (DB.ProfileId,UserAddress)
+type instance AuthServerData (AuthProtect "public-key") = (DB.ProfileId,ProfileWalletAddress)
+type instance AuthServerData (AuthProtect "jwt-token") = (DB.ProfileId,ProfileWalletAddress)
 
 toDbStatus :: RunStatusV1 -> DB.Status
 toDbStatus (Finished _)= DB.Succeeded
@@ -237,18 +235,19 @@ consumeRuns = await >>= \case
 ensureProfile :: forall m env. ( MonadIO m , MonadError ServerError m, MonadMask m
                                , MonadReader env m, HasDb env
                                )
-              => ByteString -> m (DB.ProfileId,UserAddress)
+              => ByteString -> m (DB.ProfileId,ProfileWalletAddress)
 ensureProfile bs = do
-  let address' = decodeUtf8 bs
-  profileIdM <- getProfileFromDb
-  case profileIdM of
-    Just pid -> pure (pid, UserAddress address')
-    Nothing -> do
-      pidM <- withDb $ DB.upsertProfile
-        (DB.Profile undefined address' Nothing Nothing Nothing Nothing Nothing Nothing)
-        Nothing
-      case pidM of
-        Nothing -> throw $ err500 { errBody = "Profile couldn't be created" }
-        Just pid -> pure (pid,UserAddress address')
+  case DB.mkPatternedText (decodeUtf8 bs) of
+    Left err -> throwError $ err400 { errBody = BS.fromStrict $ BS.pack err }
+    Right address' -> do
+      profileIdM <- withDb $ DB.getProfileId address'
+      ensureProfile' profileIdM address'
   where
-  getProfileFromDb = withDb $ DB.getProfileId (decodeUtf8 bs)
+  ensureProfile'  (Just pid) address' = pure (pid, address')
+  ensureProfile'  Nothing address' = do
+    pidM <- withDb $ DB.upsertProfile
+      (DB.Profile undefined address' Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+      Nothing
+    case pidM of
+      Nothing -> throwError $ err500 { errBody = "Profile couldn't be created" }
+      Just pid -> pure (pid, address')

@@ -48,15 +48,15 @@ import Data.List as List
 import IOHK.Certification.Persistence (FeatureType(..))
 import Plutus.Certification.ProfileWallet as PW
 import Data.Functor
+import Plutus.Certification.Metadata
+import Control.Monad.Reader (ReaderT(runReaderT))
+import Control.Concurrent (MVar, takeMVar, putMVar)
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
-import Plutus.Certification.Metadata
-import Control.Monad.Reader (ReaderT(runReaderT))
-import Control.Concurrent (MVar, takeMVar, putMVar)
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -65,7 +65,6 @@ hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   , abortRuns = \mods -> nt . abortRuns mods
   , getLogs = \mods act -> transPipe nt . getLogs mods act
   }
-
 
 data GitHubCredentials = GitHubCredentials
   { githubClientId :: !Text
@@ -108,7 +107,7 @@ server :: ( MonadMask m
           , MonadError ServerError m
           -- constraint for the auth server data to be equal to the tuple
           -- of profile id and user address
-          , AuthServerData (AuthProtect auth) ~ (DB.ProfileId,UserAddress)
+          , AuthServerData (AuthProtect auth) ~ (DB.ProfileId,DB.ProfileWalletAddress)
           )
        => ServerArgs m r
        -> ServerT (API auth) m
@@ -158,9 +157,9 @@ server ServerArgs{..} = NamedAPI
            now <- getNow
            void $ withDb $ DB.markAsAborted uuid now
       pure NoContent
-  , getProfileBalance = \(profileId,UserAddress{..}) -> withEvent eb GetProfileBalance \ev -> do
+  , getProfileBalance = \(profileId,ownerAddress) -> withEvent eb GetProfileBalance \ev -> do
       addField ev profileId
-      fromMaybe 0 <$> withDb (DB.getProfileBalance unUserAddress)
+      fromMaybe 0 <$> withDb (DB.getProfileBalance ownerAddress)
   , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do
       addField ev rid
       let dropCond = case afterM of
@@ -173,20 +172,18 @@ server ServerArgs{..} = NamedAPI
         .| (dropWhileC dropCond >> sinkList)
   , getRuns = \(profileId,_) afterM countM ->
       withDb $ DB.getRuns profileId afterM countM
-  , updateCurrentProfile = \(profileId,UserAddress ownerAddress) ProfileBody{..} -> do
+  , updateCurrentProfile = \(profileId,ownerAddress)
+      (ProfileBody profile dapp) -> do
+
       let dappId = profileId
-          website' = fmap (Text.pack . showBaseUrl) website
-          twitter' = fmap unTwitter twitter
-          dappM = fmap (\DAppBody{..} -> DB.DApp{
-            dappId, dappName,dappOwner,dappVersion,dappRepo,
-            dappGitHubToken = fmap (ghAccessTokenToText . unApiGitHubAccessToken) dappGitHubToken
-          }) dapp
+          -- replace dappId from the serialization
+          dappM = fmap (\(DB.DApp{dappId=_,..}) -> DB.DApp{..}) dapp
+          -- replace profileId and ownerAddress from the serialization
+          DB.Profile{ownerAddress=_,profileId=_,..} = profile
       withDb $ do
-        _ <- DB.upsertProfile (DB.Profile
-                { website=website'
-                , twitter=twitter'
-                , linkedin=fmap unLinkedIn linkedin
-                ,..}) dappM
+        --NOTE: ownerAddress is get from the JWT token
+        --not from the request body
+        _ <- DB.upsertProfile (DB.Profile{..}) dappM
 
         -- it's safe to call partial function fromJust
         fromJust <$> DB.getProfile profileId
@@ -248,12 +245,11 @@ server ServerArgs{..} = NamedAPI
       -- verify whitelist
       verifyWhiteList serverWhitelist address
       -- ensure the profile exists
-      (pid,UserAddress userAddress) <- runDbReader (ensureProfile $ encodeUtf8 address)
+      (pid,userAddress) <- runDbReader (ensureProfile $ encodeUtf8 address)
       --verify the wallet signature validation
       verifySignature key signature address
       -- verify the message timestamp
       verifyMessageTimeStamp signature
-
 
       let -- minimum between the expiration time and the jwtExpirationSeconds
           expiration' = maybe jwtExpirationSeconds (min jwtExpirationSeconds) expiration
@@ -469,7 +465,7 @@ server ServerArgs{..} = NamedAPI
       fref <- eitherToServerError
         err400 LSB.pack
         (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
-      pure (fref,knownGhAccessTokenFromText <$> dappGitHubToken)
+      pure (fref,dappGitHubToken)
 
     forbidden str = throwError $ err403 { errBody = str}
 

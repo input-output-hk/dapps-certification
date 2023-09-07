@@ -50,10 +50,10 @@ library
     temporary,
     jwt ^>=0.11.0,
     unordered-containers,
-    regex-compat,
     vector,
     http-conduit,
     cryptonite,
+    insert-ordered-containers,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -143,7 +143,6 @@ executable plutus-certification-client
     http-types ^>= 0.12.3,
     dapps-certification-helpers,
     base16-bytestring,
-    regex-compat,
     plutus-certification
   main-is: Main.hs
   hs-source-dirs: client
@@ -155,7 +154,12 @@ test-suite plutus-certification-test
   hs-source-dirs: test
   other-modules:
     ProfileWalletSpec
+    PatternSpec
+    JSONSpec
     ProfileWallet.Data
+    Instances.Persistence
+    Utils.JSON
+
   build-depends:
       base >= 4.14.3 && < 4.18
     , hspec
@@ -164,4 +168,7 @@ test-suite plutus-certification-test
     , dapps-certification-signature-verification
     , text
     , raw-strings-qq
+    , QuickCheck
     , aeson
+    , aeson-pretty
+    , bytestring

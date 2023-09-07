@@ -50,7 +50,7 @@ import Plutus.Certification.API
 import Plutus.Certification.Cache
 import Plutus.Certification.Client
 import Plutus.Certification.Server
-import IOHK.Certification.Interface (ghAccessTokenToText)
+import IOHK.Certification.Interface ()
 
 ciceroClient :: forall m . HasClient m Cicero.API => Client m Cicero.API
 ciceroClient = cicero `clientIn` m
@@ -91,11 +91,10 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
       where
         backend' = modifyEventBackend mods backend
         uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet
-        textGhAccessTokenM =  fmap ghAccessTokenToText ghAccessTokenM
         req = ciceroClient.fact.create $ Cicero.Fact.CreateFact
           { fact = [aesonQQ| { "plutus-certification/generate-flake":
             { "ref": #{uriToString id uri ""}
-            , "ghAccessToken": #{textGhAccessTokenM}
+            , "ghAccessToken": #{ghAccessTokenM}
             } } |]
           , artifact = Nothing
           }
@@ -137,7 +136,7 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
         )
       yieldMany sorted .| mapC snd .| getLogs'
       where
-        actionTypeCond (Known actionType) = isNothing actionTypeM || (Just actionType) == actionTypeM
+        actionTypeCond (Known actionType) = isNothing actionTypeM || Just actionType == actionTypeM
         actionTypeCond Unknown = False
 
         getLogs' :: ConduitT Cicero.Run.RunID Cicero.Run.RunLog m ()
@@ -151,7 +150,7 @@ ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
         actionTypeAndRunId :: Cicero.Run.RunV2 -> m (ActionType,Cicero.Run.RunID)
         actionTypeAndRunId r = do
           inv <- runClientOrDie clientCaps eb $ ciceroClient.invocation.get r.invocationId
-          (,r.nomadJobId) . getActionType <$> (runClientOrDie clientCaps eb $ ciceroClient.action.get inv.actionId)
+          (,r.nomadJobId) . getActionType <$> runClientOrDie clientCaps eb (ciceroClient.action.get inv.actionId)
         eb = modifyEventBackend mods backend
         rid' = Cicero.Fact.FactID $ rid.uuid
     status eb = await >>= \case

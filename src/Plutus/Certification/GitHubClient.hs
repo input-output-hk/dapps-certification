@@ -5,8 +5,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedLists #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Plutus.Certification.GitHubClient
   ( getCommitInfo
   , Author(..)
@@ -135,7 +133,7 @@ instance FromJSON Author
 
 type RepoAPI = "repos"
          :> Header "User-Agent" Text
-         :> Header "Authorization" GitHubAccessToken
+         :> Header "Authorization" GitHubAccessTokenWrapper
          :> Capture "owner" Text
          :> Capture "repo" Text
          :> (  "branches" :> Capture "branch" Text :> Get '[JSON] BranchResponse
@@ -150,16 +148,18 @@ api = Proxy
 type Repo = Text
 type Owner = Text
 
-mkRepoClient :: Maybe GitHubAccessToken
-         -> Repo
-         -> Owner
-         -> (Text -> ClientM BranchResponse)
-          :<|> (Text -> ClientM Commit)
-          :<|> ClientM RepositoryInfo
-mkRepoClient = client api (Just "")
+newtype GitHubAccessTokenWrapper = GitHubAccessTokenWrapper { unwrapToken :: GitHubAccessToken }
 
-instance ToHttpApiData GitHubAccessToken where
-  toUrlPiece = ("Bearer " <>) . ghAccessTokenToText
+mkRepoClient :: Maybe GitHubAccessToken
+             -> Repo
+             -> Owner
+             -> (Text -> ClientM BranchResponse)
+              :<|> (Text -> ClientM Commit)
+              :<|> ClientM RepositoryInfo
+mkRepoClient token = client api (Just "") (GitHubAccessTokenWrapper <$> token)
+
+instance ToHttpApiData GitHubAccessTokenWrapper where
+  toUrlPiece = ("Bearer " <>) . pack . show . unwrapToken
 
 githubApiBaseUrl :: BaseUrl
 githubApiBaseUrl = BaseUrl Https "api.github.com" 443 ""
@@ -246,7 +246,7 @@ instance ToSchema AccessTokenGenerationResponse where
    declareNamedSchema _ = do
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     textSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe Text))
-    return $ NamedSchema (Just "Profile") $ mempty
+    return $ NamedSchema (Just "AccessTokenGenerationResponse") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
           [ ("access_token", textSchema)
@@ -257,7 +257,7 @@ instance ToSchema AccessTokenGenerationResponse where
 
 instance ToJSON AccessTokenGenerationResponse where
   toJSON (AccessTokenGenerationResponse accessToken' tokenType' scope') =
-    object [ "access_token" .= ghAccessTokenToText accessToken'
+    object [ "access_token" .= show accessToken'
            , "token_type" .= tokenType'
            , "scope" .= scope'
            ]

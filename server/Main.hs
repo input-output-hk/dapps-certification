@@ -59,7 +59,6 @@ import Control.Concurrent (forkIO)
 import IOHK.Certification.Actions
 import Plutus.Certification.JWT
 import Data.Int
-import IOHK.Certification.Persistence (toId)
 import Plutus.Certification.ProfileWallet
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
@@ -323,12 +322,12 @@ renderRoot OnAuthMode =
 
 -- | plain address authentication
 -- NOTE: this is for testing only, and should not be used in production
-plainAddressAuthHandler :: WithDB -> Maybe Whitelist -> AuthHandler Request (DB.ProfileId,UserAddress)
+plainAddressAuthHandler :: WithDB -> Maybe Whitelist -> AuthHandler Request (DB.ProfileId,ProfileWalletAddress)
 plainAddressAuthHandler withDb whitelist = mkAuthHandler handler
   where
   handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
           => Request
-          -> m (DB.ProfileId, UserAddress)
+          -> m (DB.ProfileId, ProfileWalletAddress)
   handler req = do
      bs <- either throw401 pure $ extractAddress req
      verifyWhiteList whitelist (decodeUtf8 bs)
@@ -339,12 +338,12 @@ plainAddressAuthHandler withDb whitelist = mkAuthHandler handler
 -- | JWT authentication
 jwtAuthHandler :: Maybe Whitelist
                -> String
-               -> AuthHandler Request (DB.ProfileId,UserAddress)
+               -> AuthHandler Request (DB.ProfileId,ProfileWalletAddress)
 jwtAuthHandler whitelist secret = mkAuthHandler handler
   where
   handler :: (MonadError ServerError m,MonadIO m,MonadMask m)
           => Request
-          -> m (DB.ProfileId, UserAddress)
+          -> m (DB.ProfileId, ProfileWalletAddress)
   handler req = case lookup "Authorization" $ requestHeaders req of
     Just authHeader -> do
       let jwtToken = extractToken authHeader
@@ -357,14 +356,18 @@ jwtAuthHandler whitelist secret = mkAuthHandler handler
             JWTClaimsVerificationFailure -> "JWT claims verification failure"
             JWTDefaultKeyDecodingFailure err' -> "JWT default key decoding failure " <> err'
             JWTExpirationMissing -> "JWT expiration missing"
-        Right ((pid,addr),expiration) -> do
-          -- verify expiration
-          now <- liftIO getCurrentTime
-          -- verify if the address is whitelisted
-          verifyWhiteList whitelist addr
-          -- compare the expiration time with the current time
-          when (now > expiration) $ throw401 "JWT token expired"
-          pure (toId pid, UserAddress addr)
+
+        Right ((pid,textAddress),expiration)
+          | Right addr <- DB.mkPatternedText textAddress -> do
+            -- verify expiration
+            now <- liftIO getCurrentTime
+            -- verify if the address is whitelisted
+            verifyWhiteList whitelist textAddress
+            -- compare the expiration time with the current time
+            when (now > expiration) $ throw401 "JWT token expired"
+            pure (toId pid, addr)
+          | otherwise -> throw401 "Invalid address"
+
     Nothing -> throw401 "Missing Authorization header"
   extractToken =
     let isSpace = (== ' ')
@@ -381,7 +384,7 @@ throw401 msg = throwError $ err401 { errBody = msg }
 genAuthServerContext :: WithDB
                      -> Maybe Whitelist
                      -> Maybe JWTConfig
-                     -> Context (AuthHandler Request (DB.ProfileId,UserAddress) ': '[])
+                     -> Context (AuthHandler Request (DB.ProfileId,ProfileWalletAddress) ': '[])
 genAuthServerContext withDb whitelist mSecret = (case mSecret of
   Nothing -> plainAddressAuthHandler withDb whitelist
   Just JWTConfig{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext

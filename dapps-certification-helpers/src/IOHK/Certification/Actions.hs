@@ -307,7 +307,7 @@ lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> 
                        ] ++ accessTokenToArg ghAccessTokenM
 
 accessTokenToArg :: Maybe GitHubAccessToken -> [[Char]]
-accessTokenToArg = maybe [] \token -> ["--access-tokens", "github.com="++ T.unpack (ghAccessTokenToText token)]
+accessTokenToArg = maybe [] \token -> ["--access-tokens", "github.com="++ show token]
 
 gitHubAccessTokenReader :: ReadM GitHubAccessToken
 gitHubAccessTokenReader = do
@@ -364,12 +364,12 @@ data LaunchField
   = forall stdin stdoutIgnored stderrIgnored . LaunchConfig !(ProcessConfig stdin stdoutIgnored stderrIgnored)
   | LaunchingPid !Pid
 
-ghAccessFlexibleTokenPattern = "gh[oprst]_[A-Za-z0-9]+"
+--ghAccessFlexibleTokenPattern = "gh[oprst]_[A-Za-z0-9]+"
 
 renderLaunchField :: RenderFieldJSON LaunchField
 renderLaunchField (LaunchConfig cfg) = ("launch-config", toJSON redactedCfgString)
   where
-  redactGitHubAccess = subRegex (mkRegex ghAccessFlexibleTokenPattern)
+  redactGitHubAccess = subRegex (mkRegex (T.unpack ghAccessTokenPattern))
   redactedCfgString = redactGitHubAccess (show cfg) "<<REDACTED>>"
 renderLaunchField (LaunchingPid pid) = ("launched-pid", toJSON $ toInteger pid)
 
@@ -462,7 +462,7 @@ data ParseSHA1HashError
 data LockException = DecodeMeta !JSONPath !String
 
 instance Show LockException where
-  show (DecodeMeta path str) = "decoding metadata: " ++ formatError path str
+  show (DecodeMeta path str') = "decoding metadata: " ++ formatError path str'
 
 instance ToJSON LockException where
   toJSON (DecodeMeta path msg) = object
@@ -493,14 +493,14 @@ data BuildException = DecodeBuild !JSONPath !String
                     | ExtraBuilds !Int
 
 instance Show BuildException where
-  show (DecodeBuild path str) = "decoding nix build output: " ++ formatError path str
+  show (DecodeBuild path str') = "decoding nix build output: " ++ formatError path str'
   show (MissingOut path) = "missing output 'out' of drv " ++ path
   show (ExtraBuilds ct) = "found " ++ show ct ++ " extra builds"
 
 instance ToJSON BuildException where
-  toJSON (DecodeBuild path str) = object
+  toJSON (DecodeBuild path str') = object
     [ "render-build-exception" .= object
-      [ "msg" .= str
+      [ "msg" .= str'
       , "json-path" .= (renderElement <$> path)
       , "type" .= String "decode-build"
       ]
@@ -517,9 +517,9 @@ instance ToJSON BuildException where
       , "type" .= String "extra-builds"
       ]
     ]
-  toEncoding (DecodeBuild path str) = pairs
+  toEncoding (DecodeBuild path str') = pairs
     ( "render-build-exception" .= object
-      [ "msg" .= str
+      [ "msg" .= str'
       , "json-path" .= (renderElement <$> path)
       , "type" .= String "decode-build"
       ]

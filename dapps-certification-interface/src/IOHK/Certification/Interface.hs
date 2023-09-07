@@ -3,16 +3,21 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedStrings         #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DeriveDataTypeable        #-}
 module IOHK.Certification.Interface where
 
 import GHC.Generics
+import Data.Data
 import Control.Applicative
 import Data.Aeson hiding (Success, Error)
 import Data.Aeson.Encoding
 import Data.Text as Text hiding (index)
 import Data.Swagger
 import Data.Char (isAlphaNum)
+import Control.Lens hiding ((.=))
+
+import qualified Data.Swagger.Lens as SL
 
 -- | Renderable certification task names.
 data CertificationTaskName
@@ -132,11 +137,49 @@ data GitHubAccessTokenType
   | UserToServerToken
   | ServerToServerToken
   | RefreshToken
-  deriving (Eq, Generic)
+  deriving (Data, Eq, Generic)
+
+instance Show GitHubAccessTokenType where
+  show PersonalToken       = "ghp"
+  show OAuthToken          = "gho"
+  show UserToServerToken   = "ghu"
+  show ServerToServerToken = "ghs"
+  show RefreshToken        = "ghr"
+
+parseGitHubAccessTokenType :: String -> Either String GitHubAccessTokenType
+parseGitHubAccessTokenType "ghp" = Right PersonalToken
+parseGitHubAccessTokenType "gho" = Right OAuthToken
+parseGitHubAccessTokenType "ghu" = Right UserToServerToken
+parseGitHubAccessTokenType "ghs" = Right ServerToServerToken
+parseGitHubAccessTokenType "ghr" = Right RefreshToken
+parseGitHubAccessTokenType _ = Left "invalid access token type"
+
 data GitHubAccessToken = GitHubAccessToken
   { ghAccessTokenPrefix :: GitHubAccessTokenType
   , ghAccessTokenSuffix :: Text
-  } deriving (Eq, Generic)
+  } deriving (Data, Eq, Generic)
+
+instance ToJSON GitHubAccessToken where
+  toJSON = toJSON . show
+
+instance FromJSON GitHubAccessToken where
+  parseJSON = withText "GitHubAccessToken" $ \token ->
+    case ghAccessTokenFromText token of
+      Left err -> fail err
+      Right t  -> pure t
+
+ghAccessTokenPattern :: Text
+ghAccessTokenPattern = "^gh[oprsu]_[A-Za-z0-9]{36}$"
+
+instance ToSchema GitHubAccessToken where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "GitHubAccessToken") $ mempty
+      & type_ ?~ SwaggerString
+      & SL.pattern ?~ ghAccessTokenPattern
+
+instance Show GitHubAccessToken where
+  -- concat prefx and suffix
+  show (GitHubAccessToken pfx sfx) = show pfx ++ "_" ++ unpack sfx
 
 -- | Parse a GitHub access token.
 -- The token must be of the form "ghA_XXXXX" where
@@ -144,40 +187,12 @@ data GitHubAccessToken = GitHubAccessToken
 ghAccessTokenFromText :: Text -> Either String GitHubAccessToken
 ghAccessTokenFromText t = case Text.splitOn "_" t of
   [pfx, sfx] -> do
-    pfx' <- case pfx of
-      "ghp" -> Right PersonalToken
-      "gho" -> Right OAuthToken
-      "ghu" -> Right UserToServerToken
-      "ghs" -> Right ServerToServerToken
-      "ghr" -> Right RefreshToken
-      _ -> Left "invalid prefix"
+    pfx' <- parseGitHubAccessTokenType (Text.unpack pfx)
     sfx' <- if Text.length sfx == 36 && Text.all isAlphaNum sfx
       then Right sfx
       else Left "invalid suffix"
     Right $ GitHubAccessToken pfx' sfx'
   _ -> Left "invalid token"
-
--- | Parse a GitHub access token without error handling.
--- see 'ghAccessTokenFromText' for details.
--- This function is unsafe because it can throw an error
--- if the token is not known to be valid.
--- To be used only when the token is known to be valid (eg. from the database or a config file)
-knownGhAccessTokenFromText :: Text -> GitHubAccessToken
-knownGhAccessTokenFromText t = case ghAccessTokenFromText t of
-  Left err -> error err
-  Right t' -> t'
-
--- | Render a GitHub access token.
-ghAccessTokenToText :: GitHubAccessToken -> Text
-ghAccessTokenToText (GitHubAccessToken t s) =
-  let prefix' = case t of
-        PersonalToken       -> "ghp"
-        OAuthToken          -> "gho"
-        UserToServerToken   -> "ghu"
-        ServerToServerToken -> "ghs"
-        RefreshToken        -> "ghr"
-  in prefix' <> "_" <> s
-
 
 instance ToSchema TaskResult
 
