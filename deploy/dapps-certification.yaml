@@ -50,6 +50,15 @@ spec:
               resources:
                 requests:
                   storage: 10Gi
+        - type: storage
+          properties:
+            pvc:
+            - name: wallet-db
+              mountPath: /wallet-db
+              storageClassName: ebs-sc
+              resources:
+                requests:
+                  storage: 10Gi
         - type: k8s-update-strategy
           properties:
             strategy:
@@ -81,6 +90,8 @@ spec:
             volumes:
               - name: ipc
                 path: /ipc
+              - name: pvc-wallet-db
+                path: /wallet-db
         - type: sidecar
           properties:
             name: socat
