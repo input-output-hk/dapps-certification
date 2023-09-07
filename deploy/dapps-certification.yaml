@@ -32,6 +32,7 @@ spec:
         imagePullSecrets:
           - iohk-ghcr-creds
         memory: 8Gi
+        cpu: 4
         ports:
           - expose: true
             port: 80
