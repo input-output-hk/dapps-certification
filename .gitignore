@@ -12,3 +12,4 @@ Makefile
 .pre-commit-config.yaml
 *.ignore.*
 todo.txt
+*.pir

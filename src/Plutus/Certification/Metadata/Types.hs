@@ -241,6 +241,7 @@ instance FromJSON CertificationType where
       _ -> fail "action must be AUDIT or CERTIFY"
     certificateIssuer <- o .: "certificateIssuer"
     pure $ CertificationType{..}
+
 data PhantomAction
 
 instance ToSchema PhantomAction where

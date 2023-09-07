@@ -9,8 +9,6 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module IOHK.Certification.Persistence.Structure.Profile where
 
 import           Control.Lens         hiding (index, (.=))
@@ -20,67 +18,78 @@ import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
 import           Data.Int
+import           IOHK.Certification.Persistence.Pattern
 
 --------------------------------------------------------------------------------
--- | Profile 
+-- | Profile
 
 data Profile = Profile
-  { profileId    :: ID Profile   -- TODO: do we need an internal id?
-  , ownerAddress :: Text         -- TODO: type level restrictions might apply in the future
-                                 -- regarding the format
-  , website      :: Maybe Text
-  , vendor       :: Maybe Text
-  , twitter      :: Maybe Text
-  , linkedin     :: Maybe Text
-  , authors      :: Maybe Text
-  , contacts     :: Maybe Text
-  } deriving (Generic, Show)
+  { profileId     :: ID Profile
+  , ownerAddress  :: ProfileWalletAddress
+  , website       :: Maybe Website
+  , twitter       :: Maybe Twitter
+  , linkedin      :: Maybe LinkedIn
+  , email         :: Maybe Email
+  , contactEmail  :: Maybe Email
+  , companyName   :: Maybe Text
+  , fullName      :: Maybe Text
+  } deriving (Generic, Show, Eq)
 
 type ProfileId = ID Profile
 instance ToSchema ProfileId where
   declareNamedSchema _ = declareNamedSchema (Proxy :: Proxy Int64)
 
-instance FromJSON Profile where
-    parseJSON = withObject "Profile" $ \v -> Profile def
-      <$> v .:  "address"
-      <*> v .:? "website"     .!= Nothing
-      <*> v .:? "vendor"      .!= Nothing
-      <*> v .:? "twitter"     .!= Nothing
-      <*> v .:? "linkedin"    .!= Nothing
-      <*> v .:? "authors"     .!= Nothing
-      <*> v .:? "contacts"    .!= Nothing
+--------------------------------------------------------------------------------
+-- | FIELD TYPES
 
 instance ToSchema Profile where
    declareNamedSchema _ = do
+    websiteSchema <- declareSchemaRef (Proxy :: Proxy Website)
+    addressSchema <- declareSchemaRef (Proxy :: Proxy ProfileWalletAddress)
+    linkedInSchema <- declareSchemaRef (Proxy :: Proxy LinkedIn)
+    emailSchema <- declareSchemaRef (Proxy :: Proxy Email)
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
-    textSchemaM <- declareSchemaRef (Proxy :: Proxy (Maybe Text))
+    twitterSchema <- declareSchemaRef (Proxy :: Proxy Twitter)
     return $ NamedSchema (Just "Profile") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
-          [ ("address", textSchema)
-          , ("dapp", textSchemaM)
-          , ("website", textSchemaM)
-          , ("vendor", textSchemaM)
-          , ("twitter", textSchemaM)
-          , ("linkedin", textSchemaM)
-          , ("authors", textSchemaM)
-          , ("contacts", textSchemaM)
-          , ("githubToken", textSchemaM)
+          [ ("address", addressSchema)
+          , ("website", websiteSchema)
+          , ("twitter", twitterSchema)
+          , ("linkedin", linkedInSchema)
+          , ("email", emailSchema)
+          , ("contactEmail", emailSchema)
+          , ("companyName", textSchema)
+          , ("fullName", textSchema)
           ]
-      & required .~ [ "address", "dapp" ]
+      & required .~ [ "address" ]
+
+instance FromJSON Profile where
+    parseJSON = withObject "Profile" $ \v ->
+      Profile . toId
+        <$> v .:? "profileId" .!= (-1)
+        <*> v .:  "address"
+        <*> v .:? "website"
+        <*> v .:? "twitter"
+        <*> v .:? "linkedin"
+        <*> v .:? "email"
+        <*> v .:? "contactEmail"
+        <*> v .:? "companyName"
+        <*> v .:? "fullName"
 
 instance ToJSON Profile where
   toJSON = object . profileJSONPairs
 
 profileJSONPairs :: Profile -> [Pair]
-profileJSONPairs Profile{..} =
-  [ "address" .= ownerAddress
-  , "website" .= website
-  , "vendor" .= vendor
-  , "twitter" .= twitter
-  , "linkedin" .= linkedin
-  , "authors" .= authors
-  , "contacts" .= contacts
+profileJSONPairs Profile{email = email',..} =
+  [ "address"      .= ownerAddress
+  , "website"      .= website
+  , "twitter"      .= twitter
+  , "linkedin"     .= linkedin
+  , "email"        .= email'
+  , "contactEmail" .= contactEmail
+  , "companyName"  .= companyName
+  , "fullName"     .= fullName
   ]
 instance SqlRow Profile
 
@@ -90,4 +99,3 @@ profiles = table "profile"
   , #ownerAddress :- unique
   , #ownerAddress :- index
   ]
-

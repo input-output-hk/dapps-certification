@@ -13,6 +13,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -41,17 +43,17 @@ import Control.Lens hiding ((.=))
 import Plutus.Certification.GitHubClient (RepositoryInfo,AccessTokenGenerationResponse)
 import Control.Arrow (ArrowChoice(left))
 import GHC.TypeLits
-import Servant.Client (BaseUrl)
 import IOHK.Certification.SignatureVerification
   (COSEKey,COSESign1, decodeHex,encodeHex)
-import Data.Char (isAlphaNum)
-import Text.Regex
 import Plutus.Certification.Metadata as Metadata
 import Data.Int
+import Data.HashMap.Strict.InsOrd as HM
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
+import qualified Data.Aeson.KeyMap as KM
+import Data.Either (fromRight)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
@@ -222,18 +224,9 @@ type CreateAuditorReport (auth :: Symbol) = "auditor"
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
 
-instance ToJSON ApiGitHubAccessToken where
-  toJSON = toJSON . ghAccessTokenToText . unApiGitHubAccessToken
-
-instance FromJSON ApiGitHubAccessToken where
-  parseJSON = withText "ApiGitHubAccessToken" $ \token ->
-    case ghAccessTokenFromText token of
-      Left err -> fail err
-      Right t  -> pure $ ApiGitHubAccessToken t
-
 instance ToHttpApiData ApiGitHubAccessToken where
   -- | Convert a 'GitHubAccessToken' to a 'Text' value.
-  toUrlPiece  = ghAccessTokenToText . unApiGitHubAccessToken
+  toUrlPiece  = Text.pack . show . unApiGitHubAccessToken
 
 instance FromHttpApiData ApiGitHubAccessToken where
   -- | Parse a 'GitHubAccessToken' from a 'Text' value.
@@ -320,96 +313,6 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getAdaUsdPrice :: mode :- GetAdaUsdPriceRoute
   , createAuditorReport :: mode :- CreateAuditorReport auth
   } deriving stock Generic
-
-data DAppBody = DAppBody
-  { dappName :: Text
-  , dappOwner :: Text
-  , dappRepo :: Text
-  , dappVersion :: Text
-  , dappGitHubToken :: Maybe ApiGitHubAccessToken
-  } deriving stock Generic
-
-instance FromJSON DAppBody where
-    parseJSON = withObject "DApp" $ \v -> DAppBody
-      <$> v .: "name"
-      <*> v .: "owner"
-      <*> v .: "repo"
-      <*> v .: "version"
-      <*> v .:? "githubToken" .!= Nothing
-
-instance ToJSON DAppBody where
-  toJSON DAppBody{..} = object
-    [ "name" .= dappName
-    , "owner"  .= dappOwner
-    , "repo"  .= dappRepo
-    , "version"  .= dappVersion
-    , "githubToken"  .= dappGitHubToken
-    ]
-
-newtype Twitter = Twitter { unTwitter :: Text }
-
-instance FromJSON Twitter where
-    parseJSON = withText "Twitter" $ \v ->
-      -- validate twitter account regex format ^[A-Za-z0-9_]{1,15}$
-      if not (isTwitterValid v)
-        then fail "Invalid twitter account format"
-        else pure $ Twitter v
-
-isTwitterValid :: Text -> Bool
-isTwitterValid v = not (
-  Text.length v > 15 || Text.length v < 1 || Text.any (\c -> not (isAlphaNum c || c == '_')) v
-  )
-
-instance ToJSON Twitter where
-  toJSON (Twitter v) = String v
-
-instance ToSchema Twitter where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "Twitter") $ mempty
-      & type_ ?~ SwaggerString
-      & SL.pattern ?~ "^[A-Za-z0-9_]{1,15}$"
-
-newtype LinkedIn = LinkedIn { unLinkedIn :: Text }
-
-linkedInProfilePattern :: Text
-linkedInProfilePattern = "^(http(s)?:\\/\\/)?([\\w]+\\.)?linkedin\\.com\\/(pub|in|profile|company)\\/([a-zA-Z0-9_-]+)$"
-
-instance ToSchema LinkedIn where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "LinkedIn") $ mempty
-      & type_ ?~ SwaggerString
-      & SL.pattern ?~ linkedInProfilePattern
-
-instance FromJSON LinkedIn where
-  parseJSON = withText "LinkedIn" $ \v -> do
-    case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) (Text.unpack v) of
-      Just _ -> return (LinkedIn v)
-      Nothing -> fail "Invalid LinkedIn profile URL"
-
-instance ToJSON LinkedIn where
-  toJSON = toJSON . unLinkedIn
-
-data ProfileBody = ProfileBody
-   { dapp :: !(Maybe DAppBody)
-   , website :: !(Maybe BaseUrl)
-   , vendor :: !(Maybe Text)
-   , twitter :: !(Maybe Twitter)
-   , linkedin :: !(Maybe LinkedIn)
-   , authors :: Maybe Text
-   , contacts :: Maybe Text
-   } deriving stock Generic
-
-instance FromJSON ProfileBody where
-    parseJSON = withObject "Profile" $ \v -> ProfileBody
-      <$> v .:? "dapp"      .!= Nothing
-      <*> v .:? "website"   .!= Nothing
-      <*> v .:? "vendor"    .!= Nothing
-      <*> v .:? "twitter"   .!= Nothing
-      <*> v .:? "linkedin"  .!= Nothing
-      <*> v .:? "authors"   .!= Nothing
-      <*> v .:? "contacts"  .!= Nothing
-
-instance ToJSON ProfileBody where
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
 
@@ -612,10 +515,7 @@ instance ToParamSchema ApiGitHubAccessToken where
     -- we use SL qualified because of an issue
     -- of parsing for the hlint. it seems to be
     -- some kind of bug
-    & SL.pattern ?~ ghAccessTokenPattern
-
-ghAccessTokenPattern :: Pattern
-ghAccessTokenPattern = "^gh[oprst]_[A-Za-z0-9]{36}$"
+    & SL.pattern ?~ DB.ghAccessTokenPattern
 
 
 instance ToSchema ApiGitHubAccessToken where
@@ -623,44 +523,8 @@ instance ToSchema ApiGitHubAccessToken where
     return $ NamedSchema (Just "ApiGitHubAccessToken") $ mempty
       & type_ ?~ SwaggerString
       & maxLength ?~ 40
-      & SL.pattern ?~ ghAccessTokenPattern
+      & SL.pattern ?~ DB.ghAccessTokenPattern
 
-instance ToSchema DAppBody where
-  declareNamedSchema _ = do
-    profileSchema <- declareSchema (Proxy :: Proxy DB.DApp)
-    apiGitHubAccessTokenSchema <- declareSchemaRef (Proxy :: Proxy ApiGitHubAccessToken)
-    return $ NamedSchema (Just "DAppBody") $ profileSchema
-        & properties . at "githubToken" ?~ apiGitHubAccessTokenSchema
-
--- | A phantom type for website for swagger schema
-data Website
-
-instance ToSchema Website where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "BaseUrl") $ mempty
-      & type_ ?~ SwaggerString
-      & SL.pattern ?~ baseUrlPattern
-
-baseUrlPattern :: Pattern
-baseUrlPattern = "^[(http(s)?):\\/\\/(www\\.)?a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)$"
-
-instance ToSchema ProfileBody where
-   declareNamedSchema _ = do
-    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
-    dappSchema <- declareSchemaRef (Proxy :: Proxy DAppBody)
-    urlSchema <- declareSchemaRef (Proxy :: Proxy Website)
-    twitterSchema <- declareSchemaRef (Proxy :: Proxy Twitter)
-    return $ NamedSchema (Just "Profile") $ mempty
-      & type_ ?~ SwaggerObject
-      & properties .~
-          [ ("dapp", dappSchema)
-          , ("website", urlSchema)
-          , ("vendor", textSchema)
-          , ("twitter", twitterSchema)
-          , ("linkedin", textSchema)
-          , ("authors", textSchema)
-          , ("contacts", textSchema)
-          ]
 instance ToSchema FlakeRefV1  where
    declareNamedSchema _ = do
     return $ NamedSchema (Just "FlakeRefV1") $ mempty
@@ -692,3 +556,40 @@ instance Enum KnownActionType where
 
 instance Ord KnownActionType where
   a <= b = fromEnum a <= fromEnum b
+
+data ProfileBody = ProfileBody
+  { profile :: !DB.Profile
+  , dapp    :: !(Maybe DB.DApp)
+  } deriving (Show,Eq)
+
+instance ToSchema ProfileBody where
+  declareNamedSchema _ = do
+    profileDtoSchema <- declareSchema (Proxy :: Proxy DB.ProfileDTO)
+    pure $ NamedSchema (Just "ProfileBody") $ profileDtoSchema
+        -- remove address from properties
+        & properties %~ HM.delete "address"
+        -- remove address from required
+        & required %~ Prelude.filter (/= "address")
+
+instance ToJSON ProfileBody where
+  toJSON (ProfileBody p dapp) = Object (x <> y)
+    where
+    address :: DB.ProfileWalletAddress =
+      case DB.mkPatternedText "addr100000000000000000000000000000000000000000000000000000000" of
+         Right addr -> addr
+         Left err   -> error $ "failed to create dummy address: " <> err
+    profile = p { DB.ownerAddress = address }
+    x = KM.fromList [ "dapp" .= dapp ]
+    y = case toJSON profile of
+      Object obj -> obj
+      _          -> KM.empty
+
+instance FromJSON ProfileBody where
+  parseJSON = withObject "ProfileBody" $ \v -> do
+    -- if there isn't an address add a dummy one
+    address <- v .:? "address" .!= ("addr100000000000000000000000000000000000000000000000000000000" :: Text)
+    let v' = KM.insert "address" (toJSON address) v
+    dapp <- v .:? "dapp"
+    ProfileBody
+      <$> parseJSON (Object v')
+      <*> pure dapp

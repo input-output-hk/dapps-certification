@@ -3,6 +3,13 @@ module IOHK.Certification.Persistence
   , MonadSelda
   ) where
 import Database.Selda
+
+import           IOHK.Certification.Interface  as X
+  ( GitHubAccessToken(..)
+  , GitHubAccessTokenType(..)
+  , ghAccessTokenPattern
+  )
+
 import IOHK.Certification.Persistence.Structure.Run as X
   ( Run(..)
   , Status(..)
@@ -16,6 +23,7 @@ import IOHK.Certification.Persistence.Structure.Certification as X
 import IOHK.Certification.Persistence.Structure as X
   ( DApp(..)
   , ProfileDTO(..)
+  , DAppDTO(..)
   , createTables
   , IpfsCid(..)
   , TxId(..)
@@ -33,9 +41,9 @@ import Database.Selda as X
   )
 import IOHK.Certification.Persistence.Structure.Profile as X
   ( ProfileId
-  , authors
   , Profile(..)
   )
+import IOHK.Certification.Persistence.Pattern as X
 import IOHK.Certification.Persistence.Structure.Subscription as X
   ( Subscription(..)
   , SubscriptionId

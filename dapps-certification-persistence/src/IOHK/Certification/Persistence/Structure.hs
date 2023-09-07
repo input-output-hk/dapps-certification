@@ -21,19 +21,23 @@ import           Data.Aeson
 import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
-import           Data.Int
 import           Database.Selda.SqlType as Selda
 import           Control.Exception ( throw)
-import           GHC.OverloadedLabels
-import           Data.Char as Char
 import           Data.Int (Int64)
 
 import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
 import           IOHK.Certification.Persistence.Structure.Certification
 import           IOHK.Certification.Persistence.Structure.Run
+import           IOHK.Certification.Persistence.Pattern
 import           Data.Text hiding (index)
 import           Data.Maybe
+
+import           IOHK.Certification.Interface
+  ( GitHubAccessToken(..)
+  , ghAccessTokenPattern
+  , ghAccessTokenFromText
+  )
 
 import qualified Data.Text         as Text
 import qualified Data.Aeson.KeyMap as KM
@@ -154,11 +158,35 @@ instance FromJSON (ID Profile) where
 instance ToJSON (ID Profile) where
   toJSON = toJSON . show . fromId
 
-data ProfileDTO = ProfileDTO
-  { profile :: Profile
-  , dapp    :: Maybe DApp
-  }
+newtype DAppDTO = DAppDTO { unDAppDTO :: DApp } deriving (Generic, Show, Eq)
 
+instance ToJSON DAppDTO where
+  toJSON (DAppDTO dapp)= case dappGitHubToken dapp of
+    Nothing -> toJSON dapp
+    Just _  -> Object (KM.insert "githubToken" "<<REDACTED>>" obj)
+    where
+    obj = case toJSON dapp of
+      Object obj' -> obj'
+      _ -> error "impossible"
+
+instance FromJSON DAppDTO where
+  parseJSON = withObject "DAppDTO" $ \v -> do
+    -- remove githubToken from the object
+    let v' = KM.delete "githubToken" $ KM.delete "id" v
+    DAppDTO <$> parseJSON (Object v')
+
+instance ToSchema DAppDTO where
+  declareNamedSchema _ = do
+    dappSchema <- declareSchema (Proxy :: Proxy DApp)
+    return $ NamedSchema (Just "DAppDTO") dappSchema
+
+data ProfileDTO = ProfileDTO
+  { profile :: !Profile
+  , dapp    :: !(Maybe DAppDTO)
+  } deriving (Show)
+
+-- NOTE: ProfileDTO serialization is not isomorphic
+-- because we hide the github access token
 instance FromJSON ProfileDTO where
   parseJSON = withObject "ProfileDTO" $ \v -> ProfileDTO
       <$> parseJSON (Object v)
@@ -177,19 +205,19 @@ instance ToSchema ProfileDTO where
 
 --------------------------------------------------------------------------------
 -- | Dapp
-
 data DApp = DApp
   { dappId      :: ID Profile
   , dappName    :: Text
   , dappOwner   :: Text
   , dappRepo    :: Text
   , dappVersion :: Text
-  , dappGitHubToken :: Maybe Text
-  } deriving (Generic,Show)
+  , dappGitHubToken :: Maybe GitHubAccessToken
+  } deriving (Generic,Show,Eq)
 
 instance ToSchema DApp where
   declareNamedSchema _ = do
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    ghTokenSchema <- declareSchemaRef (Proxy :: Proxy GitHubAccessToken)
     return $ NamedSchema (Just "DApp") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
@@ -197,17 +225,18 @@ instance ToSchema DApp where
           , ("owner", textSchema)
           , ("repo", textSchema)
           , ("version", textSchema)
-          , ("githubToken", textSchema)
+          , ("githubToken", ghTokenSchema)
           ]
       & required .~ ["name", "owner", "repo", "version"]
 
 instance FromJSON DApp where
-  parseJSON = withObject "DApp" $ \v -> DApp def
-    <$> v .: "name"
+  parseJSON = withObject "DApp" $ \v -> DApp
+    <$> (toId <$> v .:? "dappId" .!= (-1))
+    <*> v .: "name"
     <*> v .: "owner"
     <*> v .: "repo"
     <*> v .: "version"
-    <*> v .: "githubToken"
+    <*> v .:? "githubToken"
 
 instance ToJSON DApp where
   toJSON (DApp{..}) = object
@@ -215,8 +244,19 @@ instance ToJSON DApp where
       , "owner" .= dappOwner
       , "repo" .= dappRepo
       , "version" .= dappVersion
-      , "githubToken" .= fmap (const ("<<REDACTED>>" :: Text)) dappGitHubToken
+      , "githubToken" .= dappGitHubToken
       ]
+
+instance SqlType GitHubAccessToken where
+  mkLit gitHubAccessToken =
+    let t = (pack $ show gitHubAccessToken)
+     in LCustom TText (LText t)
+  sqlType _ = TText
+  fromSql (SqlString t)
+    | Right token <- ghAccessTokenFromText t = token
+    | otherwise = throw $ userError $ "Invalid GitHubAccessToken: " ++ show t
+  fromSql v = throw $ userError $ "fromSql: expected SqlString, got " ++ show v
+  defaultValue = throw $ userError "GitHubAccessToken: no default value"
 
 instance SqlRow DApp
 

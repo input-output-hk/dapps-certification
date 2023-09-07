@@ -18,7 +18,7 @@ module Plutus.Certification.ProfileWallet
   , AddressRotation(..)
   , emptyAddressRotation
   , WalletAddress(..)
-  , ProfileAddress(..)
+  , ProfileWalletAddress
   -- for testing purposes
   , fromDbTransaction
   , Transaction(..)
@@ -45,6 +45,7 @@ import Observe.Event.Render.JSON
 import Observe.Event
 import Data.Function
 import Plutus.Certification.WalletClient (WalletClient(..))
+import IOHK.Certification.Persistence (ProfileWalletAddress)
 
 import qualified Plutus.Certification.WalletClient as WalletClient
 import qualified IOHK.Certification.Persistence as DB
@@ -59,20 +60,17 @@ import Control.Monad.RWS (MonadReader)
 newtype WalletAddress = WalletAddress { unWalletAddress :: Text }
                       deriving (Eq,Show,Ord)
 
-newtype ProfileAddress = ProfileAddress { unProfileAddress :: Text }
-                      deriving (Ord,Eq,Show)
-
 data AddressReservation = Reserved | Overlapping
 
 data ProfileWallet = ProfileWallet
     { pwAddressReservation :: (AddressReservation, WalletAddress)
-    , pwProfileAddress :: ProfileAddress
+    , pwProfileAddress :: ProfileWalletAddress
     , pwBalance :: Word64
     }
 
 data Transaction = SimplePayment WalletAddress Word64
-                 | DesignatedPayment ProfileAddress WalletAddress Word64
-                 | WalletAddressAssignment ProfileAddress WalletAddress
+                 | DesignatedPayment ProfileWalletAddress WalletAddress Word64
+                 | WalletAddressAssignment ProfileWalletAddress WalletAddress
                  deriving (Eq,Show)
 
 type ProfileWallets = [ProfileWallet]
@@ -156,7 +154,7 @@ data ResyncWalletsArgs = TransactionMappingErrors !Int
                        | TransactionMappingCounts !(Int,Int,Int)
 
 data AssignAddressArgs
-  = AssignAddressInputs !(ProfileAddress, WalletAddress, OverlappingAddress)
+  = AssignAddressInputs !(ProfileWalletAddress, WalletAddress, OverlappingAddress)
   | AssignAddressError !String
   | AssignAddressTxResp !WalletClient.TxResponse
 
@@ -182,13 +180,14 @@ renderProfileWalletSyncSelector ResyncWallets =
       )
   )
 renderProfileWalletSyncSelector AssignAddress = ("assign-address", \case
-  AssignAddressInputs (ProfileAddress{..}, WalletAddress{..}, overlappingAddress) ->
+  AssignAddressInputs (walletAddress, WalletAddress{..}, overlappingAddress) ->
     let overlappingAddress' = overlappingAddress.unWalletAddress
+        profileWalletAddress = DB.getPatternedText walletAddress
     in ("assign-address-inputs", toJSON [aesonQQ|
-      { "profileAddress" : #{unProfileAddress}
-      , "destinationAddress" : #{unWalletAddress}
-      , "overlappingAddress" : #{overlappingAddress'}
-      } |] )
+        { "profileAddress" : #{profileWalletAddress}
+        , "destinationAddress" : #{unWalletAddress}
+        , "overlappingAddress" : #{overlappingAddress'}
+        } |] )
   AssignAddressError err -> ("assign-address-error", toJSON err)
   AssignAddressTxResp txResp -> ("assign-address-tx-id", toJSON txResp)
   )
@@ -241,7 +240,7 @@ resyncWallets eb walletClient ourAddress minAmount prevAssignments = withEvent e
 data Assignment = Assignment
                 { assgnOverlappingAddress :: WalletAddress
                 , assgnDestinationAddress :: WalletAddress
-                , assgnProfileAddress :: ProfileAddress
+                , assgnProfileAddress :: ProfileWalletAddress
                 } deriving (Eq,Show)
 type PrevAssignments = [Assignment]
 
@@ -253,7 +252,7 @@ assignAddress :: (MonadIO m,MonadMask m)
               => WalletBackend m r
               -> (forall metadata. WalletClient.BroadcastTx m metadata)
               -> PrevAssignments
-              -> ProfileAddress
+              -> ProfileWalletAddress
               -> OverlappingAddress
               -> DestinationAddress
               -> m (Either String PrevAssignments)
@@ -274,7 +273,7 @@ assignAddress eb broadcastTx prevAssignments profileAddress overlappingAddress d
     let address = split64 (destinationAddress.unWalletAddress)
     let metadata = [aesonQQ| { "assignment" : #{address} } |]
 
-    resp <- broadcastTx (Just profileAddress.unProfileAddress) 0 metadata
+    resp <- broadcastTx (Just (DB.getPatternedText profileAddress)) 0 metadata
     case resp of
       Left err -> do
         addField ev $ AssignAddressError (show err)
@@ -348,7 +347,9 @@ fromDbTransaction isOurAddress minAmount DB.MinimalTransaction{..} entries =
     -- address assignment
     (_,Right (AddressAssignmentMetadata address),Just walletAddress)
       | mtxAmount < 0 && not (isOurAddress address)
-          -> Right $ WalletAddressAssignment (ProfileAddress address) walletAddress
+          -> case DB.mkPatternedText address of
+              Right address' -> Right $ WalletAddressAssignment address' walletAddress
+              Left err -> Left $ "Can't parse address: " <> err
       | isOurAddress address
           -> Left "Address assignment shouldn't belong to our wallet"
       | otherwise
@@ -360,8 +361,10 @@ fromDbTransaction isOurAddress minAmount DB.MinimalTransaction{..} entries =
     (Right (PayerMetadata address),_,Just walletAddress)
       -- payer address is not our address and amount is greater than minAmount
       | mtxAmount >= fromIntegral minAmount && not (isOurAddress address)
-          -> Right $ DesignatedPayment (ProfileAddress address)
-            walletAddress (fromIntegral mtxAmount)
+          ->  case DB.mkPatternedText address of
+                Right address' -> Right $ DesignatedPayment address'
+                      walletAddress (fromIntegral mtxAmount)
+                Left err -> Left $ "Can't parse payer address: " <> err
       -- payer address is our address
       | isOurAddress address
           -> Left "Payer address should not belong to our wallet"
@@ -399,12 +402,12 @@ syncDbProfileWallets :: forall m r env. (MonadIO m, MonadMask m, MonadReader env
 syncDbProfileWallets eb wallets = do
     withDb DB.getProfileWallets >>= mapM_ updateProfileWallet
   where
-  pwMap :: Map ProfileAddress ProfileWallet
+  pwMap :: Map ProfileWalletAddress ProfileWallet
   pwMap = Map.fromList (map (\wallet@(ProfileWallet _ address _) -> (address,wallet)) wallets)
 
   updateProfileWallet :: (MonadIO m,MonadMask m) => (DB.Profile, Maybe DB.ProfileWallet) -> m ()
   updateProfileWallet (DB.Profile{..},dbWalletM) =
-    case (Map.lookup (ProfileAddress ownerAddress) pwMap,dbWalletM) of
+    case (Map.lookup ownerAddress pwMap,dbWalletM) of
       -- if there is no wallet in the db, create it
       (Just wallet,Nothing) -> upsertWallet (profileWalletToDBProfileWallet profileId wallet)
       -- if there is a wallet in the db

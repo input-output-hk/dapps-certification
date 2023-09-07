@@ -10,10 +10,24 @@ import Plutus.Certification.Internal as X
   )
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
+import IOHK.Certification.Persistence as X
+  ( Profile(..)
+  , DApp(..)
+  , ProfileDTO(..)
+  , ProfileWalletAddress
+  , LinkedIn
+  , Website
+  , Email
+  , Twitter
+  , fromId
+  , toId
+  , PatternedText(..)
+  , mkPatternedText
+  , match
+  )
+
 import Plutus.Certification.API.Routes as X
   ( API
-  , Twitter(..)
-  , LinkedIn(..)
   , NamedAPI(..)
   , VersionV1(..)
   , RunIDV1(..)
@@ -24,12 +38,9 @@ import Plutus.Certification.API.Routes as X
   , CertifyingStatus(..)
   , IncompleteRunStatus(..)
   , KnownActionType(..)
-  , ProfileBody(..)
-  , DAppBody(..)
   , ApiGitHubAccessToken(..)
   , LoginBody(..)
-  , isTwitterValid
-  , linkedInProfilePattern
+  , ProfileBody(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson

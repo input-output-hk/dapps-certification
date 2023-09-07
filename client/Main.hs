@@ -1,7 +1,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE Rank2Types #-}
 module Main where
@@ -27,11 +29,10 @@ import Data.Time.LocalTime
 import Data.Time
 import Data.Text as Text
 import IOHK.Certification.Actions (gitHubAccessTokenParser)
-import Control.Monad (unless)
-import Text.Regex
 import Data.Int
 
 import qualified Data.ByteString.Base16 as Hexa
+import GHC.TypeLits (KnownSymbol)
 
 
 newtype PublicKey = PublicKey { unPublicKey :: ByteString }
@@ -233,8 +234,6 @@ getBalanceInfo = info authParser
   <> header "plutus-certification-client profile get-balance — Get the balance of the current profile"
   )
 
-
-
 getWalletAddressInfo :: ParserInfo Auth
 getWalletAddressInfo = info authParser
   ( fullDesc
@@ -252,8 +251,8 @@ updateCurrentProfileInfoParser = UpdateCurrentProfileArgs
   <$> authParser
   <*> profileBodyParser
 
-dappBodyParser :: Parser DAppBody
-dappBodyParser = DAppBody
+dappParser :: Parser DApp
+dappParser = DApp (toId 0)
   <$> option str
         ( long "dapp-name"
        <> metavar "DAPP_NAME"
@@ -274,48 +273,58 @@ dappBodyParser = DAppBody
        <> metavar "DAPP_VERSION"
        <> help "dapp version"
         )
-  <*> optional (ApiGitHubAccessToken <$> gitHubAccessTokenParser)
+  <*> optional gitHubAccessTokenParser
 
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
-  <$> optional dappBodyParser
-  <*> optional (option baseUrlReader
+  <$> profileParser
+  <*> optional dappParser
+
+profileParser :: Parser Profile
+profileParser = Profile (toId 0) (error "this won't be evaluated")
+  <$> optional (option patternedTextReader
         ( long "website"
        <> metavar "WEBSITE"
        <> help "dapp website url"
         ))
-  <*> optional (option str
-        ( long "vendor"
-       <> metavar "VENDOR"
-       <> help "vendor identification"
-        ))
-  <*> optional (option twitterReader
+  <*> optional (option patternedTextReader
         ( long "twitter"
        <> metavar "TWITTER"
        <> help "twitter account"
         ))
-  <*> optional (option linkedinReader
+  <*> optional (option patternedTextReader
         ( long "linkedin"
        <> metavar "LINKEDIN"
        <> help "linkedin account"
         ))
-  <*> optional (option str
-        ( long "authors"
-       <> metavar "AUTHORS"
-       <> help "the list of authors represented as a string"
+  <*> optional (option patternedTextReader
+        ( long "email"
+       <> metavar "EMAIL"
+       <> help "email"
+        ))
+  <*> optional (option patternedTextReader
+        ( long "contact-email"
+       <> metavar "CONTACT_EMAIL"
+       <> help "contact email"
         ))
   <*> optional (option str
-        ( long "contacts"
-       <> metavar "CONTACTS"
-       <> help "the list of contacts represented as a string"
+        ( long "company-name"
+       <> metavar "COMPANY_NAME"
+       <> help "company name"
+        ))
+  <*> optional (option str
+        ( long "full-name"
+       <> metavar "FULL_NAME"
+       <> help "full name"
         ))
 
-linkedinReader :: ReadM LinkedIn
-linkedinReader = do
+patternedTextReader :: (KnownSymbol n,KnownSymbol p) => ReadM (PatternedText n p)
+patternedTextReader = do
   v <- str
-  case matchRegex (mkRegex (Text.unpack linkedInProfilePattern)) v of
-    Just _ -> pure (LinkedIn (Text.pack v))
-    Nothing -> fail "Invalid LinkedIn profile URL"
+  case mkPatternedText (Text.pack v) of
+    Right p -> pure p
+    Left e -> fail (show e)
+
 
 getCurrentProfileInfo :: ParserInfo Auth
 getCurrentProfileInfo = info authParser
@@ -519,13 +528,6 @@ baseUrlReader = do
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
 
-twitterReader :: ReadM Twitter
-twitterReader = do
-  twitterStr <- str
-  unless (isTwitterValid twitterStr) $
-    readerError $ "invalid twitter account '" <> Text.unpack twitterStr <> "'"
-  pure $ Twitter twitterStr
-
 hexaReader :: ReadM ByteString
 hexaReader = do
   urlStr <- str
@@ -598,7 +600,7 @@ main = do
       withAuth auth $ \c authKey -> True <$ c.createCertification authKey ref
     CmdCurrentProfile (GetCurrentProfile auth) ->
       withAuth auth $ \c authKey -> c.getCurrentProfile authKey
-    CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) ->
+    CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) -> do
       withAuth auth $ \c authKey -> c.updateCurrentProfile authKey profileBody
     CmdCurrentProfile (GetProfileWalletAddress auth) ->
       withAuth auth $ \c authKey -> c.getProfileWalletAddress authKey

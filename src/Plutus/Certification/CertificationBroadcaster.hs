@@ -64,17 +64,17 @@ createL1Certification eb wc profileId rid@RunID{..} = withEvent eb CreateCertifi
   addField ev (CreateCertificationRunID rid)
 
   -- getting required profile information before further processing
-  (profile,dapp@DB.DApp{..}) <- getProfileAndDApp
+  (profile,dapp@(DB.DAppDTO DB.DApp{..})) <- getProfileAndDApp
 
   -- sync the run with the db and return the db-run information
   DB.Run{commitHash,reportContentId} <- getRun
   ipfsCid <- maybeToError "No report stored for this run" reportContentId
 
   -- create the certification object
-  websiteUrl <- parseUrl (profile.website)
-  FlakeRef{..} <- createFlakeRef dapp (CommitOrBranch commitHash)
+  websiteUrl <- parseUrl (DB.getPatternedText <$> profile.website)
+  FlakeRef{..} <- createFlakeRef (DB.unDAppDTO dapp) (CommitOrBranch commitHash)
   let certificate = Wallet.CertificationMetadata uuid (DB.IpfsCid ipfsCid) dappName websiteUrl
-                    (profile.twitter) uri dappVersion
+                    (fmap DB.getPatternedText profile.twitter) uri dappVersion
 
   -- broadcast the certification
   tx@Wallet.TxResponse{..} <- Wallet.broadcastTx wc Nothing 1304 certificate
@@ -103,7 +103,7 @@ createL1Certification eb wc profileId rid@RunID{..} = withEvent eb CreateCertifi
         (mimeUnrender (Proxy :: Proxy PlainText) (LSB.fromStrict uri))
 
     parseUrl website = eitherToError show
-        (maybe (Right Nothing) (fmap Just . parseBaseUrl . unpack ) website)
+      (maybe (Right Nothing) (fmap Just . parseBaseUrl . unpack) website)
 
     withDappNotAvailableMsg = maybeToError "DApp profile data not available"
 

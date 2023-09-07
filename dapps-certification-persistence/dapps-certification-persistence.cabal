@@ -12,6 +12,7 @@ library
                     , IOHK.Certification.Persistence.Structure.Certification
                     , IOHK.Certification.Persistence.Structure.Run
                     , IOHK.Certification.Persistence.Structure.Profile
+                    , IOHK.Certification.Persistence.Pattern
     build-depends: base
                  , selda
                  , selda-sqlite
@@ -23,5 +24,9 @@ library
                  , swagger2
                  , lens
                  , containers
+                 , raw-strings-qq
+                 , regex-tdfa
+
+                 , dapps-certification-interface
     hs-source-dirs:   src
     default-language: Haskell2010

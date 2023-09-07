@@ -19,6 +19,7 @@ import IOHK.Certification.Persistence.Structure.Subscription as Subscription
 import IOHK.Certification.Persistence.Structure.Run
 import IOHK.Certification.Persistence.Structure.Certification
 import IOHK.Certification.Persistence.Structure
+import IOHK.Certification.Persistence.Pattern
 import Data.Time.Clock
 import Data.Fixed
 import Data.Int
@@ -110,7 +111,7 @@ activateSubscription sub = do
         pure Nothing
     Nothing -> pure Nothing
 
-getAllCertifiedRunsForAddress :: MonadSelda m => Text -> m [Run]
+getAllCertifiedRunsForAddress :: MonadSelda m => ProfileWalletAddress -> m [Run]
 getAllCertifiedRunsForAddress address = query $ do
   -- get the profile id for the address
   profileId <- getProfileIdQ address
@@ -131,7 +132,7 @@ getAllPaidSubscriptions profileId = query $ do
 -- | get all available balance for a given address
 -- | this is the sum of all the transactions minus the cost of all the certified runs
 -- | if the address is not a profile owner Nothing will be returned
-getProfileBalance :: MonadSelda m => Text -> m (Maybe Int64)
+getProfileBalance :: MonadSelda m => ProfileWalletAddress -> m (Maybe Int64)
 getProfileBalance address = do
   profileIdM <- getProfileId address
   case profileIdM of
@@ -160,14 +161,15 @@ getProfileBalance address = do
 upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
 upsertProfile profile@Profile{..} dappM = do
   void $ upsert profiles
-     (\p -> p ! #ownerAddress .== text ownerAddress)
+     (\p -> p ! #ownerAddress .== literal ownerAddress)
      (`with`
-      [ #website     := fromTextMaybe website
-      , #vendor      := fromTextMaybe vendor
-      , #twitter     := fromTextMaybe twitter
-      , #linkedin    := fromTextMaybe linkedin
-      , #authors     := fromTextMaybe authors
-      , #contacts    := fromTextMaybe contacts
+      [ #website      := fromMaybe' website
+      , #twitter      := fromMaybe' twitter
+      , #linkedin     := fromMaybe' linkedin
+      , #email        := fromMaybe' email
+      , #contactEmail := fromMaybe' contactEmail
+      , #companyName  := fromMaybe' companyName
+      , #fullName     := fromMaybe' fullName
       ])
      [#profileId (def :: ID Profile) profile]
   -- we query this because upsert returns id only when inserts
@@ -192,12 +194,13 @@ upsertProfile profile@Profile{..} dappM = do
           [dapp { dappId = pid }]
   pure profileIdM
   where
-  fromTextMaybe = maybe null_ (just . text)
+  fromMaybe' :: SqlType a => Maybe a -> Col s (Maybe a)
+  fromMaybe' = maybe null_ (just . literal)
 
-getProfileByAddress :: MonadSelda m => Text -> m (Maybe Profile)
+getProfileByAddress :: MonadSelda m => ProfileWalletAddress -> m (Maybe Profile)
 getProfileByAddress address = listToMaybe <$> query (do
     p <- select profiles
-    restrict (p ! #ownerAddress .== text address)
+    restrict (p ! #ownerAddress .== literal address)
     pure p
   )
 
@@ -254,24 +257,24 @@ getProfileDApp :: MonadSelda m => ID Profile -> m (Maybe DApp)
 getProfileDApp pid = fmap listToMaybe $ query $ getProfileDAppQ pid
 
 toProfileDTO :: (Profile :*: Maybe DApp) -> ProfileDTO
-toProfileDTO (profile :*: dapp) = ProfileDTO{..}
+toProfileDTO (profile :*: dapp) = ProfileDTO profile (DAppDTO <$> dapp)
 
-getProfileIdQ:: Text -> Query t (Col t (ID Profile))
+getProfileIdQ:: ProfileWalletAddress -> Query t (Col t (ID Profile))
 getProfileIdQ  address = do
   p <- select profiles
-  restrict (p ! #ownerAddress .== text address)
+  restrict (p ! #ownerAddress .== literal address)
   pure (p ! #profileId)
 
-getProfileId :: MonadSelda m => Text -> m (Maybe ProfileId)
+getProfileId :: MonadSelda m => ProfileWalletAddress -> m (Maybe ProfileId)
 getProfileId = fmap listToMaybe . query . getProfileIdQ
 
-getProfileAddressQ :: ID Profile -> Query t (Col t Text)
+getProfileAddressQ :: ID Profile -> Query t (Col t ProfileWalletAddress)
 getProfileAddressQ  pid = do
   p <- select profiles
   restrict (p ! #profileId .== literal pid)
   pure (p ! #ownerAddress)
 
-getProfileAddress :: MonadSelda m => ID Profile -> m (Maybe Text)
+getProfileAddress :: MonadSelda m => ID Profile -> m (Maybe ProfileWalletAddress)
 getProfileAddress = fmap listToMaybe . query . getProfileAddressQ
 
 createRun :: MonadSelda m
