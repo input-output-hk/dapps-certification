@@ -2,7 +2,7 @@
 
   mkCertity = system: let 
 
-    origProject = repo.iog.$system.dapp;
+    origProject = repo.iog.${system}.dapp;
 
     inherit (origProject) pkgs;
 
