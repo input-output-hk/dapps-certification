@@ -37,8 +37,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetRunDetailsRoute
   :<|> GetCurrentProfileRoute auth
   :<|> UpdateCurrentProfileRoute auth
-  :<|> CreateCertificationRoute auth
-  :<|> GetCertificateRoute
+  :<|> CreateL1CertificationRoute auth
   :<|> GetBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute

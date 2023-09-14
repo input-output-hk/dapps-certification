@@ -14,6 +14,11 @@ module Plutus.Certification.Metadata
 , createDraftMetadata
 , createMetadataAndPushToIpfs
 , FullMetadata(..)
+, parseURIUnsafe
+, CertificationInput(..)
+, AuditorCertificationInput(..)
+, URL(..)
+, DB.Subject(..)
 ) where
 
 import Plutus.Certification.Metadata.Types as X
@@ -77,22 +82,26 @@ user error (Report URLs do not match)
 Report {reportURLs = [ReportURL {unReportURL = ipfs://bafkreihic53arwawc73rivbnxl3ax2cc26xvd23x67obm5vq33uosdwbcy},ReportURL {unReportURL = https://bafkreihic53arwawc73rivbnxl3ax2cc26xvd23x67obm5vq33uosdwbcy.ipfs.w3s.link}], reportHash = "64663839663138363636393838333631346534613932333265346235643236376337396531346435316266643836383263616661623536396663376433313463"}
 -}
 
-certLevel :: DB.CertificationLevel
-certLevel = DB.L2
+--certLevel :: DB.CertificationLevel
+--certLevel = DB.L2
 
 createOffchainMetadata :: (MonadIO m)
                        => AuditorCertificationInput
+                       -> AllowNoReport
                        -> m OffChainMetadata
-createOffchainMetadata AuditorCertificationInput{..} = do
-  report' <- toReport report
-  let certificationLevel = certLevel
+createOffchainMetadata AuditorCertificationInput{..} allowNoReport = do
+  let CertificationInput{..} = certificationInput
+  report' <- if allowNoReport && Prelude.null report
+                then pure (Report [] (Hash ""))
+                else toReport report
   pure OffChainMetadata { report = report', ..}
 
 createOnchainMetadata :: AuditorCertificationInput
                       -> Maybe (OffChainMetadata,[MetadataUrl])
                       -> OnChainMetadata
 createOnchainMetadata AuditorCertificationInput{..} offchainM =
-  let (rootHash,metadata') = case offchainM of
+  let CertificationInput{..} = certificationInput
+      (rootHash,metadata') = case offchainM of
         Nothing -> (Hash "",[])
         Just (offchain,metadata) ->
           -- hash represents the encoded json of the offchain metadata
@@ -103,7 +112,7 @@ createOnchainMetadata AuditorCertificationInput{..} offchainM =
       { metadata=metadata'
       , schemaVersion = 1
       , onChainType = CertificationType
-        { certificationLevel = certLevel
+        { certificationLevel = certificationLevel
         , certificateIssuer = certificateIssuerName
         }
       ,..}
@@ -135,11 +144,13 @@ instance ToSchema FullMetadata where
           ]
       & required .~ ["onchain","offchain"]
 
+type AllowNoReport = Bool
 createDraftMetadata :: MonadIO m
                     => AuditorCertificationInput
+                    -> AllowNoReport
                     -> m FullMetadata
-createDraftMetadata input = do
-  offchain <- createOffchainMetadata input
+createDraftMetadata input allowNoReport = do
+  offchain <- createOffchainMetadata input allowNoReport
   let onchain = createOnchainMetadata input Nothing
   pure $ FullMetadata (onchain,offchain)
 
@@ -147,10 +158,11 @@ createMetadataAndPushToIpfs :: MonadIO m
                             => AuditorCertificationInput
                             -> m (FullMetadata,IpfsCid)
 createMetadataAndPushToIpfs input = do
-  offchain <- createOffchainMetadata input
+  offchain <- createOffchainMetadata input False
   finalOffchain <- addIpfsToMetadataIfNecessary offchain
   ipfsCid <- uploadToIpfs finalOffchain
-  let onchain = createOnchainMetadata input $ Just (finalOffchain,[toMetadataUrl ipfsCid])
+  let onchain = createOnchainMetadata input
+        (Just (finalOffchain,[toMetadataUrl ipfsCid]))
   pure (FullMetadata (onchain,finalOffchain),IpfsCid ipfsCid)
   where
   addIpfsToMetadataIfNecessary (offchain :: OffChainMetadata) = do

@@ -105,6 +105,9 @@ instance Arbitrary Website where
 instance Arbitrary LinkedIn where
   arbitrary = genPatternedTextWith genLinkedIn
 
+instance Arbitrary Subject where
+  arbitrary = genPatternedTextWith genSubject
+
 -- LinkedIn regex:
 -- ^(http(s)?:\/\/)?([\w]+\.)?linkedin\.com\/(pub|in|profile|company)\/([a-zA-Z0-9_-]+)$
 
@@ -119,6 +122,11 @@ genLinkedIn = do
   genLinkedInAccount = do
     len <- choose (1, 15)
     replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+genSubject :: Gen Text
+genSubject = do
+  len <- choose (1, 64)
+  pack <$> replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
 instance Arbitrary Email where
   arbitrary = genPatternedTextWith genEmail
@@ -164,6 +172,7 @@ instance Arbitrary DApp where
     <*> genArbitraryName
     <*> genArbitraryName
     <*> genArbitraryName
+    <*> arbitrary
     <*> arbitrary
 
 instance Arbitrary DAppDTO where

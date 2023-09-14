@@ -39,6 +39,7 @@ import           IOHK.Certification.Interface
   , ghAccessTokenFromText
   )
 
+import qualified Data.Swagger.Lens as SL
 import qualified Data.Text         as Text
 import qualified Data.Aeson.KeyMap as KM
 
@@ -205,6 +206,7 @@ instance ToSchema ProfileDTO where
 
 --------------------------------------------------------------------------------
 -- | Dapp
+
 data DApp = DApp
   { dappId      :: ID Profile
   , dappName    :: Text
@@ -212,6 +214,7 @@ data DApp = DApp
   , dappRepo    :: Text
   , dappVersion :: Text
   , dappGitHubToken :: Maybe GitHubAccessToken
+  , dappSubject :: Maybe Subject
   } deriving (Generic,Show,Eq)
 
 instance ToSchema DApp where
@@ -226,6 +229,7 @@ instance ToSchema DApp where
           , ("repo", textSchema)
           , ("version", textSchema)
           , ("githubToken", ghTokenSchema)
+          , ("subject", textSchema)
           ]
       & required .~ ["name", "owner", "repo", "version"]
 
@@ -237,6 +241,7 @@ instance FromJSON DApp where
     <*> v .: "repo"
     <*> v .: "version"
     <*> v .:? "githubToken"
+    <*> v .:? "subject"
 
 instance ToJSON DApp where
   toJSON (DApp{..}) = object
@@ -245,6 +250,7 @@ instance ToJSON DApp where
       , "repo" .= dappRepo
       , "version" .= dappVersion
       , "githubToken" .= dappGitHubToken
+      , "subject" .= dappSubject
       ]
 
 instance SqlType GitHubAccessToken where

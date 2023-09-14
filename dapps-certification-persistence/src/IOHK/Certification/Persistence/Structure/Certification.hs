@@ -51,24 +51,24 @@ instance SqlType CertificationLevel where
 
 instance ToJSON CertificationLevel where
   toJSON = toJSON . \case
-    L0 -> "l0" :: String
-    L1 -> "l1"
-    L2 -> "l2"
-    L3 -> "l3"
+    L0 -> 0 :: Int
+    L1 -> 1
+    L2 -> 2
+    L3 -> 3
 
 instance FromJSON CertificationLevel where
-  parseJSON = withText "CertificationLevel" $ \case
-    "l0" -> pure L0
-    "l1" -> pure L1
-    "l2" -> pure L2
-    "l3" -> pure L3
+  parseJSON = withScientific "CertificationLevel" $ \case
+    0 -> pure L0
+    1 -> pure L1
+    2 -> pure L2
+    3 -> pure L3
     _    -> fail "CertificationLevel"
 
 instance ToSchema CertificationLevel where
    declareNamedSchema _ = do
-     let values = [ "l0", "l1", "l2", "l3" ] :: [Value]
+     let values = [Number x | x <- [0,1,2,3]] :: [Value]
      return $ NamedSchema (Just "CertificationLevel") $ mempty
-       & type_ ?~ SwaggerString
+       & type_ ?~ SwaggerNumber
        & enum_ ?~ values
 
 data Certification = Certification

@@ -33,7 +33,7 @@ import Data.Int
 
 import qualified Data.ByteString.Base16 as Hexa
 import GHC.TypeLits (KnownSymbol)
-
+import Plutus.Certification.Metadata
 
 newtype PublicKey = PublicKey { unPublicKey :: ByteString }
 newtype JWT = JWT { unJWT :: ByteString }
@@ -173,6 +173,83 @@ createCertificationParser :: Parser CreateCertificationArgs
 createCertificationParser = CreateCertificationArgs
   <$> getRunParser
   <*> authParser
+  <*> certificationInputParser
+  -- dry-run
+  <*> optional (switch
+      ( long "dry-run"
+      <> help "dry run"
+      ))
+
+certificationIssuerParser :: Parser CertificateIssuer
+certificationIssuerParser  = CertificateIssuer
+  -- name
+  <$> option str
+      ( long "issuer-name"
+      <> metavar "ISSUER-NAME"
+      <> help "issuer name"
+      )
+  -- URL
+  <*> optional ( URL <$> option str
+      ( long "issuer-url"
+      <> metavar "ISSUER-URL"
+      <> help "issuer URL"
+      ))
+  <*> parseSocial
+
+parseSocial :: Parser Social
+parseSocial = Social
+  <$> optional ( option str
+      ( long "twitter"
+      <> metavar "TWITTER"
+      <> help "twitter handle"
+      ))
+  <*> optional ( option str
+      ( long "github"
+      <> metavar "GITHUB"
+      <> help "github handle"
+      ))
+  <*> option str
+      ( long "contact"
+      <> metavar "CONTACT"
+      <> help "contact email"
+      )
+  <*> option str
+      ( long "website"
+      <> metavar "WEBSITE"
+      <> help "website URL"
+      )
+  <*> optional ( option str
+      ( long "discord"
+      <> metavar "DISCORD"
+      <> help "discord handle"
+      ))
+
+subjectInputParser :: Parser Subject
+subjectInputParser = option patternedTextReader
+  ( long "subject"
+  <> metavar "SUBJECT"
+  <> help "dapp subject"
+  )
+
+certificationInputParser :: Parser CertificationInput
+certificationInputParser  = CertificationInput
+  <$> certificationIssuerParser
+  <*> option str
+      ( long "summary"
+      <> metavar "SUMMARY"
+      <> help "dapp summary"
+      )
+  -- disclaimer optional
+  <*> option str
+      ( long "disclaimer"
+      <> metavar "DISCLAIMER"
+      <> help "dapp disclaimer"
+      <> value Text.empty
+      )
+  -- TODO: add scripts
+  <*> pure []
+
+
 
 data RunCommand
   = Create !CreateRunArgs
@@ -180,7 +257,6 @@ data RunCommand
   | Abort !AbortRunArgs
   | GetLogs !GetLogsArgs
   | GetRuns !GetRunsArgs
-  | GetCertification !RunIDV1
   | CreateCertification !CreateCertificationArgs
 
 runCommandParser :: Parser RunCommand
@@ -190,8 +266,7 @@ runCommandParser = hsubparser
  <> command "abort" (Abort <$> abortRunInfo)
  <> command "get-logs" (GetLogs <$> getLogsInfo)
  <> command "get-many" (GetRuns <$> getRunsInfo)
- <> command "get-certification" (GetCertification <$> getCertificationInfo)
- <> command "create-certification" (CreateCertification <$> createCertificationInfo)
+ <> command "create-l1-certification" (CreateCertification <$> createCertificationInfo)
   )
 
 data CreateRunArgs = CreateRunArgs !CommitOrBranch !Auth
@@ -200,7 +275,8 @@ data GetRunsArgs = GetRunsArgs !Auth !(Maybe UTCTime) !(Maybe Int)
 
 type DeleteRun = Maybe Bool
 data AbortRunArgs = AbortRunArgs !RunIDV1 !Auth !DeleteRun
-data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !Auth
+type DryRun = Maybe Bool
+data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !Auth !CertificationInput !DryRun
 
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
@@ -274,6 +350,7 @@ dappParser = DApp (toId 0)
        <> help "dapp version"
         )
   <*> optional gitHubAccessTokenParser
+  <*> optional subjectInputParser
 
 profileBodyParser :: Parser ProfileBody
 profileBodyParser = ProfileBody
@@ -592,12 +669,11 @@ main = do
       handle $ apiClient.getLogs ref zt act
     CmdRun (GetRuns (GetRunsArgs pubKey after' count')) ->
       withAuth pubKey $ \c authKey -> c.getRuns authKey after' count'
-    CmdRun (GetCertification ref) ->
-      handle $ apiClient.getCertification ref
     CmdGetRepositoryInfo (GetGitHubAddressArgs owner' repo' gitHubAccessToken') ->
       handle $ apiClient.getRepositoryInfo owner' repo' gitHubAccessToken'
-    CmdRun (CreateCertification (CreateCertificationArgs ref auth)) ->
-      withAuth auth $ \c authKey -> True <$ c.createCertification authKey ref
+    CmdRun (CreateCertification (CreateCertificationArgs ref auth certInput dryRun)) ->
+      withAuth auth $ \c authKey ->
+        c.createCertification authKey ref certInput dryRun
     CmdCurrentProfile (GetCurrentProfile auth) ->
       withAuth auth $ \c authKey -> c.getCurrentProfile authKey
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) -> do

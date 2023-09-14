@@ -12,6 +12,8 @@ module Plutus.Certification.Synchronizer
   ( startTransactionsMonitor
   , SynchronizerSelector(..)
   , renderSynchronizerSelector
+  -- TODO: remove this export, we are using this just to suppress warnings
+  , certifyRuns
   ) where
 
 import Plutus.Certification.WalletClient.Transaction
@@ -189,7 +191,6 @@ monitorWalletTransactions eb args minAssignmentAmount refAssignments = withEvent
     >>= resyncWallets (narrowEventBackend InjectProfileWalletSync eb) wc isOurAddress minAssignmentAmount
     >>= liftIO . writeIORef refAssignments
 
-  certifyRuns (subEventBackend ev) wc
   where
     wc :: WalletClient
     wc = realClient args
@@ -209,6 +210,7 @@ type CertificationProcess m = DB.ProfileId -> UUID -> m DB.L1CertificationDTO
 
 -- certify all runs who have enough credit to be certified
 -- and have not been certified yet
+-- NOTE: this is momentarily disabled
 certifyRuns :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
             => EventBackend m r SynchronizerSelector
             -> WalletClient

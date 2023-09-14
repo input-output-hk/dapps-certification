@@ -28,19 +28,18 @@ import           Data.Text.Encoding as Text
 import           Data.Vector
 import           Plutus.Certification.Internal
 import           IOHK.Certification.SignatureVerification
-import Network.URI
-import Data.ByteString (ByteString)
-import Control.Monad (when)
+import           Network.URI
+import           Data.ByteString (ByteString)
+import           Control.Monad (when)
 
 import qualified IOHK.Certification.Persistence as DB
 import qualified Data.Swagger.Lens as SL
+import qualified Data.Aeson.KeyMap as KM
 import GHC.OverloadedLabels
+import IOHK.Certification.Persistence (CertificationLevel)
 
 --------------------------------------------------------------------------------
 -- | ON-CHAIN METADATA
-
-newtype Subject = Subject { unSubject :: Text }
-  deriving (Generic,Show)
 
 newtype MetadataUrl = MetadataUrl { unMetadata :: URI }
   deriving (Generic,Show)
@@ -107,21 +106,6 @@ instance ToSchema MetadataUrl where
 -- >>> (eitherDecode $ "\"ftp://abcdefghijklmnopqrstuvwxyz0123456789\"") :: Either String Metadata
 -- Left "Error in $: Invalid URL schema ftp:"
 
-instance ToJSON Subject where
-  toJSON = toJSON . unSubject
-
-instance FromJSON Subject where
-  parseJSON = withText "Subject" $ \t ->
-    -- if it's larger than 64 bytes, fail
-    if Text.length t > 64 then fail "Subject must be less than 64 bytes"
-    else pure $ Subject t
-
-instance ToSchema Subject where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "Subject") $ mempty
-      & type_ ?~ SwaggerString
-      & SL.pattern ?~ "^[A-Za-z0-9_]{64}$"
-
 newtype Hash = Hash { unHash :: ByteString }
              deriving (Generic,Eq,Ord)
 
@@ -160,11 +144,11 @@ instance FromJSON Hash where
 
 -- TODO: calculate hash for
 data OnChainMetadata = OnChainMetadata
-  { subject :: Subject
-  , rootHash :: Hash
-  , metadata :: [MetadataUrl]
-  , schemaVersion :: Int
-  , onChainType :: CertificationType
+  { subject :: !DB.Subject
+  , rootHash :: !Hash
+  , metadata :: ![MetadataUrl]
+  , schemaVersion :: !Int
+  , onChainType :: !CertificationType
   } deriving (Generic)
 
 instance ToJSON OnChainMetadata where
@@ -192,7 +176,7 @@ data Phantom1304
 
 instance ToSchema Phantom1304 where
   declareNamedSchema _ = do
-    subjectSchema <- declareSchemaRef (Proxy :: Proxy Subject)
+    subjectSchema <- declareSchemaRef (Proxy :: Proxy DB.Subject)
     rootHashSchema <- declareSchemaRef (Proxy :: Proxy Hash)
     metadataSchema <- declareSchemaRef (Proxy :: Proxy [MetadataUrl])
     schemaVersionSchema <- declareSchemaRef (Proxy :: Proxy Int)
@@ -208,7 +192,6 @@ instance ToSchema Phantom1304 where
           ]
       & required .~ ["subject", "rootHash", "metadata", "schemaVersion", "type"]
 
-
 instance ToSchema OnChainMetadata where
   declareNamedSchema _ = do
     _1304Schema <- declareSchemaRef (Proxy :: Proxy Phantom1304)
@@ -220,8 +203,8 @@ instance ToSchema OnChainMetadata where
 
 
 data CertificationType = CertificationType
-  { certificationLevel :: DB.CertificationLevel
-  , certificateIssuer :: Text
+  { certificationLevel :: !DB.CertificationLevel
+  , certificateIssuer :: !Text
   } deriving (Generic,Show)
 
 instance ToJSON CertificationType where
@@ -272,12 +255,13 @@ instance ToSchema CertificationType where
 -- | OFF-CHAIN METADATA
 --  https://github.com/RSoulatIOHK/CIPs/blob/cip-certification-metadata/CIP-0096/README.md#off-chain-metadata-properties
 
+--TODO: add validation for all fields after merging with #94
 data Social = Social
-  { twitter :: Maybe Text
-  , github :: Maybe Text
-  , contact :: Text
-  , website :: Text
-  , discord :: Maybe Text
+  { twitter :: !(Maybe Text)
+  , github :: !(Maybe Text)
+  , contact :: !Text
+  , website :: !Text
+  , discord :: !(Maybe Text)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON Social where
@@ -302,9 +286,9 @@ instance ToSchema Social where
       & required .~ ["contact", "website"]
 
 data CertificateIssuer = CertificateIssuer
-  { name :: Text
-  , logo :: Maybe URL
-  , social :: Social
+  { name :: !Text
+  , logo :: !(Maybe URL)
+  , social :: !Social
   } deriving (Show, Eq, Generic)
 
 instance ToJSON CertificateIssuer where
@@ -348,8 +332,8 @@ instance ToSchema ReportURL where
       & description ?~ "Report URL"
 
 data Report = Report
-  { reportURLs :: [ReportURL]
-  , reportHash :: Hash
+  { reportURLs :: ![ReportURL]
+  , reportHash :: !Hash
   } deriving (Generic,Show)
 
 instance ToJSON Report where
@@ -376,13 +360,13 @@ instance ToSchema Report where
       & required .~ ["reportURLs", "reportHash"]
 
 data SmartContractInfo = SmartContractInfo
-  { era :: Maybe Text
-  , compiler :: Maybe Text
-  , compilerVersion :: Maybe Text
-  , optimizer :: Maybe Text
-  , optimizerVersion :: Maybe Text
-  , progLang :: Maybe Text
-  , repository :: Maybe Text
+  { era :: !(Maybe Text)
+  , compiler :: !(Maybe Text)
+  , compilerVersion :: !(Maybe Text)
+  , optimizer :: !(Maybe Text)
+  , optimizerVersion :: !(Maybe Text)
+  , progLang :: !(Maybe Text)
+  , repository :: !(Maybe Text)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON SmartContractInfo where
@@ -394,10 +378,11 @@ instance FromJSON SmartContractInfo where
 instance ToSchema SmartContractInfo where
   declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
 
+
 data Script = Script
-  { smartContractInfo :: Maybe SmartContractInfo
-  , scriptHash :: Hash
-  , contractAddress :: Maybe Text
+  { smartContractInfo :: !(Maybe SmartContractInfo)
+  , scriptHash :: !Hash
+  , contractAddress :: !(Maybe Text)
   } deriving (Show, Eq, Generic)
 
 
@@ -407,21 +392,42 @@ instance ToJSON Script where
 instance FromJSON Script where
   parseJSON = genericParseJSON defaultOptions
 
+-- TODO: this has to be removed after merging the PR #94
+data PhantomAddress
+
+instance ToSchema PhantomAddress where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "ContractAddress") $ mempty
+      & type_ ?~ SwaggerString
+      & description ?~ "Contract address"
+      & SL.pattern ?~ "^(addr_test1|addr1)[a-zA-Z0-9]{53,}$"
+
 instance ToSchema Script where
-  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+  declareNamedSchema _ = do
+    smartContractInfo <- declareSchemaRef (Proxy :: Proxy SmartContractInfo)
+    hashSchema <- declareSchemaRef (Proxy :: Proxy Hash)
+    addressSchema <- declareSchemaRef (Proxy :: Proxy PhantomAddress)
+    return $ NamedSchema (Just "Script") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("smartContractInfo", smartContractInfo)
+          , ("scriptHash", hashSchema)
+          , ("contractAddress", addressSchema)
+          ]
+      & required .~ ["scriptHash"]
 
 instance IsLabel "report" (Report -> OffChainMetadata -> OffChainMetadata) where
   fromLabel v p = p { report = v}
 
 data OffChainMetadata = OffChainMetadata
-  { subject :: Subject
+  { subject :: !DB.Subject
   -- schemaVersion will be set to 1, but should be serialized to and from JSON
-  , certificationLevel :: DB.CertificationLevel
-  , certificateIssuer :: CertificateIssuer
-  , report :: Report
-  , summary :: Text
-  , disclaimer :: Text
-  , scripts :: [Script]
+  , certificationLevel :: !DB.CertificationLevel
+  , certificateIssuer :: !CertificateIssuer
+  , report :: !Report
+  , summary :: !Text
+  , disclaimer :: !Text
+  , scripts :: ![Script]
   } deriving (Generic)
 
 instance ToJSON OffChainMetadata where
@@ -451,7 +457,7 @@ instance FromJSON OffChainMetadata where
 
 instance ToSchema OffChainMetadata where
   declareNamedSchema _ = do
-    subjectSchema <- declareSchemaRef (Proxy :: Proxy Subject)
+    subjectSchema <- declareSchemaRef (Proxy :: Proxy DB.Subject)
     certificationLevelSchema <- declareSchemaRef (Proxy :: Proxy DB.CertificationLevel)
     certificateIssuerSchema <- declareSchemaRef (Proxy :: Proxy CertificateIssuer)
     reportSchema <- declareSchemaRef (Proxy :: Proxy Report)
@@ -473,22 +479,56 @@ instance ToSchema OffChainMetadata where
 --------------------------------------------------------------------------------
 -- | AUDITOR CERTIFICATION INPUT
 
+data CertificationInput = CertificationInput
+  { certificateIssuer :: CertificateIssuer
+  , summary :: !Text
+  , disclaimer :: !Text
+  , scripts :: ![Script]
+  } deriving (Generic,Show)
+
 data AuditorCertificationInput = AuditorCertificationInput
-  { subject :: Subject
-  , certificateIssuer :: CertificateIssuer
-  , report :: [ReportURL]
-  , summary :: Text
-  , disclaimer :: Text
-  , scripts :: [Script]
+  { certificationInput :: !CertificationInput
+  , report :: ![ReportURL]
+  , subject :: !DB.Subject
+  , certificationLevel :: CertificationLevel
   } deriving (Generic,Show)
 
 instance ToJSON AuditorCertificationInput where
-  toJSON = genericToJSON defaultOptions
+  toJSON AuditorCertificationInput{..} = Object (x <> y)
+    where
+    x = case toJSON certificationInput of
+            Object obj -> obj
+            _          -> KM.empty
+    y = KM.fromList [ "report" .= report, "subject" .= subject, "certificationLevel" .= certificationLevel  ]
 
 instance FromJSON AuditorCertificationInput where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = withObject "AuditorCertificationInput" $ \v -> AuditorCertificationInput
+      <$> parseJSON (Object v)
+      <*> v .:? "report" .!= []
+      <*> v .: "subject"
+      <*> v .: "certificationLevel"
 
 instance ToSchema AuditorCertificationInput where
+  declareNamedSchema _ = do
+    certificationInputSchema <- declareSchema (Proxy :: Proxy CertificationInput)
+    reportSchema <- declareSchemaRef (Proxy :: Proxy [ReportURL])
+    subjectSchema <- declareSchemaRef (Proxy :: Proxy DB.Subject)
+    certificationLevelSchema <- declareSchemaRef (Proxy :: Proxy CertificationLevel)
+    return $ NamedSchema (Just "AuditorCertificationInput") $ certificationInputSchema
+              & properties %~ (`mappend`
+                  [ ("report", reportSchema)
+                  , ("subject", subjectSchema)
+                  , ("certificationLevel", certificationLevelSchema)
+                  ])
+              & required .~ ["subject", "certificationLevel"]
+
+instance ToJSON CertificationInput where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON CertificationInput where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToSchema CertificationInput where
   declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
 
 
