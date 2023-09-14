@@ -201,10 +201,11 @@ instance ToSchema OnChainMetadata where
           [ ("1304", _1304Schema) ]
       & required .~ ["name", "social"]
 
+type CertificationIssuerName = DB.PatternedText "CertificationIssuer" "^.{1,64}$"
 
 data CertificationType = CertificationType
   { certificationLevel :: !DB.CertificationLevel
-  , certificateIssuer :: !Text
+  , certificateIssuer :: !CertificationIssuerName
   } deriving (Generic,Show)
 
 instance ToJSON CertificationType where
@@ -250,18 +251,22 @@ instance ToSchema CertificationType where
           ]
       & required .~ ["action", "certificationLevel", "certificateIssuer"]
 
-
 --------------------------------------------------------------------------------
 -- | OFF-CHAIN METADATA
 --  https://github.com/RSoulatIOHK/CIPs/blob/cip-certification-metadata/CIP-0096/README.md#off-chain-metadata-properties
 
---TODO: add validation for all fields after merging with #94
+type GitHubAccount = DB.PatternedText "GitHubAccount"
+ "^(?=.{1,39}$)[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$"
+
+type DiscordAccount = DB.PatternedText "DiscordAccount"
+  "^.{3,32}#[0-9]{4}$"
+
 data Social = Social
-  { twitter :: !(Maybe Text)
-  , github :: !(Maybe Text)
+  { twitter :: !(Maybe DB.Twitter)
+  , github :: !(Maybe GitHubAccount)
   , contact :: !Text
-  , website :: !Text
-  , discord :: !(Maybe Text)
+  , website :: !DB.Website
+  , discord :: !(Maybe DiscordAccount)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON Social where
@@ -273,20 +278,23 @@ instance FromJSON Social where
 instance ToSchema Social where
   declareNamedSchema _ = do
     textSchema <- declareSchemaRef (Proxy :: Proxy Text)
-    uriSchema <- declareSchemaRef (Proxy :: Proxy String)
+    uriSchema <- declareSchemaRef (Proxy :: Proxy DB.Website)
+    twitterSchema <- declareSchemaRef (Proxy :: Proxy DB.Twitter)
+    githubSchema <- declareSchemaRef (Proxy :: Proxy GitHubAccount)
+    discordSchema <- declareSchemaRef (Proxy :: Proxy DiscordAccount)
     return $ NamedSchema (Just "Social") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
-          [ ("twitter", textSchema)
-          , ("github", textSchema)
+          [ ("twitter", twitterSchema)
+          , ("github", githubSchema)
           , ("contact", textSchema)
           , ("website", uriSchema)
-          , ("discord", textSchema)
+          , ("discord", discordSchema)
           ]
       & required .~ ["contact", "website"]
 
 data CertificateIssuer = CertificateIssuer
-  { name :: !Text
+  { name :: !CertificationIssuerName
   , logo :: !(Maybe URL)
   , social :: !Social
   } deriving (Show, Eq, Generic)
@@ -300,13 +308,13 @@ instance FromJSON CertificateIssuer where
 
 instance ToSchema CertificateIssuer where
   declareNamedSchema _ = do
-    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
     uriSchema <- declareSchemaRef (Proxy :: Proxy String)
     socialSchema <- declareSchemaRef (Proxy :: Proxy Social)
+    certificateIssuerSchema <- declareSchemaRef (Proxy :: Proxy CertificateIssuer)
     return $ NamedSchema (Just "CertificateIssuer") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
-          [ ("name", textSchema)
+          [ ("name", certificateIssuerSchema)
           , ("logo", uriSchema)
           , ("social", socialSchema)
           ]
@@ -382,9 +390,11 @@ instance ToSchema SmartContractInfo where
 data Script = Script
   { smartContractInfo :: !(Maybe SmartContractInfo)
   , scriptHash :: !Hash
-  , contractAddress :: !(Maybe Text)
+  , contractAddress :: !(Maybe ContractAddress)
   } deriving (Show, Eq, Generic)
 
+type ContractAddress = DB.PatternedText "ContractAddress"
+  "^(addr_test1|addr1)[a-zA-Z0-9]{53,}$"
 
 instance ToJSON Script where
   toJSON = genericToJSON defaultOptions
@@ -392,21 +402,12 @@ instance ToJSON Script where
 instance FromJSON Script where
   parseJSON = genericParseJSON defaultOptions
 
--- TODO: this has to be removed after merging the PR #94
-data PhantomAddress
-
-instance ToSchema PhantomAddress where
-  declareNamedSchema _ = do
-    return $ NamedSchema (Just "ContractAddress") $ mempty
-      & type_ ?~ SwaggerString
-      & description ?~ "Contract address"
-      & SL.pattern ?~ "^(addr_test1|addr1)[a-zA-Z0-9]{53,}$"
 
 instance ToSchema Script where
   declareNamedSchema _ = do
     smartContractInfo <- declareSchemaRef (Proxy :: Proxy SmartContractInfo)
     hashSchema <- declareSchemaRef (Proxy :: Proxy Hash)
-    addressSchema <- declareSchemaRef (Proxy :: Proxy PhantomAddress)
+    addressSchema <- declareSchemaRef (Proxy :: Proxy ContractAddress)
     return $ NamedSchema (Just "Script") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~

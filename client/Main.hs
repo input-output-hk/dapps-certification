@@ -183,7 +183,7 @@ createCertificationParser = CreateCertificationArgs
 certificationIssuerParser :: Parser CertificateIssuer
 certificationIssuerParser  = CertificateIssuer
   -- name
-  <$> option str
+  <$> option patternedTextReader
       ( long "issuer-name"
       <> metavar "ISSUER-NAME"
       <> help "issuer name"
@@ -198,12 +198,12 @@ certificationIssuerParser  = CertificateIssuer
 
 parseSocial :: Parser Social
 parseSocial = Social
-  <$> optional ( option str
+  <$> optional ( option patternedTextReader
       ( long "twitter"
       <> metavar "TWITTER"
       <> help "twitter handle"
       ))
-  <*> optional ( option str
+  <*> optional ( option patternedTextReader
       ( long "github"
       <> metavar "GITHUB"
       <> help "github handle"
@@ -213,12 +213,12 @@ parseSocial = Social
       <> metavar "CONTACT"
       <> help "contact email"
       )
-  <*> option str
+  <*> option patternedTextReader
       ( long "website"
       <> metavar "WEBSITE"
       <> help "website URL"
       )
-  <*> optional ( option str
+  <*> optional ( option patternedTextReader
       ( long "discord"
       <> metavar "DISCORD"
       <> help "discord handle"

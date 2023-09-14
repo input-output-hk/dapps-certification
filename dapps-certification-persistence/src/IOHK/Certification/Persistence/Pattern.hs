@@ -32,7 +32,7 @@ import           GHC.TypeLits
 import           Data.Data
 
 import qualified Data.Swagger.Lens as SL
-import qualified Text.Regex.TDFA as TDFA
+import qualified Text.Regex.PCRE as PCRE
 
 --------------------------------------------------------------------------------
 -- | PatternedText
@@ -41,7 +41,7 @@ newtype PatternedText n p = MkUnsafePatternedText { getPatternedText :: Text }
                           deriving (Eq,Ord,Data)
 
 mkPatternedText :: forall p n. KnownSymbol p => Text -> Either String (PatternedText n p)
-mkPatternedText t = if match (pack labelP) t
+mkPatternedText t = if IOHK.Certification.Persistence.Pattern.match (pack labelP) t
   then Right $ MkUnsafePatternedText t
   else Left $ "Invalid value for pattern " ++ labelP
   where
@@ -84,20 +84,22 @@ getPattern :: forall n p. (KnownSymbol p) => Proxy (PatternedText n p) -> Text
 getPattern _ = pack $ symbolVal (Proxy :: Proxy p)
 
 match :: Text -> Text -> Bool
-match p val= val TDFA.=~ p
+match p val= unpack val PCRE.=~ unpack p
 
 {-
 
 >>> pattern = "^(https?:\\/\\/)?(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,255}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#()?&\\/\\/=]*)$"
 
 >>> match pattern "http://peY.com"
-Nothing
-
->>> match' pattern "http://peY.com"
 True
 
--}
+>>> pattern = "^(?=.{1,39}$)[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$"
+>>> match pattern "peY-asdad"
+True
+>>> match pattern "peY-asdad-"
+False
 
+-}
 --------------------------------------------------------------------------------
 -- | Useful aliases
 

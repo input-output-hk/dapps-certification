@@ -208,7 +208,7 @@ type GetAdaUsdPriceRoute = "ada-usd-price"
   :> Get '[JSON] DB.AdaUsdPrice
 
 type CreateAuditorReport (auth :: Symbol) = "auditor"
-  :> Description "Get the L2 report"
+  :> Description "Fetches the auditor report L0 | L2"
   :> "reports"
   :> QueryParam "dry-run" Bool
   :> ReqBody '[JSON] Metadata.AuditorCertificationInput
