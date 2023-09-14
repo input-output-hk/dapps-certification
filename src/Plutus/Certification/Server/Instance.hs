@@ -195,8 +195,11 @@ server ServerArgs{..} = NamedAPI
   -- Multiple transactions are going to be broadcasted at the same time and
   -- therefore we are going to pay multiple fees.
   -- We have to somehow create a lock mechanism for every certification per run
-  , createCertification = \(profileId,_) rid@RunID{..} -> withEvent eb StartCertification \ev -> do
-    addField ev (StartCertificationRunID rid)
+  , createCertification = \(profileId,_) rid@RunID{..} certInput dryRun ->
+    withEvent eb CreateL1Certification \ev -> do
+
+    addField ev (CreateL1CertificationRunID rid)
+    addField ev (CreateL1CertificationDryRun (dryRun == Just True))
     -- ensure runId belongs to the owner
     requireRunIdOwner profileId uuid
 
@@ -204,31 +207,33 @@ server ServerArgs{..} = NamedAPI
     status <- runConduit (getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns)
 
     -- sync the run with the db and return the db-run information
-    DB.Run{runStatus} <- getRunAndSync rid status
+    DB.Run{runStatus,reportContentId} <- getRunAndSync rid status
 
-    let certResultM = toCertificationResult status
-    (IPFS.UploadResponse ipfsCid _) <- maybe
-      (throwError $ err403 { errBody = "Incompatible status for certification"})
-      uploadToIpfs certResultM
-    addField ev (StartCertificationIpfsCid ipfsCid)
+    subject <- getProfileDAppSubject profileId
 
-    -- ensure there is no certificate already created
-    when (runStatus `elem` [DB.ReadyForCertification, DB.Certified]) $
-      throwError err403 { errBody = "Certification already started" }
+    let getInput reportUrls = AuditorCertificationInput certInput reportUrls subject certLevel
+    -- create the certification metadata
+    case dryRun of
+      -- if it's a dry run, just return the metadata
+      Just True ->do
+        let reportUrls = case reportContentId of
+              Just rCid -> [ReportURL $ parseURIUnsafe ("ipfs://" <> Text.unpack rCid)]
+              Nothing -> []
+        let auditorCertificationInput = getInput reportUrls
+        catch (createDraftMetadata auditorCertificationInput True) handleException
+      -- otherwise push both the metadata and the run report to the ipfs and return the full metadata
+      _ -> do
+        let certResultM = toCertificationResult status
+        -- upload the report to ipfs or use the existing ipfs cid
+        ipfsCid <- case reportContentId of
+          Just rCid -> pure (DB.IpfsCid rCid)
+          Nothing -> uploadRunReportToIpfs ev runStatus certResultM uuid
+        let reportUrl = ReportURL $ parseURIUnsafe ("ipfs://" <> Text.unpack (DB.ipfsCid ipfsCid))
+        let auditorCertificationInput = getInput [reportUrl]
 
-    -- ensure the run is finished
-    unless (runStatus == DB.Succeeded) $
-      throwError err403 { errBody = "Transaction status not fit for certification" }
-
-    -- mark the run as ready for certification
-    now <- getNow
-    withDb (DB.markAsReadyForCertification uuid ipfsCid now)
-      >> pure NoContent -- yep, we don't need to return anything
-
-  , getCertification = \rid@RunID{..} -> withEvent eb GetCertification \ev -> do
-    addField ev rid
-    withDb (DB.getL1Certification uuid)
-      >>= maybeToServerError err404 "Certification not found"
+        (fullMetadata,metadataIpfs) <- catch (createMetadataAndPushToIpfs auditorCertificationInput) handleException
+        addField ev (CreateL1CertificationMetadataIpfsCid metadataIpfs)
+        pure fullMetadata
 
   , getRepositoryInfo = \owner repo apiGhAccessTokenM -> withEvent eb GetRepoInfo \ev -> do
     addField ev (GetRepoInfoOwner owner)
@@ -315,7 +320,7 @@ server ServerArgs{..} = NamedAPI
     addField ev $ CreateAuditorReportFieldProfileId profileId
     addField ev $ CreateAuditorReportDryRun (dryRun == Just True)
     case dryRun of
-      Just True -> catch (createDraftMetadata reportInput) handleException
+      Just True -> catch (createDraftMetadata reportInput False) handleException
       _ -> do
         (fullMetadata,ipfs) <- catch (createMetadataAndPushToIpfs reportInput) handleException
         addField ev $ CreateAuditorReportIpfsCid ipfs
@@ -345,6 +350,24 @@ server ServerArgs{..} = NamedAPI
 
   }
   where
+    uploadRunReportToIpfs ev runStatus certResultM uuid = do
+      -- ensure the run is finished
+      unless (runStatus == DB.Succeeded) $
+        throwError err403 { errBody = "Transaction status not fit for certification" }
+      -- upload the report to ipfs
+      (IPFS.UploadResponse ipfsCid _) <- maybe
+        (throwError $ err403 { errBody = "can't upload report to ipfs" })
+        uploadToIpfs certResultM
+      --
+      -- mark the run as ready for certification
+      now <- getNow
+      _ <- withDb (DB.markAsReadyForCertification uuid ipfsCid now)
+
+      addField ev (CreateL1CertificationReportIpfsCid ipfsCid)
+      pure ipfsCid
+
+    -- TODO: for the moment we use L0 for all the certificates
+    certLevel = DB.L0
     wallet = Wallet.realClient serverWalletArgs
     handleException :: (MonadError ServerError m ) =>  SomeException -> m a
     handleException e = do
@@ -471,6 +494,10 @@ server ServerArgs{..} = NamedAPI
 
     getProfileDApp profileId = withDb (DB.getProfileDApp profileId)
         >>= withDappNotAvailableMsg
+
+    getProfileDAppSubject profileId = do
+      DB.DApp{..} <- withDb (DB.getProfileDApp profileId) >>= withDappNotAvailableMsg
+      maybeToServerError err403 "DApp subject not available" dappSubject
 
     withDappNotAvailableMsg = maybeToServerError err403 "DApp profile data not available"
 

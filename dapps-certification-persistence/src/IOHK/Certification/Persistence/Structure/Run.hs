@@ -76,7 +76,7 @@ data Run = Run
   , runStatus           :: Status
   , profileId           :: ID Profile
   , certificationPrice  :: CertificationPrice
-  , reportContentId :: Maybe Text
+  , reportContentId     :: Maybe Text
   } deriving (Generic,Show)
 
 instance ToSchema Status where

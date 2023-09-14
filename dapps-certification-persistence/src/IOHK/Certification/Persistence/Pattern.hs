@@ -14,6 +14,7 @@ module IOHK.Certification.Persistence.Pattern
 , Website
 , Email
 , ProfileWalletAddress
+, Subject
 , mkPatternedText
 , match
 , getPattern
@@ -111,5 +112,8 @@ type Email = PatternedText "Email" "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-_]+\\.[A-Za-z
 
 type Website = PatternedText "Website"
   "^(https?:\\/\\/)?(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,255}\\.[a-z]{2,6}(\\b([-a-zA-Z0-9@:%_\\+.~#()?&\\/\\/=]*))?$"
+
 type ProfileWalletAddress = PatternedText "ProfileWalletAddress"
   "^(addr_test1|addr1|stake|stake_test1)[a-zA-Z0-9]{53,}$"
+
+type Subject = PatternedText "Subject" "^[A-Za-z0-9_]{1,64}$"

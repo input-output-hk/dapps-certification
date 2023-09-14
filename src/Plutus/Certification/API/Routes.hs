@@ -14,7 +14,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -53,7 +52,6 @@ import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import qualified Data.Aeson.KeyMap as KM
-import Data.Either (fromRight)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
@@ -117,18 +115,14 @@ type UpdateCurrentProfileRoute (auth :: Symbol) = "profile"
   :> ReqBody '[JSON] ProfileBody
   :> Put '[JSON] DB.ProfileDTO
 
-type CreateCertificationRoute (auth :: Symbol) = "run"
+type CreateL1CertificationRoute (auth :: Symbol) = "run"
   :> Description "Store the L1 Report into IPFS and broadcasts the Certificate onchain"
   :> AuthProtect auth
   :> Capture "id" RunIDV1
   :> "certificate"
-  :> PostNoContent
-
-type GetCertificateRoute = "run"
-  :> Description "Get the L1 IPFS CID and the transaction id of the onchain stored Certificate"
-  :> Capture "id" RunIDV1
-  :> "certificate"
-  :> Get '[JSON] DB.L1CertificationDTO
+  :> ReqBody '[JSON] CertificationInput
+  :> QueryParam "dry-run" Bool
+  :> Post '[JSON] Metadata.FullMetadata
 
 type GetBalanceRoute (auth :: Symbol) = "profile"
   :> Description "Get the current balance of the profile"
@@ -214,7 +208,7 @@ type GetAdaUsdPriceRoute = "ada-usd-price"
   :> Get '[JSON] DB.AdaUsdPrice
 
 type CreateAuditorReport (auth :: Symbol) = "auditor"
-  :> Description "Get the available tiers"
+  :> Description "Get the L2 report"
   :> "reports"
   :> QueryParam "dry-run" Bool
   :> ReqBody '[JSON] Metadata.AuditorCertificationInput
@@ -294,9 +288,8 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getRuns :: mode :- GetRunsRoute auth
   , getCurrentProfile :: mode :- GetCurrentProfileRoute auth
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
-  , createCertification :: mode :- CreateCertificationRoute auth
-  , getCertification :: mode :- GetCertificateRoute
   , getProfileWalletAddress :: mode :- GetProfileWalletAddressRoute auth
+  , createCertification :: mode :- CreateL1CertificationRoute auth
   , walletAddress :: mode :- WalletAddressRoute
   , getProfileBalance :: mode :- GetBalanceRoute auth
   , getRunDetails :: mode :- GetRunDetailsRoute

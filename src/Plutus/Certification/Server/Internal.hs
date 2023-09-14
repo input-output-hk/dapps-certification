@@ -52,9 +52,11 @@ data CreateRunField
   = CreateRunRef !FlakeRefV1
   | CreateRunID !RunIDV1
 
-data StartCertificationField
-  = StartCertificationRunID !RunIDV1
-  | StartCertificationIpfsCid !DB.IpfsCid
+data CreateL1CertificationField
+  = CreateL1CertificationRunID !RunIDV1
+  | CreateL1CertificationReportIpfsCid !DB.IpfsCid
+  | CreateL1CertificationMetadataIpfsCid !DB.IpfsCid
+  | CreateL1CertificationDryRun !Bool
 
 data GetRepoInfoField
   = GetRepoInfoOwner !Text
@@ -94,7 +96,7 @@ data ServerEventSelector f where
   GetProfileBalance :: ServerEventSelector DB.ProfileId
   GetCertification :: ServerEventSelector RunIDV1
   GetRepoInfo :: ServerEventSelector GetRepoInfoField
-  StartCertification :: ServerEventSelector StartCertificationField
+  CreateL1Certification :: ServerEventSelector CreateL1CertificationField
   Login :: ServerEventSelector WalletAddress
   ServerTimestamp :: ServerEventSelector Void
   GenerateGitHubToken :: ServerEventSelector GenerateGitHubTokenField
@@ -141,9 +143,11 @@ renderServerEventSelector CreateRun = ("create-run", \case
     CreateRunID rid -> ("run-id", toJSON rid)
   )
 
-renderServerEventSelector StartCertification = ("start-certification", \case
-    StartCertificationRunID rid -> ("run-id", toJSON rid)
-    StartCertificationIpfsCid cid -> ("cid", toJSON cid)
+renderServerEventSelector CreateL1Certification = ("start-certification", \case
+    CreateL1CertificationRunID rid -> ("run-id", toJSON rid)
+    CreateL1CertificationReportIpfsCid cid -> ("report-ipfs-cid", toJSON cid)
+    CreateL1CertificationMetadataIpfsCid cid -> ("metadata-ipfs-cid", toJSON cid)
+    CreateL1CertificationDryRun dryRun -> ("dry-run", toJSON dryRun)
   )
 
 renderServerEventSelector GetRepoInfo = ("get-repo-info", \case

@@ -22,6 +22,7 @@ spec = modifyMaxSuccess (const 2000) $ do
       testJSON' "Twitter" (na :: Twitter)
       testJSON' "LinkedIn" (na :: LinkedIn)
       testJSON' "Email" (na :: Email)
+      testJSON' "Subject" (na :: Subject)
       modifyMaxSuccess (const 300) $ do
         testJSON' "ProfileWalletAddress" (na :: ProfileWalletAddress)
         testJSON' "Website" (na :: Website)
