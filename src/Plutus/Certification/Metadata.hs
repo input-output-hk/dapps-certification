@@ -18,7 +18,7 @@ module Plutus.Certification.Metadata
 , CertificationInput(..)
 , AuditorCertificationInput(..)
 , URL(..)
-, DB.Subject(..)
+, DB.Subject
 ) where
 
 import Plutus.Certification.Metadata.Types as X

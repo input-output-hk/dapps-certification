@@ -9,6 +9,7 @@ module Instances.Persistence where
 import Test.QuickCheck
 import IOHK.Certification.Persistence
 import Plutus.Certification.API
+import Plutus.Certification.Metadata
 import Control.Monad (replicateM)
 import Data.Text
 import GHC.TypeLits (KnownSymbol)
@@ -33,7 +34,6 @@ genTwitterAccount :: Gen Text
 genTwitterAccount = do
   length' <- choose (1, 15)
   pack <$> replicateM length' (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
-
 
 instance Arbitrary Twitter where
   arbitrary = genPatternedTextWith genTwitterAccount
@@ -104,29 +104,73 @@ instance Arbitrary Website where
 
 instance Arbitrary LinkedIn where
   arbitrary = genPatternedTextWith genLinkedIn
+    where
+      genLinkedIn :: Gen Text
+      genLinkedIn = do
+        prefix <- elements ["https://", "http://"]
+        domain <- elements ["linkedin.com", "www.linkedin.com"]
+        suffix <- elements ["/pub/", "/in/", "/profile/", "/company/"]
+        account <- genLinkedInAccount
+        return $ pack $ prefix ++ domain ++ suffix ++ account
+        where
+        genLinkedInAccount = do
+          len <- choose (1, 15)
+          replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 instance Arbitrary Subject where
   arbitrary = genPatternedTextWith genSubject
+    where
+    genSubject :: Gen Text
+    genSubject = do
+      len <- choose (1, 64)
+      pack <$> replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
--- LinkedIn regex:
--- ^(http(s)?:\/\/)?([\w]+\.)?linkedin\.com\/(pub|in|profile|company)\/([a-zA-Z0-9_-]+)$
 
-genLinkedIn :: Gen Text
-genLinkedIn = do
-  prefix <- elements ["https://", "http://"]
-  domain <- elements ["linkedin.com", "www.linkedin.com"]
-  suffix <- elements ["/pub/", "/in/", "/profile/", "/company/"]
-  account <- genLinkedInAccount
-  return $ pack $ prefix ++ domain ++ suffix ++ account
-  where
-  genLinkedInAccount = do
-    len <- choose (1, 15)
-    replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+instance Arbitrary GitHubAccount where
+  arbitrary = genPatternedTextWith genGitHubAccount
+    where
+    genGitHubAccount = do
+      hasHyphen :: Bool <- arbitrary
+      len <- choose (5, if hasHyphen then 38 else 39)
+      whereToSplit <- choose (2, len-1)
+      prefix <- replicateM whereToSplit (elements alphaNum)
+      suffix <- replicateM (len - whereToSplit) (elements alphaNum)
+      return $ pack $ prefix ++ (if hasHyphen then "-" else "") ++ suffix
 
-genSubject :: Gen Text
-genSubject = do
-  len <- choose (1, 64)
-  pack <$> replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
+instance Arbitrary DiscordAccount where
+  arbitrary = genPatternedTextWith discordAccount
+    where
+    discordAccount = do
+      len <- choose (3, 32)
+      prefix <- replicateM len (elements alphaNum)
+      suffix <- replicateM 4 (elements "0123456789")
+      return $ pack $ prefix ++ "#" ++ suffix
+
+instance Arbitrary Social where
+  arbitrary = Social
+    <$> arbitrary
+    <*> arbitrary
+    <*> pure "" -- empty contact info
+    <*> arbitrary
+    <*> arbitrary
+
+instance Arbitrary CertificationIssuerName where
+  arbitrary = genPatternedTextWith genArbitraryIssuerName
+    where
+    -- generate for "^.{1,64}$"
+    genArbitraryIssuerName = do
+      len <- choose (1, 64)
+      -- generate a printable ASCII char
+      let printableChar = elements [' '..'~']
+      -- any chars not only the alphanumeric ones
+      pack <$> replicateM len printableChar
+
+instance Arbitrary CertificateIssuer where
+  arbitrary = CertificateIssuer
+    <$> arbitrary
+    <*> pure Nothing -- TODO: test logo as well in the future
+    <*> arbitrary
 
 instance Arbitrary Email where
   arbitrary = genPatternedTextWith genEmail
@@ -140,7 +184,6 @@ genEmail = do
   domain <- replicateM 10 (elements (alphaNum ++ "_."))
   suffix <- replicateM 3 (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
   return $ pack $ prefix ++ "@" ++ domain ++ "." ++ suffix
-
 
 genArbitraryName :: Gen Text
 genArbitraryName = do

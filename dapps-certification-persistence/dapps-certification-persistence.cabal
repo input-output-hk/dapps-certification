@@ -25,7 +25,7 @@ library
                  , lens
                  , containers
                  , raw-strings-qq
-                 , regex-tdfa
+                 , regex-pcre
 
                  , dapps-certification-interface
     hs-source-dirs:   src

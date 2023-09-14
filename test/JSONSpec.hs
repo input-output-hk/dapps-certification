@@ -5,33 +5,36 @@ module JSONSpec (spec) where
 import Test.Hspec
 import IOHK.Certification.Persistence
 import Plutus.Certification.API
+import Plutus.Certification.Metadata
 import Utils.JSON
 
 
 import Instances.Persistence ()
-import Test.Hspec.QuickCheck (modifyMaxSuccess)
 import Data.Text (pack)
 
 na :: a
 na = undefined
 
 spec :: SpecWith ()
-spec = modifyMaxSuccess (const 2000) $ do
+spec = do
   describe "JSON - happy path" $ do
       testJSON (na :: GitHubAccessToken)
       testJSON' "Twitter" (na :: Twitter)
       testJSON' "LinkedIn" (na :: LinkedIn)
       testJSON' "Email" (na :: Email)
       testJSON' "Subject" (na :: Subject)
-      modifyMaxSuccess (const 300) $ do
-        testJSON' "ProfileWalletAddress" (na :: ProfileWalletAddress)
-        testJSON' "Website" (na :: Website)
-      modifyMaxSuccess (const 200) $ do
-        testJSON' "Profile" (na :: Profile)
-        testJSON' "DApp" (na :: DApp)
-        testJSONWithEq' eqDAppDTO "DAppDTO" (na :: DAppDTO)
-        testJSONWithEq' eqProfileDTO "ProfileDTO" (na :: ProfileDTO)
-        testJSONWithEq' eqProfileBody "ProfileBody" (na :: ProfileBody)
+      testJSON' "GitHubAccount" (na :: GitHubAccount)
+      testJSON' "DiscordAccount" (na :: DiscordAccount)
+      testJSON' "CertificationIssuerName" (na :: CertificationIssuerName)
+      testJSON' "ProfileWalletAddress" (na :: ProfileWalletAddress)
+      testJSON' "Website" (na :: Website)
+      testJSON' "Social" (na :: Social)
+      testJSON' "CertificateIssuer" (na :: CertificateIssuer)
+      testJSON' "Profile" (na :: Profile)
+      testJSON' "DApp" (na :: DApp)
+      testJSONWithEq' eqDAppDTO "DAppDTO" (na :: DAppDTO)
+      testJSONWithEq' eqProfileDTO "ProfileDTO" (na :: ProfileDTO)
+      testJSONWithEq' eqProfileBody "ProfileBody" (na :: ProfileBody)
 
   where
 
