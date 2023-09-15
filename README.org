@@ -16,6 +16,34 @@ The ~plutus-certification~ program has a ~--local~ flag to run the service local
 
 Now ~Cicero~ is running at http://localhost:18080, which you can pass as ~--cicero-url~ to ~plutus-certification~.
 
-** Docker  local-mode
-1. ~docker compose build~
-2. ~docker compose up~ or for daemon mode ~docker compose up -d~
+** In local-mode
+to run the service in local mode, run ~nix run .#plutus-certification -- --local ...~.
+
+** Build it and run it with Docker
+to run the service in docker, run ~./nix/docker-files/run-local.sh~.
+In order to modify parameters, you can edit ~./nix/docker-files/default.env~.
+
+** Running it with Docker without building (from docker registry, no nix is needed)
+Regularry the developers are pushing into the docker registry the latest version of every branch.
+To run the service without building it locally or even pulling the code, you can run the following command:
+
+~sh <( curl -L -s bit.ly/3EM70du ) <brach-name> [--env-file <env-file>]~
+
+Note: you can find how the default env file looks at ~./nix/docker-files/default.env~ but if it is not specified, the script will use the default one.
+
+Examples:
+
+TODO: replace ~bit.ly/3EM70du~ and `deploy/push-docker-by-branch` with the `master` link before merging
+. We use this until the PR is approved because master is not yet compatible with these modifications
+
+- ~sh <( curl -L -s bit.ly/3EM70du ) deploy/push-docker-by-branch~
+- ~sh <( curl -L -s bit.ly/3EM70du ) deploy/push-docker-by-branch --env-file ./nix/docker-files/default.env~
+
+** Pushing the docker image to the registry
+
+- to push the official/tagged image use the following command:
+    ~nix run .\#dockerApps.push-docker-image  -- <docker-registry> [<tag>]~
+- to push the current branch to the docker registry use the following command:
+    ~nix run .\#dockerApps.push-branch-to-docker-registry -- <docker-registry>~
+
+NOTE: Temporarly, we use as the ~ghcr.io/demoiog~ for the docker registry. This will be changed in the future.
