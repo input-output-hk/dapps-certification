@@ -201,7 +201,7 @@ instance ToSchema OnChainMetadata where
           [ ("1304", _1304Schema) ]
       & required .~ ["name", "social"]
 
-type CertificationIssuerName = DB.PatternedText "CertificationIssuer" "^.{1,64}$"
+type CertificationIssuerName = DB.PatternedText "CertificationIssuerName" "^.{1,64}$"
 
 data CertificationType = CertificationType
   { certificationLevel :: !DB.CertificationLevel
@@ -239,7 +239,7 @@ instance ToSchema PhantomAction where
 instance ToSchema CertificationType where
   declareNamedSchema _ = do
     certificationLevelSchema <- declareSchemaRef (Proxy :: Proxy DB.CertificationLevel)
-    certificateIssuerSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    certificateIssuerSchema <- declareSchemaRef (Proxy :: Proxy CertificationIssuerName)
     actionSchema <- declareSchemaRef (Proxy :: Proxy PhantomAction)
     return $ NamedSchema (Just "CertificationType") $ mempty
       & type_ ?~ SwaggerObject
@@ -310,11 +310,11 @@ instance ToSchema CertificateIssuer where
   declareNamedSchema _ = do
     uriSchema <- declareSchemaRef (Proxy :: Proxy String)
     socialSchema <- declareSchemaRef (Proxy :: Proxy Social)
-    certificateIssuerSchema <- declareSchemaRef (Proxy :: Proxy CertificateIssuer)
+    certificationIssuerName <- declareSchemaRef (Proxy :: Proxy CertificationIssuerName)
     return $ NamedSchema (Just "CertificateIssuer") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
-          [ ("name", certificateIssuerSchema)
+          [ ("name", certificationIssuerName )
           , ("logo", uriSchema)
           , ("social", socialSchema)
           ]
