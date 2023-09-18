@@ -173,7 +173,7 @@
           #remove the ':' character and replace it with '_'
           containerName=${"$"}{containerName//:/_}
 
-          docker_args="-t --platform linux/amd64 --name $containerName"
+          docker_args="-t --platform linux/amd64 --name $containerName --restart on-failure"
 
           ${runDockerArgs}
 
