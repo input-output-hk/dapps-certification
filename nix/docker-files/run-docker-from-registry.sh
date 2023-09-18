@@ -22,7 +22,7 @@ containerName=$(basename "$dockerImage")
 #remove the ':' character and replace it with '_'
 containerName=${containerName//:/_}
 
-docker_args="-t --platform linux/amd64 --name $containerName"
+docker_args="-t --platform linux/amd64 --name $containerName --restart on-failure"
 
 if [ -n "$WALLET_ID" ]; then
   docker_args="$docker_args -e WALLET_ID=$WALLET_ID"
