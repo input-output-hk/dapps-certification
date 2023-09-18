@@ -17,7 +17,12 @@ script="docker pull $dockerImage"
 echo $script >&2
 eval "$script"
 
-docker_args="-t --platform linux/amd64 --name plutus-certification"
+# Use basename to remove the registry from the image name
+containerName=$(basename "$dockerImage")
+#remove the ':' character and replace it with '_'
+containerName=${containerName//:/_}
+
+docker_args="-t --platform linux/amd64 --name $containerName"
 
 if [ -n "$WALLET_ID" ]; then
   docker_args="$docker_args -e WALLET_ID=$WALLET_ID"
@@ -82,6 +87,6 @@ fi
 docker_args="$docker_args -p $PORT:$PORT"
 
 
-script="docker run --rm $docker_args $dockerImage"
+script="docker run $docker_args $dockerImage"
 echo $script >&2
 eval "$script"
