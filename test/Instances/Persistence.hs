@@ -151,7 +151,7 @@ instance Arbitrary Social where
   arbitrary = Social
     <$> arbitrary
     <*> arbitrary
-    <*> pure "" -- empty contact info
+    <*> arbitrary
     <*> arbitrary
     <*> arbitrary
 

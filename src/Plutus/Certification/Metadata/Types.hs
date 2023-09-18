@@ -264,7 +264,7 @@ type DiscordAccount = DB.PatternedText "DiscordAccount"
 data Social = Social
   { twitter :: !(Maybe DB.Twitter)
   , github :: !(Maybe GitHubAccount)
-  , contact :: !Text
+  , contact :: !DB.Email
   , website :: !DB.Website
   , discord :: !(Maybe DiscordAccount)
   } deriving (Show, Eq, Generic)
@@ -277,7 +277,7 @@ instance FromJSON Social where
 
 instance ToSchema Social where
   declareNamedSchema _ = do
-    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+    emailSchema <- declareSchemaRef (Proxy :: Proxy DB.Email)
     uriSchema <- declareSchemaRef (Proxy :: Proxy DB.Website)
     twitterSchema <- declareSchemaRef (Proxy :: Proxy DB.Twitter)
     githubSchema <- declareSchemaRef (Proxy :: Proxy GitHubAccount)
@@ -287,7 +287,7 @@ instance ToSchema Social where
       & properties .~
           [ ("twitter", twitterSchema)
           , ("github", githubSchema)
-          , ("contact", textSchema)
+          , ("contact", emailSchema)
           , ("website", uriSchema)
           , ("discord", discordSchema)
           ]

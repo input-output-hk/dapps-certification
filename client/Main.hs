@@ -208,7 +208,7 @@ parseSocial = Social
       <> metavar "GITHUB"
       <> help "github handle"
       ))
-  <*> option str
+  <*> option patternedTextReader
       ( long "contact"
       <> metavar "CONTACT"
       <> help "contact email"
