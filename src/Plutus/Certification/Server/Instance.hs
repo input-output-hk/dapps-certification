@@ -301,7 +301,10 @@ server ServerArgs{..} = NamedAPI
   , getAllTiers = withEvent eb GetAllTiers \ev -> do
     tiers <- withDb DB.getAllTiers
     addField ev (List.length tiers)
-    pure tiers
+    -- TODO: remove when you want to activate all tiers
+    -- remove the Developer tier from the list
+    let filteredTiers = List.filter (\t -> t.tierDtoTier.tierType  /= DB.Developer ) tiers
+    pure filteredTiers
 
   , getActiveFeatures = \(profileId,_) -> withEvent eb GetActiveFeatures \ev -> do
     addField ev $ GetActiveFeaturesFieldProfileId profileId

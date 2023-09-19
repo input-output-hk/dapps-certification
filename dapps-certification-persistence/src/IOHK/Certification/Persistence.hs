@@ -49,6 +49,8 @@ import IOHK.Certification.Persistence.Structure.Subscription as X
   , SubscriptionId
   , FeatureType(..)
   , TierId
+  , TierType(..)
+  , Tier(..)
   )
 import IOHK.Certification.Persistence.API as X
   ( MinimalTransaction(..)
