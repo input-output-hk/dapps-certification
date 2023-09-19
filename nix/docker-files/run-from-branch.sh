@@ -16,7 +16,7 @@
 # 4. Pull the image
 # 5. Run the image with the env vars
 
-set -eEuo pipefail
+set -eEu
 
 if [ $# -ne 1 ] && [ $# -ne 3 ]; then
   echo "Usage: $0 <brach-name> [--env-file <env-file>]"
