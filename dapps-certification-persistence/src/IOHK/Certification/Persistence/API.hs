@@ -189,6 +189,7 @@ upsertProfile profile@Profile{..} dappM = do
            , #dappVersion := text dappVersion
            , #dappId := literal profileId
            , #dappGitHubToken := literal dappGitHubToken
+           , #dappSubject := literal dappSubject
            ]
           )
           [dapp { dappId = pid }]

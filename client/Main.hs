@@ -226,7 +226,7 @@ parseSocial = Social
 
 subjectInputParser :: Parser Subject
 subjectInputParser = option patternedTextReader
-  ( long "subject"
+  ( long "dapp-subject"
   <> metavar "SUBJECT"
   <> help "dapp subject"
   )
