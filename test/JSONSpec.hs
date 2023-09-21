@@ -24,7 +24,7 @@ spec = do
       testJSON' "Email" (na :: Email)
       testJSON' "Subject" (na :: Subject)
       testJSON' "GitHubAccount" (na :: GitHubAccount)
-      testJSON' "DiscordAccount" (na :: DiscordAccount)
+      testJSON' "DiscordLink" (na :: DiscordLink)
       testJSON' "CertificationIssuerName" (na :: CertificationIssuerName)
       testJSON' "ProfileWalletAddress" (na :: ProfileWalletAddress)
       testJSON' "Website" (na :: Website)

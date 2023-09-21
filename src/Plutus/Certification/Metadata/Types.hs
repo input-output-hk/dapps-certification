@@ -258,15 +258,15 @@ instance ToSchema CertificationType where
 type GitHubAccount = DB.PatternedText "GitHubAccount"
  "^(?=.{1,39}$)[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$"
 
-type DiscordAccount = DB.PatternedText "DiscordAccount"
-  "^.{3,32}#[0-9]{4}$"
+type DiscordLink = DB.PatternedText "DiscordLink"
+   "^(?:https?:\\/\\/)?discord(?:\\.gg|app\\.com\\/invite|\\.com\\/invite)\\/[\\w-]+$"
 
 data Social = Social
   { twitter :: !(Maybe DB.Twitter)
   , github :: !(Maybe GitHubAccount)
   , contact :: !DB.Email
   , website :: !DB.Website
-  , discord :: !(Maybe DiscordAccount)
+  , discord :: !(Maybe DiscordLink)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON Social where
@@ -281,7 +281,7 @@ instance ToSchema Social where
     uriSchema <- declareSchemaRef (Proxy :: Proxy DB.Website)
     twitterSchema <- declareSchemaRef (Proxy :: Proxy DB.Twitter)
     githubSchema <- declareSchemaRef (Proxy :: Proxy GitHubAccount)
-    discordSchema <- declareSchemaRef (Proxy :: Proxy DiscordAccount)
+    discordSchema <- declareSchemaRef (Proxy :: Proxy DiscordLink)
     return $ NamedSchema (Just "Social") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~

@@ -137,15 +137,24 @@ instance Arbitrary GitHubAccount where
       suffix <- replicateM (len - whereToSplit) (elements alphaNum)
       return $ pack $ prefix ++ (if hasHyphen then "-" else "") ++ suffix
 
-
-instance Arbitrary DiscordAccount where
-  arbitrary = genPatternedTextWith discordAccount
+-- Pattern for Discord ^(?:https?:\/\/)?discord(?:\.gg|app\.com\/invite|\.com\/invite)\/[\w-]+$
+-- Valid examples:
+-- https://discordapp.com/invite/asda
+-- https://discord.com/invite/asda
+-- https://discord.gg/asda
+instance Arbitrary DiscordLink where
+  arbitrary = genPatternedTextWith discordLink
     where
-    discordAccount = do
-      len <- choose (3, 32)
-      prefix <- replicateM len (elements alphaNum)
-      suffix <- replicateM 4 (elements "0123456789")
-      return $ pack $ prefix ++ "#" ++ suffix
+    discordLink = do
+      prefix <- elements ["https://", "http://"]
+      domain <- elements ["discordapp.com", "discord.com", "discord.gg"]
+      invite <- elements ["/invite/"]
+      account <- genDiscordAccount
+      return $ pack $ prefix ++ domain ++ (if domain == "discord.gg" then "/" else invite) ++ account
+      where
+      genDiscordAccount = do
+        len <- choose (1, 15)
+        replicateM len (elements "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 instance Arbitrary Social where
   arbitrary = Social
