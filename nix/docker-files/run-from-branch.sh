@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # DESCRIPTION: This script is used to run the docker image from a specific branch.
 # SCOPE: to be used by users not familiar with nix or when the user does not want
 # to build the image locally or even clone the repo.
@@ -17,6 +19,20 @@
 # 5. Run the image with the env vars
 
 set -eEu
+
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    echo "Docker is not installed. Please install Docker and try again."
+    exit 1
+fi
+
+# Check if Docker daemon is running
+if ! docker info &> /dev/null; then
+    echo "Docker daemon is not running. Please start Docker and try again."
+    exit 1
+fi
+
+echo "Docker is installed, the daemon is running"
 
 if [ $# -ne 1 ] && [ $# -ne 3 ]; then
   echo "Usage: $0 <brach-name> [--env-file <env-file>]"
