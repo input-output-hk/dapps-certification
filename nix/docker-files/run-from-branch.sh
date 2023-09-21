@@ -106,6 +106,6 @@ runDockerFile=run-docker-from-registry.sh
 urlToShell=$baseUrl/$branch/$folder/run-docker-from-registry.sh
 
 export $vars
-script="curl -sSfL -H 'Cache-Control: no-cache' $urlToShell | sh -s \"$imageName\""
+script="curl -sSfL -H 'Cache-Control: no-cache' $urlToShell | bash -s \"$imageName\""
 echo $script >&2
 eval "$script"
