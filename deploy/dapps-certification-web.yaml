@@ -8,7 +8,7 @@ spec:
     - name: dapps-certification-web
       type: webservice
       properties:
-        image: ghcr.io/demoiog/plutus-certification-web:8
+        image: ghcr.io/demoiog/plutus-certification-web:9
         imagePullPolicy: IfNotPresent
         ports:
           - expose: true
