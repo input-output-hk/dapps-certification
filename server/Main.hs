@@ -452,18 +452,20 @@ main = do
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       addressRotation <- liftIO $ newMVar emptyAddressRotation
-      _ <- initDb $ withDb' (args.dbPath)
-      jwtConfig <- getJwtArgs eb args
-      adaPriceRef <- startSynchronizer eb scheduleCrash args
+      conn <- DB.sqliteOpen (args.dbPath)
+      --_ <- initDb $ withDb' (args.dbPath)
+      _ <- initDb $ DB.withConnection conn
+      jwtConfig <- getJwtArgs conn eb args
+      adaPriceRef <- startSynchronizer conn eb scheduleCrash args
       -- TODO: this has to be refactored
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
-        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext (withDb' (args.dbPath)) whitelist jwtConfig) .
+        serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext (DB.withConnection conn) whitelist jwtConfig) .
         (\r -> swaggerSchemaUIServer (documentation args.auth)
-               :<|> server (serverArgs args caps r eb whitelist adaPriceRef jwtConfig addressRotation))
+               :<|> server (serverArgs conn args caps r eb whitelist adaPriceRef jwtConfig addressRotation))
   exitFailure
   where
-  getJwtArgs eb args = withEvent eb OnAuthMode \ev ->
+  getJwtArgs conn eb args = withEvent eb OnAuthMode \ev ->
     case (args.auth) of
       JWTAuth (JWTArgs mode expiration) -> Just <$> do
         secret <- case mode of
@@ -472,21 +474,21 @@ main = do
               pure secret
             JWTGenerate -> do
               addField ev OnAuthModeFieldJWTGenerate
-              getJWTSecretFromDB args
+              getJWTSecretFromDB conn
         pure $ JWTConfig secret expiration
       _ -> do
         addField ev OnAuthModeFieldPlainAddressAuth
         pure Nothing
 
-  getJWTSecretFromDB :: Args -> IO String
-  getJWTSecretFromDB args = do
+  --getJWTSecretFromDB :: Args -> IO String
+  getJWTSecretFromDB conn = do
     -- check if the secret is already in the db
-    maybeSecret <- withDb' args.dbPath DB.getJWTSecret
+    maybeSecret <- DB.withConnection conn DB.getJWTSecret
     case maybeSecret of
       -- if not generate a new one and store it in the db
       Nothing -> do
         secret <- generateSecret
-        withDb' args.dbPath  (DB.insertJWTSecret (Text.pack secret))
+        DB.withConnection conn  (DB.insertJWTSecret (Text.pack secret))
         pure secret
       -- if yes return it
       Just secret -> pure (Text.unpack secret)
@@ -499,14 +501,14 @@ main = do
       pure randomText
 
 
-  startSynchronizer eb scheduleCrash args = do
+  startSynchronizer conn eb scheduleCrash args = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor
             (narrowEventBackend InjectSynchronizer eb) scheduleCrash
             (args.wallet) ref 10 (args.minAmountForAddressAssignment)
-            (WithDBWrapper (withDb' (args.dbPath)) )
+            (WithDBWrapper (DB.withConnection conn) )
     pure ref
-  serverArgs args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
+  serverArgs conn args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
     { serverWalletArgs  = args.wallet
     , serverGithubToken = args.github.accessToken
     , serverEventBackend = be r eb
@@ -515,11 +517,9 @@ main = do
     , serverValidateSubscriptions = not args.bypassSubscriptionValidation
     , serverGitHubCredentials = args.github.credentials
     , serverAdaUsdPrice = liftIO $ readIORef ref
-    , withDb = withDb' (args.dbPath)
+    , withDb = DB.withConnection conn
     , ..
     }
-  withDb' :: (MonadIO m, MonadMask m) => FilePath -> (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> m a
-  withDb' = DB.withSQLite'
   documentation PlainAddressAuth = swaggerJson
   documentation (JWTAuth _) = swaggerJsonWithLogin
 

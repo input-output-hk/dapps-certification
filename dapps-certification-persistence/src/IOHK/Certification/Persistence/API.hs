@@ -14,6 +14,7 @@ import Data.Maybe
 import Data.List (nub)
 import Database.Selda
 import Database.Selda.SQLite
+import Database.Selda.Backend
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
 import IOHK.Certification.Persistence.Structure.Run
@@ -602,6 +603,6 @@ getAllTransactions justOutput = do
       , mtxMetadata = wtxMetadata
       }
 
--- | Polimorphic function to run a Selda computation with a SQLite database.
-withSQLite' :: (MonadIO m, MonadMask m) => FilePath -> (forall n. (MonadSelda n,MonadMask n) => n a) -> m a
-withSQLite' = withSQLite
+-- | Polimorphic function to run a Selda computation with a connection
+withConnection :: (MonadIO m, MonadMask m) => SeldaConnection b -> (forall n. (MonadSelda n,MonadMask n) => n a) -> m a
+withConnection = flip runSeldaT
