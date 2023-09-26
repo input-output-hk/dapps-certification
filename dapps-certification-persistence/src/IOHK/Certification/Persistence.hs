@@ -1,8 +1,12 @@
 module IOHK.Certification.Persistence
   ( module X
   , MonadSelda
+  , sqliteOpen
+  , seldaClose
   ) where
 import Database.Selda
+
+import Database.Selda.SQLite
 
 import           IOHK.Certification.Interface  as X
   ( GitHubAccessToken(..)
@@ -64,7 +68,7 @@ import IOHK.Certification.Persistence.API as X
   , getRun
   , updateFinishedRun
   , getRuns
-  , withSQLite'
+  , withConnection
   , getProfileId
   , getProfileAddress
   , syncRun
