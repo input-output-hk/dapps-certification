@@ -2,10 +2,7 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE PolyKinds            #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
-
-
 {-# LANGUAGE ScopedTypeVariables       #-}
-
 
 module IOHK.Certification.Persistence.Pattern
 ( PatternedText(getPatternedText)
@@ -18,6 +15,7 @@ module IOHK.Certification.Persistence.Pattern
 , mkPatternedText
 , match
 , getPattern
+, SqlDataValidationException(..)
 ) where
 
 import           Data.Text
@@ -27,7 +25,7 @@ import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
 import           Database.Selda.SqlType
-import           Control.Exception ( throw)
+import           Control.Exception ( throw, Exception(..))
 import           GHC.TypeLits
 import           Data.Data
 
@@ -57,12 +55,20 @@ instance (KnownSymbol n,KnownSymbol p) => FromJSON (PatternedText n p) where
     where
     labelN = symbolVal (Proxy :: Proxy n)
 
+-- We want to separate the exceptions when data from the database is not in the
+-- expected format but the type is correct
+-- In other parts we might want to take different actions depending on this
+newtype SqlDataValidationException = SqlDataValidationException String
+  deriving (Show,Typeable)
+
+instance Exception SqlDataValidationException where
+
 instance (KnownSymbol n,KnownSymbol p) => SqlType (PatternedText n p) where
   mkLit (MkUnsafePatternedText t) = LCustom TText (LText t)
   sqlType _ = TText
   fromSql (SqlString t) = case mkPatternedText t of
     Right value -> value
-    Left str -> throw $ userError $ "fromSql: " ++ str
+    Left str -> throw $ SqlDataValidationException $ "fromSql: " ++ str
   fromSql v = throw $ userError $ "fromSql: expected SqlString, got " ++ show v
   defaultValue = throw $ userError $ labelN ++ " : no default value"
     where

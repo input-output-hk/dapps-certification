@@ -70,6 +70,7 @@ import qualified Data.Text as Text
 import System.Environment (lookupEnv)
 import Crypto.Random
 import Control.Monad.Reader (ReaderT(runReaderT))
+import Network.HTTP.Types (status500)
 
 oneAda :: Word64
 oneAda = 1000000
@@ -436,7 +437,11 @@ main = do
                    & setHost args.host
                    & setOnException (\r e -> when (defaultShouldDisplayException e) $ withEvent eb OnException \ev -> do
                                         addField ev $ OnExceptionField r e
-                                        schedule scheduleCrash (setAncestor $ reference ev))
+                                        -- if the exception is a validation exception, we don't want to crash the server
+                                        let sqlValidationEx = fromException @DB.SqlDataValidationException e
+                                        unless (isJust sqlValidationEx) $
+                                          schedule scheduleCrash (setAncestor $ reference ev)
+                                    )
                    & setInstallShutdownHandler (putMVar closeSocketVar)
                    & setBeforeMainLoop (finalize initEv)
           corsPolicy = simpleCorsResourcePolicy
