@@ -17,6 +17,7 @@ import Data.Maybe
 import Database.Selda
 import Database.Selda.SqlType as Selda
 import IOHK.Certification.Persistence.Structure.Profile
+import IOHK.Certification.Persistence.Pattern
 import Data.Text hiding (drop)
 import Control.Exception ( throw)
 import Data.Aeson
@@ -225,6 +226,7 @@ instance SqlType SubscriptionStatus where
   fromSql (SqlInt64 0) = InactiveSubscription
   fromSql (SqlInt64 1) = ActiveSubscription
   fromSql (SqlInt64 2) = PendingSubscription
+  fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0, 1, or 2, got " ++ show n
   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
   defaultValue = mkLit PendingSubscription
 

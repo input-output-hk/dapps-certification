@@ -25,6 +25,7 @@ import           GHC.OverloadedLabels
 import           IOHK.Certification.Persistence.Structure.Profile
 import           Control.Exception ( throw)
 import           IOHK.Certification.Persistence.Structure.Run
+import           IOHK.Certification.Persistence.Pattern
 
 import qualified Data.Aeson.KeyMap as KM
 
@@ -46,6 +47,7 @@ instance SqlType CertificationLevel where
   fromSql (SqlInt64 1) = L1
   fromSql (SqlInt64 2) = L2
   fromSql (SqlInt64 3) = L3
+  fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0,1,2,3, got " ++ show n
   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
   defaultValue = mkLit L1
 
@@ -163,6 +165,7 @@ instance SqlType MetadataType where
   sqlType _ = TInt64
   fromSql (SqlInt64 0) = MetaIpfs
   fromSql (SqlInt64 1) = MetaUrl
+  fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0,1, got " ++ show n
   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
   defaultValue = mkLit MetaIpfs
 
@@ -177,6 +180,7 @@ instance SqlType CertificationAction where
   sqlType _ = TInt64
   fromSql (SqlInt64 0) = Certify
   fromSql (SqlInt64 1) = Audit
+  fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0,1, got " ++ show n
   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
   defaultValue = mkLit Certify
 

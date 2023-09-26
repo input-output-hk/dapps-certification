@@ -35,11 +35,9 @@ import           Data.Maybe
 
 import           IOHK.Certification.Interface
   ( GitHubAccessToken(..)
-  , ghAccessTokenPattern
   , ghAccessTokenFromText
   )
 
-import qualified Data.Swagger.Lens as SL
 import qualified Data.Text         as Text
 import qualified Data.Aeson.KeyMap as KM
 
@@ -129,6 +127,7 @@ instance SqlType WalletAddressStatus where
    sqlType _ = TInt64
    fromSql (SqlInt64 0) = Overlapping
    fromSql (SqlInt64 1) = Reserved
+   fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0 or 1, got " ++ show n
    fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
    defaultValue = mkLit Overlapping
 
@@ -260,7 +259,7 @@ instance SqlType GitHubAccessToken where
   sqlType _ = TText
   fromSql (SqlString t)
     | Right token <- ghAccessTokenFromText t = token
-    | otherwise = throw $ userError $ "Invalid GitHubAccessToken: " ++ show t
+    | otherwise = throw $ SqlDataValidationException $ "Invalid GitHubAccessToken: " ++ show t
   fromSql v = throw $ userError $ "fromSql: expected SqlString, got " ++ show v
   defaultValue = throw $ userError "GitHubAccessToken: no default value"
 
