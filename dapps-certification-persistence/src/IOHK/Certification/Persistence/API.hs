@@ -424,8 +424,8 @@ getRuns pid afterM topM = query $
 
 addInitialData :: MonadSelda m => m ()
 addInitialData = void $ do
-  let devFeatures = [ Feature L1Run "allows running testing campaign for a DApp" ]
-      auditFeatures = [ Feature L2UploadReport "allows an auditor to upload a report" ]
+  let devFeatures = [ Feature L1Run "Testing of a DApp with Property Based Testing" ]
+      auditFeatures = [ Feature L2UploadReport "CIP-0096 metadata generation for audit reports" ]
   insert_ features (devFeatures <> auditFeatures)
   -- TODO: price should be configurable
   let usdPrice = 2
