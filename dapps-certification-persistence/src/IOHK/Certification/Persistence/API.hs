@@ -436,8 +436,8 @@ addInitialData = void $ do
           \ With this tier, you will have access to our testing tool and all its features as described in the documentation."
           Developer usdPrice 365 True ]
       auditor  =
-        [Tier def "Standard" "All Testing Features \
-        \and CIP-0096 formatting of Reports "
+        [Tier def "Auditor" "All Testing Features \
+        \and CIP-96 formatting of Reports "
          "This tier is suited for auditors who want to test multiple DApps and format reports to be CIP-0096 compliant.\
          \ With this tier, you will have access to our testing tool and all its features as described in the documentation.\
          \ You will also be able to format your reports to be CIP-0096 compliant."
