@@ -223,7 +223,7 @@ instance Arbitrary DApp where
     <$> genArbitraryName
     <*> genArbitraryName
     <*> genArbitraryName
-    <*> genArbitraryName
+    <*> liftArbitrary genArbitraryName
     <*> arbitrary
     <*> arbitrary
 

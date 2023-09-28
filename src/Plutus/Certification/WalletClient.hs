@@ -134,7 +134,7 @@ data CertificationMetadata = CertificationMetadata
   , crtmLink         :: !(Maybe BaseUrl)
   , crtmTwitter      :: !(Maybe Text)
   , crtmContractLink :: !URI
-  , crtmVersion      :: !Text
+  , crtmVersion      :: !(Maybe Text)
   } deriving Generic
 
 instance ToJSON CertificationMetadata where
@@ -143,7 +143,7 @@ instance ToJSON CertificationMetadata where
     , "ipfsCid" .= split64 (crtmIpfsCid.ipfsCid)
     , "projectName" .= split64 crtmProjectName
     , "contractLink" .= split64 (pack $ show crtmContractLink)
-    , "version" .= split64 crtmVersion
+    , "version" .= fmap split64 crtmVersion
     ] ++ maybe [] (\x -> [ "twitter" .= split64 x]) crtmTwitter
       ++ maybe [] (\x -> [ "link" .= (split64 . pack . showBaseUrl $ x )]) crtmLink
 

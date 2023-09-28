@@ -344,11 +344,11 @@ dappParser = DApp (toId 0)
        <> metavar "DAPP_GITHUB_REPO"
        <> help "dapp github repo"
         )
-  <*> option str
+  <*> optional (option str
         ( long "dapp-version"
        <> metavar "DAPP_VERSION"
        <> help "dapp version"
-        )
+        ))
   <*> optional gitHubAccessTokenParser
   <*> optional subjectInputParser
 
