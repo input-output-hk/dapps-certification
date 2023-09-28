@@ -211,7 +211,7 @@ data DApp = DApp
   , dappName    :: Text
   , dappOwner   :: Text
   , dappRepo    :: Text
-  , dappVersion :: Text
+  , dappVersion :: Maybe Text
   , dappGitHubToken :: Maybe GitHubAccessToken
   , dappSubject :: Maybe Subject
   } deriving (Generic,Show,Eq)
@@ -230,7 +230,7 @@ instance ToSchema DApp where
           , ("githubToken", ghTokenSchema)
           , ("subject", textSchema)
           ]
-      & required .~ ["name", "owner", "repo", "version"]
+      & required .~ ["name", "owner", "repo"]
 
 instance FromJSON DApp where
   parseJSON = withObject "DApp" $ \v -> DApp
@@ -238,7 +238,7 @@ instance FromJSON DApp where
     <*> v .: "name"
     <*> v .: "owner"
     <*> v .: "repo"
-    <*> v .: "version"
+    <*> v .:? "version"
     <*> v .:? "githubToken"
     <*> v .:? "subject"
 
