@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedLabels           #-}
@@ -10,7 +9,6 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE LambdaCase                 #-}
 
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -24,15 +22,10 @@ import           Data.Proxy
 --import           Control.Exception ( throw)
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
-import           Database.Selda.SqlType as Selda
 import           GHC.OverloadedLabels
 import           Data.Int
 
 import           IOHK.Certification.Persistence.Structure.Profile
-import           Control.Exception ( throw)
-
-import qualified Data.Text         as Text
-import qualified Data.Aeson.KeyMap as KM
 
 --------------------------------------------------------------------------------
 -- | Run

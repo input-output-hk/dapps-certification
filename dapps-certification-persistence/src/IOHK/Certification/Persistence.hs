@@ -97,4 +97,5 @@ import IOHK.Certification.Persistence.API as X
   , getProfileWallets
   , getProfileWallet
   , upsertProfileWallet
+  , markAllRunningAsAborted
   )

@@ -13,7 +13,6 @@ import Control.Monad
 import Data.Maybe
 import Data.List (nub)
 import Database.Selda
-import Database.Selda.SQLite
 import Database.Selda.Backend
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
@@ -326,6 +325,16 @@ deleteRun runId = deleteFrom runs
 markAsAborted :: MonadSelda m => UUID -> UTCTime -> m Int
 markAsAborted runId time = update runs
     (\run -> (run ! #runId .== literal runId) .&& (run ! #runStatus .== literal Queued))
+    (`with`
+      [ #runStatus := literal Aborted
+      , #syncedAt := literal time
+      , #finishedAt := literal (Just time)
+      ]
+    )
+
+markAllRunningAsAborted :: MonadSelda m => UTCTime -> m Int
+markAllRunningAsAborted time = update runs
+    (\run -> run ! #runStatus .== literal Queued)
     (`with`
       [ #runStatus := literal Aborted
       , #syncedAt := literal time
