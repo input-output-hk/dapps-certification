@@ -70,7 +70,6 @@ import qualified Data.Text as Text
 import System.Environment (lookupEnv)
 import Crypto.Random
 import Control.Monad.Reader (ReaderT(runReaderT))
-import Network.HTTP.Types (status500)
 
 oneAda :: Word64
 oneAda = 1000000
@@ -78,6 +77,7 @@ oneAda = 1000000
 data Backend
   = Local
   | Cicero !BaseUrl
+  deriving (Eq, Show)
 
 data Args = Args
   { port :: !Port
@@ -288,6 +288,7 @@ data RootEventSelector f where
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
+  MarkRunningTestsAsAborted :: RootEventSelector Int
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -319,6 +320,10 @@ renderRoot OnAuthMode =
       OnAuthModeFieldJWTSecret -> ("mode","jwt-secret")
       OnAuthModeFieldJWTGenerate -> ("mode","jwt-generate-secret")
       OnAuthModeFieldPlainAddressAuth -> ("mode","plain-address-auth")
+  )
+renderRoot MarkRunningTestsAsAborted =
+  ( "mark-running-tests-as-aborted"
+  , ("count" .=)
   )
 
 -- | plain address authentication
@@ -453,8 +458,10 @@ main = do
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       addressRotation <- liftIO $ newMVar emptyAddressRotation
       conn <- DB.sqliteOpen (args.dbPath)
-      --_ <- initDb $ withDb' (args.dbPath)
       _ <- initDb $ DB.withConnection conn
+      -- if is local mark all previous running tests as aborted
+      when (args.backend == Local) $
+        markAllRunningAsAborted eb conn
       jwtConfig <- getJwtArgs conn eb args
       adaPriceRef <- startSynchronizer conn eb scheduleCrash args
       -- TODO: this has to be refactored
@@ -465,6 +472,11 @@ main = do
                :<|> server (serverArgs conn args caps r eb whitelist adaPriceRef jwtConfig addressRotation))
   exitFailure
   where
+  markAllRunningAsAborted eb conn = withEvent eb MarkRunningTestsAsAborted \ev -> do
+      now <- getCurrentTime
+      len <- DB.withConnection conn $ DB.markAllRunningAsAborted now
+      addField ev len
+
   getJwtArgs conn eb args = withEvent eb OnAuthMode \ev ->
     case (args.auth) of
       JWTAuth (JWTArgs mode expiration) -> Just <$> do
