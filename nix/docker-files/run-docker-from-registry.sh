@@ -80,6 +80,14 @@ if [ -n "$MIN_AMOUNT_FOR_ADDRESS_RESERVATION" ]; then
   docker_args="$docker_args -e MIN_AMOUNT_FOR_ADDRESS_RESERVATION=$MIN_AMOUNT_FOR_ADDRESS_RESERVATION"
 fi
 
+if [ -n "$GITHUB_CLIENT_ID" ]; then
+  docker_args="$docker_args -e GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID"
+fi
+
+if [ -n "$GITHUB_CLIENT_SECRET" ]; then
+  docker_args="$docker_args -e GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET"
+fi
+
 
 if [[ -z "$PORT" ]]; then
   export PORT=9671
