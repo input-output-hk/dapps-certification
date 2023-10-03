@@ -24,11 +24,16 @@ import IOHK.Certification.Persistence.Structure.Certification as X
   , CertificationLevel(..)
   , L1CertificationDTO(..)
   )
+import IOHK.Certification.Persistence.Migration as X
+  ( ensureTables
+  , MigrationSelector(..)
+  , renderMigrationSelector
+  )
+
 import IOHK.Certification.Persistence.Structure as X
   ( DApp(..)
   , ProfileDTO(..)
   , DAppDTO(..)
-  , createTables
   , IpfsCid(..)
   , TxId(..)
   , Transaction(..)
@@ -69,6 +74,7 @@ import IOHK.Certification.Persistence.API as X
   , updateFinishedRun
   , getRuns
   , withConnection
+  , withSQLiteConnection
   , getProfileId
   , getProfileAddress
   , syncRun
@@ -98,4 +104,5 @@ import IOHK.Certification.Persistence.API as X
   , getProfileWallet
   , upsertProfileWallet
   , markAllRunningAsAborted
+  , sqlLiteGetAllTables
   )

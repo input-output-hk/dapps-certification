@@ -13,6 +13,10 @@ library
                     , IOHK.Certification.Persistence.Structure.Run
                     , IOHK.Certification.Persistence.Structure.Profile
                     , IOHK.Certification.Persistence.Pattern
+                    , IOHK.Certification.Persistence.Migration
+                    , IOHK.Certification.Persistence.Migration.SQLite.V0
+                    , IOHK.Certification.Persistence.Migration.SQLite.V1
+
     build-depends: base
                  , selda
                  , selda-sqlite
@@ -26,6 +30,8 @@ library
                  , containers
                  , raw-strings-qq
                  , regex-pcre
+                 , eventuo11y
+                 , exceptions
 
                  , dapps-certification-interface
     hs-source-dirs:   src

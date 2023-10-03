@@ -27,11 +27,8 @@ import           Data.Int (Int64)
 
 import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
-import           IOHK.Certification.Persistence.Structure.Certification
-import           IOHK.Certification.Persistence.Structure.Run
 import           IOHK.Certification.Persistence.Pattern
 import           Data.Text hiding (index)
-import           Data.Maybe
 
 import           IOHK.Certification.Interface
   ( GitHubAccessToken(..)
@@ -300,18 +297,21 @@ data TransactionEntry = TransactionEntry
 instance SqlRow TransactionEntry
 
 --------------------------------------------------------------------------------
--- | JWT Config
-newtype JWTSecret = JWTSecret
-  { jwtSecret :: Text
+-- | General lookup table
+
+data Lookup = Lookup
+  { lookupProp :: Text
+  , lookupValue :: Text
   } deriving (Generic, Show)
 
-instance SqlRow JWTSecret
-
-jwtSecretTable :: Table JWTSecret
-jwtSecretTable = tableFieldMod "jwt-secret" [] (fromJust . stripPrefix "jwt")
+instance SqlRow Lookup
 
 --------------------------------------------------------------------------------
 -- | Create Tables
+
+lookupValues :: Table Lookup
+lookupValues = table "lookup"
+  [ #lookupProp :- primary ]
 
 transactions :: Table Transaction
 transactions = table "transaction"
@@ -332,26 +332,9 @@ profileWallets = table "profile_wallet"
   , #profileWalletId :- foreignKey profiles #profileId
   ]
 
-
 dapps :: Table DApp
 dapps = table "dapp"
   [ #dappId :- unique
   , #dappId :- foreignKey profiles #profileId
   ]
 
-createTables :: MonadSelda m => m ()
-createTables = do
-  createTable certifications
-  createTable onChainCertifications
-  createTable profiles
-  createTable profileWallets
-  createTable dapps
-  createTable runs
-  createTable transactions
-  createTable transactionEntries
-  createTable features
-  createTable tiers
-  createTable tierFeatures
-  createTable subscriptions
-  createTable l1Certifications
-  createTable jwtSecretTable
