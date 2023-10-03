@@ -13,7 +13,7 @@ import Control.Monad
 import Data.Maybe
 import Data.List (nub)
 import Database.Selda
-import Database.Selda.Backend
+import Database.Selda.Backend hiding (withConnection)
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
 import IOHK.Certification.Persistence.Structure.Run
@@ -25,9 +25,12 @@ import Data.Fixed
 import Data.Int
 import Data.Bifunctor
 
+import Database.Selda.SQLite
+
 import Data.Functor
 
 import qualified Data.Map as Map
+import Database.Selda.Unsafe
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -64,16 +67,32 @@ upsertTransaction tx@Transaction{..} entries = do
   forM_ txIdM (insert transactionEntries . updateEntries)
   pure txIdM
 
+jwtSecretPropName :: Text
+jwtSecretPropName = "jwt-secret"
+
 getJWTSecret :: MonadSelda m => m (Maybe Text)
-getJWTSecret = fmap listToMaybe $ query $ do
-  record <- select jwtSecretTable
-  pure (record ! #jwtSecret)
+getJWTSecret = getLookupValue jwtSecretPropName
 
+insertJWTSecret :: (MonadSelda m,MonadMask m) => Text -> m ()
+insertJWTSecret = upsertLookupValue jwtSecretPropName
 
--- insert jwtToken
-insertJWTSecret :: MonadSelda m => Text -> m ()
-insertJWTSecret secret = do
-  insert_ jwtSecretTable [JWTSecret secret]
+getLookupValueQ :: Text -> Query t (Col t Text)
+getLookupValueQ property = do
+  row' <- select lookupValues
+  restrict (row' ! #lookupProp .== literal property)
+  pure (row' ! #lookupValue)
+
+getLookupValue :: MonadSelda m => Text -> m (Maybe Text)
+getLookupValue property = fmap listToMaybe $
+  query $ getLookupValueQ property
+
+upsertLookupValue :: (MonadSelda m,MonadMask m) => Text -> Text -> m ()
+upsertLookupValue property value = do
+  void $ upsert lookupValues
+     (\p -> p ! #lookupProp .== literal property)
+     (`with` [ #lookupValue := literal value ])
+     [Lookup property value]
+
 
 -- get all ready for certification runs
 -- in ascending order
@@ -156,7 +175,6 @@ getProfileBalance address = do
   getWalletCredits Nothing = 0
   getWalletCredits (Just (_, Nothing)) = 0
   getWalletCredits (Just (_, Just ProfileWallet{..})) = profileWalletCredits
-
 
 upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
 upsertProfile profile@Profile{..} dappM = do
@@ -613,5 +631,27 @@ getAllTransactions justOutput = do
       }
 
 -- | Polimorphic function to run a Selda computation with a connection
-withConnection :: (MonadIO m, MonadMask m) => SeldaConnection b -> (forall n. (MonadSelda n,MonadMask n) => n a) -> m a
+withConnection :: (MonadIO m, MonadMask m)
+               => SeldaConnection b
+               -> (forall n. (MonadSelda n,MonadMask n) => n a)
+               -> m a
 withConnection = flip runSeldaT
+
+withSQLiteConnection :: forall m a. (MonadIO m, MonadMask m) => SeldaConnection SQLite -> SeldaT SQLite m a -> m a
+withSQLiteConnection = flip runSeldaT
+
+sqlLiteGetAllTables :: (MonadIO m,MonadMask m) => SeldaT SQLite m [Text]
+sqlLiteGetAllTables = query sqlLiteGetAllTablesQ
+  where
+  sqlLiteGetAllTablesQ :: Query s (Col s Text)
+  sqlLiteGetAllTablesQ = do
+    let fragment = inj col
+    rawQuery1 "name" fragment
+    where
+    col :: Col s Text
+    col = do
+      rawExp "SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1"
+
+-- >>> sqliteOpen "certification.sqlite" >>= runSeldaT sqlLiteGetAllTables
+-- ["certification","dapp","feature","jwt-secret","l1Certification","onchain_certifications","profile","profile_wallet","run","subscription","tier","tier_feature","transaction","transaction_entry"]
+

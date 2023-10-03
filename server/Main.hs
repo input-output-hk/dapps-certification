@@ -17,7 +17,6 @@ import Control.Monad.Except
 import Control.Monad.Catch hiding (try)
 import Servant.Swagger.UI
 import Data.Maybe
-import Control.Exception hiding (Handler)
 import Data.Aeson
 import Data.ByteString.Char8 as BS hiding (hPutStrLn,foldl',words)
 import Data.Function
@@ -287,6 +286,7 @@ data RootEventSelector f where
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
   InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
   InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
+  InjectDbMigration :: forall f . !(DB.MigrationSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
   MarkRunningTestsAsAborted :: RootEventSelector Int
 
@@ -313,6 +313,7 @@ renderRoot (InjectRunRequest s) = runRequestJSON s
 renderRoot (InjectServeRequest s) = renderServeRequest s
 renderRoot (InjectRunClient s) = renderRunClientSelector s
 renderRoot (InjectLocal s) = renderLocalSelector s
+renderRoot (InjectDbMigration s) = DB.renderMigrationSelector s
 renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 renderRoot OnAuthMode =
   ( "auth-mode"
@@ -395,16 +396,11 @@ genAuthServerContext withDb whitelist mSecret = (case mSecret of
   Nothing -> plainAddressAuthHandler withDb whitelist
   Just JWTConfig{..} -> jwtAuthHandler whitelist jwtSecret ) :. EmptyContext
 
--- TODO: replace the try with some versioning mechanism
-initDb :: WithDB -> IO ()
-initDb withDb = void $ try' $
-  withDb do
-    DB.createTables
-    DB.addInitialData
-
-  where
-  try' :: IO a -> IO (Either SomeException a)
-  try' = try
+initDb :: EventBackend IO r RootEventSelector -> WithDB -> Bool -> IO ()
+initDb eb withDb isEmpty = withDb do
+    let eb'= hoistEventBackend liftIO $ narrowEventBackend InjectDbMigration eb
+    DB.ensureTables eb' isEmpty
+    when isEmpty DB.addInitialData
 
 main :: IO ()
 main = do
@@ -458,7 +454,8 @@ main = do
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
       addressRotation <- liftIO $ newMVar emptyAddressRotation
       conn <- DB.sqliteOpen (args.dbPath)
-      _ <- initDb $ DB.withConnection conn
+      isEmpty <- Prelude.null <$> DB.withSQLiteConnection conn DB.sqlLiteGetAllTables
+      _ <- initDb eb (DB.withConnection conn) isEmpty
       -- if is local mark all previous running tests as aborted
       when (args.backend == Local) $
         markAllRunningAsAborted eb conn
