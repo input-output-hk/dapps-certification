@@ -47,3 +47,4 @@ Examples:
 
 > [!NOTE]
 > Temporarly, we use as the ~ghcr.io/demoiog~ for the docker registry. This will be changed in the future.
+
