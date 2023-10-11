@@ -79,7 +79,7 @@ spec:
           type: scaler
         - properties:
             domains:
-              - dapps-certification.scdev.aws.iohkdev.io
+              - dapps-certification.test.scdev.aws.iohkdev.io
             rules:
               - port: 80
                 serviceName: dapps-certification

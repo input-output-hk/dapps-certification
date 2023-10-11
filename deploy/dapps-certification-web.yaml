@@ -21,7 +21,7 @@ spec:
         - type: https-route
           properties:
             domains:
-            - dapps-certification-web.scdev.aws.iohkdev.io
+            - dapps-certification-web.test.scdev.aws.iohkdev.io
             rules:
             - port: 3000
               serviceName: dapps-certification-web
