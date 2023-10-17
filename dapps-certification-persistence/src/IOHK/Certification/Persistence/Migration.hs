@@ -20,6 +20,7 @@ import           Observe.Event.Render.JSON
 
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V0 as V0
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V1 as V1
+import qualified IOHK.Certification.Persistence.Migration.SQLite.V2 as V2
 import Control.Monad (forM_)
 import Data.Aeson (ToJSON(toJSON))
 
@@ -32,6 +33,7 @@ createTables = do
   createTable profiles
   createTable profileWallets
   createTable dapps
+  createTable profileRoles
   createTable runs
   createTable transactions
   createTable transactionEntries
@@ -41,6 +43,7 @@ createTables = do
   createTable subscriptions
   createTable l1Certifications
   createTable lookupValues
+
 
 --------------------------------------------------------------------------------
 -- | MIGRATION
@@ -53,8 +56,12 @@ createTablesV1 :: (MonadSelda m,MonadMask m) => m ()
 createTablesV1 = do
   mapM_ rawStm V1.createTables
 
+createTablesV2 :: (MonadSelda m,MonadMask m) => m ()
+createTablesV2 = do
+  mapM_ rawStm V2.createTables
+
 steps :: (MonadSelda m,MonadMask m) => [m ()]
-steps = [createTablesV0,createTablesV1]
+steps = [createTablesV0,createTablesV1,createTablesV2]
 
 getDBVersion :: (MonadSelda m,MonadMask m) => m Int
 getDBVersion = do
@@ -104,4 +111,3 @@ newtype MigrateDbToFields =  MigrationStep Int
 data MigrationSelector f where
   EnsureTables :: MigrationSelector EnsureTablesFields
   MigrateDbTo :: MigrationSelector MigrateDbToFields
-

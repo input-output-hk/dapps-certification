@@ -3,10 +3,16 @@ module IOHK.Certification.Persistence
   , MonadSelda
   , sqliteOpen
   , seldaClose
+  , SeldaT
+  , SQLite
+  , Backend
+  , SeldaConnection
   ) where
+
 import Database.Selda
 
 import Database.Selda.SQLite
+import Database.Selda.Backend (SeldaConnection)
 
 import           IOHK.Certification.Interface  as X
   ( GitHubAccessToken(..)
@@ -43,6 +49,8 @@ import IOHK.Certification.Persistence.Structure as X
   , TierDTO(..)
   , ProfileWallet(..)
   , WalletAddressStatus(..)
+  , ProfileSummaryDTO(..)
+  , RunStats(..)
   )
 import Database.Selda as X
   ( fromId
@@ -51,6 +59,7 @@ import Database.Selda as X
 import IOHK.Certification.Persistence.Structure.Profile as X
   ( ProfileId
   , Profile(..)
+  , UserRole(..)
   )
 import IOHK.Certification.Persistence.Pattern as X
 import IOHK.Certification.Persistence.Structure.Subscription as X
@@ -60,6 +69,8 @@ import IOHK.Certification.Persistence.Structure.Subscription as X
   , TierId
   , TierType(..)
   , Tier(..)
+  , SubscriptionLite(..)
+  , SubscriptionStatus(..)
   )
 import IOHK.Certification.Persistence.API as X
   ( MinimalTransaction(..)
@@ -74,7 +85,6 @@ import IOHK.Certification.Persistence.API as X
   , updateFinishedRun
   , getRuns
   , withConnection
-  , withSQLiteConnection
   , getProfileId
   , getProfileAddress
   , syncRun
@@ -104,5 +114,26 @@ import IOHK.Certification.Persistence.API as X
   , getProfileWallet
   , upsertProfileWallet
   , markAllRunningAsAborted
-  , sqlLiteGetAllTables
+  , verifyImpersonation
+  , Impersonation(..)
+  , removeUserRole
+  , removeAllUserRoles
+  , hasAtLeastUserRole
+  , hasSomeUserRoles
+  , getUserRoles
+  , addUserRole
+  , updateUserRoles
+  , ensureAdminExists
+  , getAllProfilesByRole
   )
+{-
+
+Used in development to create the database schema,
+in order to create migrations.
+>>> import Database.Selda.SQLite (sqliteOpen, SQLite)
+>>> import Database.Selda.Backend (runSeldaT)
+>>> import IOHK.Certification.Persistence.Migration
+>>> sqliteOpen "temp.sqlite" >>= runSeldaT createTables >> return "DONE"
+"DONE"
+
+-}

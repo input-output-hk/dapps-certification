@@ -36,21 +36,32 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetRunsRoute auth
   :<|> GetRunDetailsRoute
   :<|> GetCurrentProfileRoute auth
+  :<|> GetProfileRoute auth
   :<|> UpdateCurrentProfileRoute auth
+  :<|> UpdateProfileRoute auth
   :<|> CreateL1CertificationRoute auth
-  :<|> GetBalanceRoute auth
+  :<|> GetCurrentProfileBalanceRoute auth
+  :<|> GetProfileBalanceRoute auth
   :<|> WalletAddressRoute
   :<|> GitHubRoute
   :<|> GenerateGitHubTokenRoute
   :<|> GetGitHubClientId
+  :<|> GetCurrentProfileSubscriptionsRoute auth
   :<|> GetProfileSubscriptionsRoute auth
   :<|> SubscribeRoute auth
+  :<|> CancelCurrentProfilePendingSubscriptionsRoute auth
   :<|> CancelProfilePendingSubscriptionsRoute auth
   :<|> GetTiersRoute
+  :<|> GetCurrentProfileActiveFeaturesRoute auth
   :<|> GetProfileActiveFeaturesRoute auth
   :<|> GetAdaUsdPriceRoute
   :<|> CreateAuditorReport auth
+  :<|> GetCurrentProfileWalletAddressRoute auth
   :<|> GetProfileWalletAddressRoute auth
+  :<|> UpdateProfileRolesRoute auth
+  :<|> GetProfileRolesRoute auth
+  :<|> GetAllProfileIdsByRole auth
+  :<|> GetProfilesSummaryRoute auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

@@ -10,6 +10,7 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE TypeApplications           #-}
 
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -149,12 +150,6 @@ instance ToSchema ProfileWallet where
 --------------------------------------------------------------------------------
 -- | Profile
 
-instance FromJSON (ID Profile) where
-  parseJSON = withText "ID Profile" $ \t -> pure $ toId $ read $ Text.unpack t
-
-instance ToJSON (ID Profile) where
-  toJSON = toJSON . show . fromId
-
 newtype DAppDTO = DAppDTO { unDAppDTO :: DApp } deriving (Generic, Show, Eq)
 
 instance ToJSON DAppDTO where
@@ -180,6 +175,7 @@ instance ToSchema DAppDTO where
 data ProfileDTO = ProfileDTO
   { profile :: !Profile
   , dapp    :: !(Maybe DAppDTO)
+  , userRole    :: !(Maybe UserRole)
   } deriving (Show)
 
 -- NOTE: ProfileDTO serialization is not isomorphic
@@ -188,17 +184,120 @@ instance FromJSON ProfileDTO where
   parseJSON = withObject "ProfileDTO" $ \v -> ProfileDTO
       <$> parseJSON (Object v)
       <*> v .:? "dapp" .!= Nothing
+      <*> v .:? "role" .!= Nothing
 
 instance ToJSON ProfileDTO where
   toJSON ProfileDTO{..} = object $
-    ("dapp" .= dapp) : profileJSONPairs profile
+      ("dapp" .= dapp)
+    : ("role" .= userRole)
+    : profileJSONPairs profile
 
 instance ToSchema ProfileDTO where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy Profile)
     dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
+    roleSchema <- declareSchemaRef (Proxy :: Proxy UserRole)
     return $ NamedSchema (Just "ProfileDTO") $ profileSchema
-              & properties %~ (`mappend` [ ("dapp", dappSchema) ])
+      & properties %~ (`mappend`
+          [ ("dapp", dappSchema), ("role", roleSchema) ])
+
+data ProfileSummaryDTO = ProfileSummaryDTO
+  { summaryProfile :: !Profile
+  , summaryMaxRole :: !UserRole
+  , summaryDapp :: !(Maybe DAppDTO)
+  , summaryRunStats :: !RunStats
+  , summarySubscription :: !(Maybe SubscriptionLite)
+} deriving (Generic, Show, Eq)
+
+instance FromJSON ProfileSummaryDTO where
+  parseJSON = withObject "ProfileSummaryDTO" $ \v -> ProfileSummaryDTO
+      <$> parseJSON (Object v)
+      <*> v .:? "role" .!= NoRole
+      <*> v .:? "dapp"
+      <*> v .:? "runStats" .!= RunStats (toId (-1)) 0 0 0 0 0 0 0
+      <*> v .:? "subscription"
+
+instance ToJSON ProfileSummaryDTO where
+  toJSON ProfileSummaryDTO{..} =
+    let Profile{email = _,..} = summaryProfile
+    in object $ profileJSONPairs summaryProfile
+      <> [ "dapp" .= summaryDapp
+         , "role" .= summaryMaxRole
+         , "subscription" .= summarySubscription
+         , "id" .= (fromIntegral @_ @Int $ fromId profileId)
+         , "runStats" .= summaryRunStats
+         ]
+
+instance ToSchema ProfileSummaryDTO where
+  declareNamedSchema _ = do
+    profileSchema <- declareSchema (Proxy :: Proxy Profile)
+    dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
+    userRoleSchema <- declareSchemaRef (Proxy :: Proxy UserRole)
+    subscriptionSchema <- declareSchemaRef (Proxy :: Proxy SubscriptionLite)
+    profileId <- declareSchemaRef (Proxy :: Proxy ProfileId)
+    runStatsSchema <- declareSchemaRef (Proxy :: Proxy RunStats)
+    return $ NamedSchema (Just "ProfileSummaryDTO")
+        $ profileSchema
+        & properties %~ (`mappend`
+            [ ("role", userRoleSchema)
+            , ("dapp", dappSchema)
+            , ("subscription", subscriptionSchema)
+            , ("id", profileId)
+            , ("runStats", runStatsSchema)
+            ])
+        & required %~ (<> ["role","profileId","runStats" ])
+
+data RunStats = RunStats
+  { runsProfileId :: ID Profile
+  , runsTotal :: Int
+  , runsSuccessful :: Int
+  , runsQueued :: Int
+  , runsFailed :: Int
+  , runsReadyForCertification :: Int
+  , runsCertified :: Int
+  , runsAborted :: Int
+  } deriving (Generic, Show, Eq)
+
+instance SqlRow RunStats
+
+-- JSON , skip the profileId
+instance ToJSON RunStats where
+  toJSON RunStats{..} = object
+    [ "total" .= runsTotal
+    , "successful" .= runsSuccessful
+    , "queued" .= runsQueued
+    , "failed" .= runsFailed
+    , "readyForCertification" .= runsReadyForCertification
+    , "certified" .= runsCertified
+    , "aborted" .= runsAborted
+    ]
+
+instance FromJSON RunStats where
+  parseJSON = withObject "RunStats" $ \v -> RunStats
+    <$> (toId <$> v .:? "profileId" .!= (-1))
+    <*> v .: "total"
+    <*> v .: "successful"
+    <*> v .: "queued"
+    <*> v .: "failed"
+    <*> v .: "readyForCertification"
+    <*> v .: "certified"
+    <*> v .: "aborted"
+
+instance ToSchema RunStats where
+  declareNamedSchema _ = do
+    intSchema <- declareSchemaRef (Proxy :: Proxy Int)
+    return $ NamedSchema (Just "RunStats") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("total", intSchema)
+          , ("successful", intSchema)
+          , ("queued", intSchema)
+          , ("failed", intSchema)
+          , ("readyForCertification", intSchema)
+          , ("certified", intSchema)
+          , ("aborted", intSchema)
+          ]
+      & required .~ ["total", "successful", "queued", "failed", "readyForCertification", "certified", "aborted"]
 
 --------------------------------------------------------------------------------
 -- | Dapp

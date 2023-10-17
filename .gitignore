@@ -11,5 +11,8 @@ Makefile
 *.sqlite
 .pre-commit-config.yaml
 *.ignore.*
-todo.txt
+todo.*
 *.pir
+
+#except all test/Data files
+!test/Data/**

@@ -160,6 +160,9 @@ test-suite plutus-certification-test
     Instances.Persistence
     Utils.JSON
     SignatureSpec
+    Database.Embedded
+    Database.Migration
+    DatabaseSpec
 
   build-depends:
       base >= 4.14.3 && < 4.18
@@ -173,3 +176,10 @@ test-suite plutus-certification-test
     , aeson
     , aeson-pretty
     , bytestring
+    , file-embed
+    , temporary
+    , filepath
+    , selda
+    , selda-sqlite
+    , eventuo11y
+    , quickcheck-instances

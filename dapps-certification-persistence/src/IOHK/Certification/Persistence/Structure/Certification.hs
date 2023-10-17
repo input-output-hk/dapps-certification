@@ -49,7 +49,7 @@ instance SqlType CertificationLevel where
   fromSql (SqlInt64 3) = L3
   fromSql (SqlInt64 n) = throw $ SqlDataValidationException $ "fromSql: expected 0,1,2,3, got " ++ show n
   fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
-  defaultValue = mkLit L1
+  defaultValue = mkLit L0
 
 instance ToJSON CertificationLevel where
   toJSON = toJSON . \case

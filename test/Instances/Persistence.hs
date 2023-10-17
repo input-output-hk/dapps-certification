@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,6 +16,7 @@ import Control.Monad (replicateM)
 import Data.Text
 import GHC.TypeLits (KnownSymbol)
 import Debug.Trace
+import Test.QuickCheck.Instances.Time ()
 
 --------------------------------------------------------------------------------
 -- | GitHubAccessToken
@@ -234,6 +237,51 @@ instance Arbitrary ProfileDTO where
   arbitrary = ProfileDTO
     <$> arbitrary
     <*> arbitrary
+    <*> arbitrary
+
+instance Arbitrary UserRole where
+  arbitrary = elements [NoRole,Support,Admin]
+
+instance Arbitrary TierType where
+-- Developer | Auditor
+  arbitrary = elements [Developer,Auditor]
+
+instance Arbitrary SubscriptionLite where
+  arbitrary = SubscriptionLite
+    <$> arbitrary
+    <*> genArbitraryName
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+
+--ActiveSubscription | InactiveSubscription | PendingSubscription
+instance Arbitrary SubscriptionStatus where
+  arbitrary = elements [ActiveSubscription, InactiveSubscription, PendingSubscription]
+
+instance Arbitrary RunStats where
+  arbitrary = RunStats
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+instance Arbitrary ProfileSummaryDTO where
+  arbitrary = do
+    profile' <- arbitrary
+    stats <- arbitrary
+    ProfileSummaryDTO profile'
+      <$> arbitrary
+      <*> arbitrary
+      <*> pure (stats { runsProfileId = profile'.profileId  })
+      <*> arbitrary
 
 instance Arbitrary ProfileBody where
   arbitrary = ProfileBody <$> arbitrary <*> arbitrary

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeApplications           #-}
 
 module IOHK.Certification.Persistence.Structure.Profile where
 
@@ -17,8 +19,81 @@ import           Data.Aeson.Types
 import           Data.Proxy
 import           Data.Swagger         hiding (Contact)
 import           Database.Selda
+import           Database.Selda.SqlType
 import           Data.Int
 import           IOHK.Certification.Persistence.Pattern
+import           Control.Exception ( throw)
+import           Data.Text hiding (index)
+
+data UserRole = NoRole | Support | Admin
+  deriving (Generic,Show,Read,Eq,Enum)
+
+instance ToJSON UserRole where
+  toJSON NoRole  = toJSON ("no-role" :: String)
+  toJSON Support = toJSON ("support" :: String)
+  toJSON Admin   = toJSON ("admin" :: String)
+
+instance FromJSON UserRole where
+  parseJSON = withText "UserRole" $ \case
+    "no-role" -> pure NoRole
+    "support" -> pure Support
+    "admin" -> pure Admin
+    _ -> fail "Invalid user role"
+
+instance ToSchema UserRole where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "UserRole") $ mempty
+      & type_ ?~ SwaggerString
+      & enum_ ?~ [ "no-role", "support", "admin" ]
+
+instance ToParamSchema UserRole where
+  toParamSchema _ = mempty
+    & type_ ?~ SwaggerString
+    & enum_ ?~ [ "no-role", "support", "admin" ]
+
+instance Num UserRole where
+  fromInteger = userRoleFromNum
+  (+) a b = userRoleToNum a + userRoleToNum b
+  (-) a b = userRoleToNum a - userRoleToNum b
+  (*) a b = userRoleToNum a * userRoleToNum b
+  abs a = abs $ userRoleToNum a
+  signum a = signum $ userRoleToNum a
+
+
+userRoleToNum :: Num a => UserRole -> a
+userRoleToNum NoRole = 0
+userRoleToNum Support = 1
+-- we leave a gap here for future roles
+userRoleToNum Admin   = 100
+
+userRoleFromNum :: (Eq a, Num a,Ord a) => a -> UserRole
+userRoleFromNum x
+  | x <= 0 = NoRole
+  | x < 100 = Support
+  | otherwise = Admin
+
+instance Ord UserRole where
+  compare a b = compare @Int (userRoleToNum a) (userRoleToNum b)
+
+instance SqlType UserRole where
+  mkLit n = LCustom TInt64 (LInt32 (userRoleToNum n))
+
+  sqlType _ = TInt32
+  fromSql (SqlInt32 x) = userRoleFromNum x
+  fromSql (SqlInt64 x) = userRoleFromNum x
+  fromSql v            = throw $ userError $ "fromSql: expected SqlInt64, got " ++ show v
+  defaultValue = mkLit NoRole
+
+data ProfileRole = ProfileRole
+  { profileId :: ID Profile
+  , role :: UserRole
+  } deriving (Generic,Show,Eq)
+
+instance SqlRow ProfileRole
+
+instance ToParamSchema ProfileId where
+  toParamSchema _ = mempty
+    & type_ ?~ SwaggerInteger
 
 --------------------------------------------------------------------------------
 -- | Profile
@@ -36,6 +111,13 @@ data Profile = Profile
   } deriving (Generic, Show, Eq)
 
 type ProfileId = ID Profile
+
+instance FromJSON (ID Profile) where
+  parseJSON = withText "ID Profile" $ \t -> pure $ toId $ read $ unpack t
+
+instance ToJSON (ID Profile) where
+  toJSON = toJSON . show . fromId
+
 instance ToSchema ProfileId where
   declareNamedSchema _ = declareNamedSchema (Proxy :: Proxy Int64)
 
@@ -99,3 +181,8 @@ profiles = table "profile"
   , #ownerAddress :- unique
   , #ownerAddress :- index
   ]
+
+profileRoles :: Table ProfileRole
+profileRoles = table "profile_role"
+  [ #profileId :- foreignKey profiles #profileId ]
+
