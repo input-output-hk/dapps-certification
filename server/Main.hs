@@ -61,6 +61,7 @@ import Data.Int
 import Plutus.Certification.ProfileWallet
 import Paths_plutus_certification qualified as Package
 import IOHK.Certification.Persistence qualified as DB
+import IOHK.Certification.Persistence.API.SQLite qualified as DB
 import Data.HashSet as HashSet
 import Data.Word
 
@@ -90,6 +91,10 @@ data Args = Args
   , bypassSubscriptionValidation :: !Bool
   , dbPath :: !FilePath
   , minAmountForAddressAssignment :: !Word64
+  , adminWallet :: !(Maybe DB.ProfileWalletAddress)
+  -- Normally, the admin wallet is not enforced, but only when there is no admin left
+  -- though, if this is set true, will be enforced even if there are admins left
+  , forceAdminAlways :: !Bool
   }
 
 data GitHubArgs = GitHubArgs
@@ -173,6 +178,32 @@ argsParser =  Args
      <> showDefault
      <> Opts.value oneAda
       )
+  <*> optional (option generalReader
+      ( long "admin-wallet"
+     <> metavar "ADMIN_WALLET"
+     <> help "the main admin wallet address"
+      ))
+  <*> switch
+      ( long "force-admin-always"
+     <> help ( "force the admin wallet to always be an admin"
+            <> "NODE: When is not set the admin wallet is not enforced as an admin,"
+            <> "but only when there is no admin left. Though,"
+            <> "if this is set true, will be enforced even if there are other admins in the system"
+             )
+      )
+
+-- | Parse a URL piece
+-- NOTE: there is a duplicate in clien/Main.hs
+-- it is intended because we don't have yet a common library
+-- which doesn't imply the full server-library
+-- TODO: in the future we should split the API definition in a common library
+-- and also add the common utility functions to that library
+generalReader :: FromHttpApiData a => ReadM a
+generalReader = do
+  urlStr <- str
+  case parseUrlPiece urlStr of
+    Right u -> pure u
+    Left t -> readerError $ Text.unpack t
 
 data AuthMode = JWTAuth JWTArgs | PlainAddressAuth
 
@@ -280,6 +311,7 @@ data RootEventSelector f where
   Initializing :: RootEventSelector InitializingField
   OnException :: RootEventSelector OnExceptionField
   OnAuthMode :: RootEventSelector OnAuthModeField
+  EnsureAdminExists :: RootEventSelector EnsureAdminExistsField
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
   InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
@@ -289,6 +321,10 @@ data RootEventSelector f where
   InjectDbMigration :: forall f . !(DB.MigrationSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
   MarkRunningTestsAsAborted :: RootEventSelector Int
+
+data EnsureAdminExistsField
+  = EnsureAdminExistsFieldAddress DB.ProfileWalletAddress
+  | EnsureAdminExistsFieldAdmins Int
 
 renderRoot :: RenderSelectorJSON RootEventSelector
 renderRoot Initializing =
@@ -325,6 +361,11 @@ renderRoot OnAuthMode =
 renderRoot MarkRunningTestsAsAborted =
   ( "mark-running-tests-as-aborted"
   , ("count" .=)
+  )
+renderRoot EnsureAdminExists =
+  ( "ensure-admin-exists", \case
+      EnsureAdminExistsFieldAddress addr -> ("address", toJSON addr)
+      EnsureAdminExistsFieldAdmins n -> ("admins", toJSON n)
   )
 
 -- | plain address authentication
@@ -402,6 +443,15 @@ initDb eb withDb isEmpty = withDb do
     DB.ensureTables eb' isEmpty
     when isEmpty DB.addInitialData
 
+verifyTheAdmin :: EventBackend IO r RootEventSelector -> WithDB -> Args -> IO ()
+verifyTheAdmin eb withDb Args{..}
+  | Nothing <- adminWallet = pure ()
+  | Just adminWallet' <- adminWallet = withEvent eb EnsureAdminExists \ev -> do
+    addField ev $ EnsureAdminExistsFieldAddress adminWallet'
+    -- if no admin enforce the provided one
+    allAdmins <- withDb $ DB.ensureAdminExists forceAdminAlways adminWallet'
+    addField ev $ EnsureAdminExistsFieldAdmins allAdmins
+
 main :: IO ()
 main = do
   args :: Args <- execParser opts
@@ -452,10 +502,21 @@ main = do
       -- get the whitelisted addresses from $WLIST env var
       -- if useWhitelist is set to false the whitelist is ignored
       whitelist <- if not args.useWhitelist then pure Nothing else Just <$> whitelisted
+
+      -- initialize the address rotation
       addressRotation <- liftIO $ newMVar emptyAddressRotation
+
+      -- open the db connection
       conn <- DB.sqliteOpen (args.dbPath)
+
+      -- check if the db is empty
       isEmpty <- Prelude.null <$> DB.withSQLiteConnection conn DB.sqlLiteGetAllTables
+
+      -- initialize the db and subsequent migrations if needed
       _ <- initDb eb (DB.withConnection conn) isEmpty
+      -- verify if the admin wallet is in the db and enforce it
+      verifyTheAdmin eb (DB.withConnection conn) args
+
       -- if is local mark all previous running tests as aborted
       when (args.backend == Local) $
         markAllRunningAsAborted eb conn
@@ -509,7 +570,6 @@ main = do
           randomText = BS.unpack randomBytes
       pure randomText
 
-
   startSynchronizer conn eb scheduleCrash args = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor
@@ -517,7 +577,7 @@ main = do
             (args.wallet) ref 10 (args.minAmountForAddressAssignment)
             (WithDBWrapper (DB.withConnection conn) )
     pure ref
-  serverArgs conn args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
+  serverArgs conn  args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
     { serverWalletArgs  = args.wallet
     , serverGithubToken = args.github.accessToken
     , serverEventBackend = be r eb
@@ -526,7 +586,7 @@ main = do
     , serverValidateSubscriptions = not args.bypassSubscriptionValidation
     , serverGitHubCredentials = args.github.credentials
     , serverAdaUsdPrice = liftIO $ readIORef ref
-    , withDb = DB.withConnection conn
+    , withDb = DB.withSQLiteConnection conn
     , ..
     }
   documentation PlainAddressAuth = swaggerJson

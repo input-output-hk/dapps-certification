@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE QuasiQuotes          #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module IOHK.Certification.Persistence.Migration.SQLite.V1 where
 

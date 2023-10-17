@@ -51,11 +51,13 @@ import Data.Functor
 import Plutus.Certification.Metadata
 import Control.Monad.Reader (ReaderT(runReaderT))
 import Control.Concurrent (MVar, takeMVar, putMVar)
+import Data.Set (fromList)
 
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
+import qualified IOHK.Certification.Persistence.API.SQLite as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
@@ -86,7 +88,11 @@ data ServerArgs m r = ServerArgs
   , serverAdaUsdPrice :: m (Maybe DB.AdaUsdPrice)
   , serverAddressRotation :: MVar AddressRotation
   -- TODO: maybe replace the 'server' prefix
-  , withDb :: forall a k. (MonadIO k, MonadMask k) => (forall n. (DB.MonadSelda n,MonadMask n) => n a) -> k a
+  , withDb :: forall a k. (MonadIO k, MonadMask k)
+           -- TODO: Removing DB.Backend n ~ DB.SQLite it's the starting point
+           -- when we switch to multi DB backend support
+           => (forall n. (DB.MonadSelda n,MonadMask n, DB.Backend n ~ DB.SQLite) => n a)
+           -> k a
   }
 
 type Whitelist = HashSet Text
@@ -135,7 +141,8 @@ server ServerArgs{..} = NamedAPI
       -- get the run details from the db
       withDb ( DB.getRun uuid )
         >>= maybeToServerError err404 "Run not found"
-  , abortRun = \(profileId,_) rid@RunID{..} deleteRun -> withEvent eb AbortRun \ev -> do
+  --TODO: elevate this to admin
+  , abortRun = \rid@RunID{..} deleteRun (profileId,_) -> withEvent eb AbortRun \ev -> do
       addField ev rid
       requireRunIdOwner profileId uuid
       -- abort the run if is still running
@@ -157,9 +164,11 @@ server ServerArgs{..} = NamedAPI
            now <- getNow
            void $ withDb $ DB.markAsAborted uuid now
       pure NoContent
-  , getProfileBalance = \(profileId,ownerAddress) -> withEvent eb GetProfileBalance \ev -> do
-      addField ev profileId
-      fromMaybe 0 <$> withDb (DB.getProfileBalance ownerAddress)
+
+  , getCurrentProfileBalance = profileBalance
+  -- elevated version
+  , getProfileBalance = impersonateWithAddress DB.Support profileBalance
+
   , getLogs = \rid afterM actionTypeM -> withEvent eb GetRunLogs \ev -> do
       addField ev rid
       let dropCond = case afterM of
@@ -172,22 +181,12 @@ server ServerArgs{..} = NamedAPI
         .| (dropWhileC dropCond >> sinkList)
   , getRuns = \(profileId,_) afterM countM ->
       withDb $ DB.getRuns profileId afterM countM
-  , updateCurrentProfile = \(profileId,ownerAddress)
-      (ProfileBody profile dapp) -> do
 
-      let dappId = profileId
-          -- replace dappId from the serialization
-          dappM = fmap (\(DB.DApp{dappId=_,..}) -> DB.DApp{..}) dapp
-          -- replace profileId and ownerAddress from the serialization
-          DB.Profile{ownerAddress=_,profileId=_,..} = profile
-      withDb $ do
-        --NOTE: ownerAddress is get from the JWT token
-        --not from the request body
-        _ <- DB.upsertProfile (DB.Profile{..}) dappM
+  , updateCurrentProfile = updateProfile
+  , updateProfile = impersonateWithAddress DB.Admin . updateProfile
 
-        -- it's safe to call partial function fromJust
-        fromJust <$> DB.getProfile profileId
   , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
+  , getProfile = impersonateWithAddress DB.Support (\(profileId,_) -> getProfileDTO profileId)
 
   -- TODO: Add instrumentation
   -- TODO: There might be an issue if more than one certification is started at
@@ -280,9 +279,10 @@ server ServerArgs{..} = NamedAPI
         Nothing -> throwError err404 { errBody = "GitHub credentials not configured" }
         Just GitHubCredentials{..} -> pure githubClientId
 
-  , getProfileSubscriptions = \(profileId,_) justEnabled -> withEvent eb GetProfileSubscriptions \ev -> do
-    addField ev profileId
-    withDb (DB.getProfileSubscriptions profileId (fromMaybe False justEnabled))
+  , getCurrentProfileSubscriptions = \justEnabled (pid,_) ->
+      profileSubscription justEnabled pid
+  , getProfileSubscriptions =
+      impersonate DB.Support . profileSubscription
 
   , subscribe = \(profileId,_) tierIdInt -> withEvent eb Subscribe \ev -> do
     let tierId = DB.toId tierIdInt
@@ -294,9 +294,10 @@ server ServerArgs{..} = NamedAPI
     forM_ ret $ \dto -> addField ev $ SubscribeFieldSubscriptionId (dto.subscriptionDtoId)
     maybeToServerError err404 "Tier not found" ret
 
-  , cancelPendingSubscriptions = \(profileId,_) -> withEvent eb CancelProfilePendingSubscriptions \ev -> do
-    addField ev $ CancelProfilePendingSubscriptionsFieldProfileId profileId
-    withDb (DB.cancelPendingSubscription profileId)
+  , cancelCurrentProfilePendingSubscriptions = \(pid,_) ->
+      cancelProfilePendingSubscriptions pid
+  , cancelProfilePendingSubscriptions =
+      impersonate DB.Admin cancelProfilePendingSubscriptions
 
   , getAllTiers = withEvent eb GetAllTiers \ev -> do
     tiers <- withDb DB.getAllTiers
@@ -306,31 +307,85 @@ server ServerArgs{..} = NamedAPI
     let filteredTiers = List.filter (\t -> t.tierDtoTier.tierType  /= DB.Developer ) tiers
     pure filteredTiers
 
-  , getActiveFeatures = \(profileId,_) -> withEvent eb GetActiveFeatures \ev -> do
-    addField ev $ GetActiveFeaturesFieldProfileId profileId
-    now <- getNow
-    featureTypes <- withDb $ DB.getCurrentFeatures profileId now
-    addField ev $ GetActiveFeaturesFieldFeatures featureTypes
-    pure featureTypes
+  , getCurrentProfileActiveFeatures = \(profileId,_)
+      -> profileActiveFeatures profileId
+  , getProfileActiveFeatures = impersonate DB.Support profileActiveFeatures
 
   , getAdaUsdPrice = withEvent eb GetAdaUsdPrice \ev -> do
     adaUsdPrice' <- getAdaUsdPrice'
     addField ev adaUsdPrice'
     pure adaUsdPrice'
 
-  , createAuditorReport = \dryRun reportInput (profileId,_) -> withEvent eb CreateAuditorReport \ev -> do
-    validateFeature L2UploadReport profileId
-    addField ev $ CreateAuditorReportFieldProfileId profileId
-    addField ev $ CreateAuditorReportDryRun (dryRun == Just True)
-    case dryRun of
-      Just True -> catch (createDraftMetadata reportInput False) handleException
-      _ -> do
-        (fullMetadata,ipfs) <- catch (createMetadataAndPushToIpfs reportInput) handleException
-        addField ev $ CreateAuditorReportIpfsCid ipfs
-        pure fullMetadata
+  , createAuditorReport = \dryRun reportInput (profileId,_) ->
+    withEvent eb CreateAuditorReport \ev -> do
+      validateFeature L2UploadReport profileId
+      addField ev $ CreateAuditorReportFieldProfileId profileId
+      addField ev $ CreateAuditorReportDryRun (dryRun == Just True)
+      case dryRun of
+        Just True -> catch (createDraftMetadata reportInput False) handleException
+        _ -> do
+          (fullMetadata,ipfs) <- catch
+            (createMetadataAndPushToIpfs reportInput)
+            handleException
+          addField ev $ CreateAuditorReportIpfsCid ipfs
+          pure fullMetadata
 
-  , getProfileWalletAddress = \(profileId,_) -> withEvent eb GetProfileWalletAddress \ev -> do
+  , getCurrentProfileWalletAddress = \(pid,_) -> profileWalletAddress pid
+  , getProfileWalletAddress = impersonate DB.Support profileWalletAddress
+
+  , updateProfileRoles = \profileId allRoles (ownerId,_)  ->
+    withEvent eb UpdateProfileRoles \ev -> do
+      addField ev $ UpdateProfileRolesFieldProfileId profileId
+      addField ev $ UpdateProfileRolesFieldRoles allRoles
+
+      -- filter out the NoRole from the list
+      let filteredRoles = List.filter (/= DB.NoRole) allRoles
+
+      verifyRole ownerId DB.Admin
+      void $ withDb $ DB.updateUserRoles profileId (Data.Set.fromList filteredRoles)
+      pure NoContent
+
+  , getCurrentProfileRoles = \(pid,_) -> getProfileRoles pid
+  , getProfileRoles = impersonate DB.Support getProfileRoles
+
+  , getAllProfilesByRole = \role (pid,_) ->
+    withEvent eb GetAllProfilesByRole \ev -> do
+      addField ev role
+      verifyRole pid DB.Support
+      withDb $ DB.getAllProfilesByRole role
+  , getProfilesSummary = \(pid,_) -> withEvent eb GetProfilesSummary \ev -> do
+      addField ev pid
+      verifyRole pid DB.Support
+      withDb DB.getProfilesSummary
+  }
+  where
+  --------------------------------------------------------------------------------
+  -- | common profile handlers
+    getProfileRoles profileId = withEvent eb GetProfileRoles \ev -> do
       addField ev profileId
+      withDb $ DB.getUserRoles profileId
+
+    profileActiveFeatures profileId = withEvent eb GetActiveFeatures \ev -> do
+      addField ev $ GetActiveFeaturesFieldProfileId profileId
+      now <- getNow
+      featureTypes <- withDb $ DB.getCurrentFeatures profileId now
+      addField ev $ GetActiveFeaturesFieldFeatures featureTypes
+      pure featureTypes
+
+    cancelProfilePendingSubscriptions profileId =
+      withEvent eb CancelProfilePendingSubscriptions \ev -> do
+        addField ev $ CancelProfilePendingSubscriptionsFieldProfileId profileId
+        withDb (DB.cancelPendingSubscription profileId)
+
+    profileSubscription justEnabled profileId =
+      withEvent eb GetProfileSubscriptions \ev -> do
+        addField ev profileId
+        withDb (DB.getProfileSubscriptions profileId (fromMaybe False justEnabled))
+
+    profileWalletAddress profileId =
+      withEvent eb GetProfileWalletAddress \ev -> do
+      addField ev profileId
+
       -- first check the db
       walletM <- (id <=< fmap snd) <$> withDb ( DB.getProfileWallet profileId )
 
@@ -351,8 +406,73 @@ server ServerArgs{..} = NamedAPI
               addField ev' (show err)
               throwError $ err500 {errBody = LSB.pack $ show resp}
 
-  }
-  where
+    --TODO: add event
+    updateProfile (ProfileBody profile dapp) (profileId,ownerAddress) =
+      withEvent eb UpdateProfile \ev ->
+      do
+        addField ev profileId
+        let dappId = profileId
+            -- replace dappId from the serialization
+            dappM = fmap (\(DB.DApp{dappId=_,..}) -> DB.DApp{..}) dapp
+            -- replace profileId and ownerAddress from the serialization
+            DB.Profile{ownerAddress=_,profileId=_,..} = profile
+        withDb $ do
+          --NOTE: ownerAddress is get from the JWT token
+          --not from the request body
+          _ <- DB.upsertProfile (DB.Profile{..}) dappM
+
+          -- it's safe to call partial function fromJust
+          fromJust <$> DB.getProfile profileId
+
+    profileBalance (profileId,ownerAddress) =
+      withEvent eb GetProfileBalance \ev -> do
+        addField ev profileId
+        fromMaybe 0 <$> withDb (DB.getProfileBalance ownerAddress)
+
+    ----------------------------------------------------------------------------
+    -- | authorization handlers
+    verifyRole :: ( MonadMask m
+                  , MonadIO m
+                  , MonadError ServerError m
+                  )
+                  => DB.ProfileId
+                  -> DB.UserRole
+                  -> m ()
+    verifyRole profileId role = do
+      hasRole <- withDb (DB.hasAtLeastUserRole profileId role)
+      unless hasRole $ throwError err403
+
+    impersonateWithAddress :: ( MonadMask m
+                              , MonadIO m
+                              , MonadError ServerError m
+                              )
+                           => DB.UserRole
+                           -> ((DB.ProfileId, ProfileWalletAddress) -> m a)
+                           -> DB.ProfileId
+                           -> (DB.ProfileId, ProfileWalletAddress)
+                           -> m a
+    impersonateWithAddress role f impersonatedId (ownerId,_) = do
+      impersonation <- withDb (DB.verifyImpersonation ownerId role impersonatedId)
+      case impersonation of
+        DB.ImpersonationNotAllowed -> throwError err403
+        DB.ImpersonationNotFound -> throwError err404
+        DB.ImpersonationProfile (pid,address)-> f (pid,address)
+
+    -- faster if we don't need the address
+    impersonate :: ( MonadMask m
+                   , MonadIO m
+                   , MonadError ServerError m
+                   )
+                => DB.UserRole
+                -> (DB.ProfileId -> m a)
+                -> DB.ProfileId
+                -> (DB.ProfileId, ProfileWalletAddress)
+                -> m a
+    impersonate role f profileId (ownerId,_) = do
+      hasRole <- withDb (DB.hasAtLeastUserRole ownerId role)
+      if hasRole then f profileId
+                 else throwError err403
+
     uploadRunReportToIpfs ev runStatus certResultM uuid = do
       -- ensure the run is finished
       unless (runStatus == DB.Succeeded) $
@@ -382,10 +502,13 @@ server ServerArgs{..} = NamedAPI
     validateFeature featureType profileId = do
       -- ensure the profile has an active feauture for L1Run
       when serverValidateSubscriptions $ do
-        now <- getNow
-        featureTypes <- withDb ( DB.getCurrentFeatures profileId now )
-        unless (featureType `elem` featureTypes) $
-          throwError err403 { errBody = "You don't have the required subscription" }
+        -- bypass subscription validation if it's an internal user
+        hasRole <- withDb (DB.hasAtLeastUserRole profileId DB.Support)
+        unless hasRole $ do
+          now <- getNow
+          featureTypes <- withDb ( DB.getCurrentFeatures profileId now )
+          unless (featureType `elem` featureTypes) $
+            throwError err403 { errBody = "You don't have the required subscription" }
 
     fromClientResponse = \case
       Left err -> throwError $ serverErrorFromClientError err

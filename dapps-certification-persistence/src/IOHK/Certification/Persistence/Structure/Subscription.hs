@@ -166,7 +166,7 @@ tierFeatures = tableFieldMod "tier_feature"
   ] (fromJust . stripPrefix "tierFeature")
 
 data SubscriptionStatus = ActiveSubscription | InactiveSubscription | PendingSubscription
-                       deriving (Generic, Show, Bounded, Enum, Read)
+                       deriving (Generic, Show, Bounded, Enum, Read, Eq)
 data Subscription = Subscription
   { subscriptionId :: ID Subscription
   , subscriptionProfileId :: ID Profile
@@ -178,7 +178,38 @@ data Subscription = Subscription
   , subscriptionStartDate :: UTCTime
   , subscriptionEndDate :: UTCTime
   , subscriptionStatus :: SubscriptionStatus
-  } deriving (Generic, Show)
+  } deriving (Generic, Show,Eq)
+
+data SubscriptionLite = SubscriptionLite
+  { subId :: Int64
+  , subName :: Text
+  , subTierType :: TierType
+  , subPrice :: Int64
+  , subAdaUsdPrice :: Double
+  , subStartDate :: UTCTime
+  , subEndDate :: UTCTime
+  , subStatus :: SubscriptionStatus
+} deriving (Generic, Show,Eq)
+
+instance ToJSON SubscriptionLite where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON SubscriptionLite where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToSchema SubscriptionLite where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance SqlRow SubscriptionLite
+
+instance ToJSON Subscription where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 12 }
+
+instance FromJSON Subscription where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 12 }
+
+instance ToSchema Subscription where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 12 }
 
 type SubscriptionId = ID Subscription
 

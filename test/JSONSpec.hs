@@ -34,6 +34,7 @@ spec = do
       testJSON' "DApp" (na :: DApp)
       testJSONWithEq' eqDAppDTO "DAppDTO" (na :: DAppDTO)
       testJSONWithEq' eqProfileDTO "ProfileDTO" (na :: ProfileDTO)
+      testJSONWithEq' eqProfileSummaryDTO "ProfileSummaryDTO" (na :: ProfileSummaryDTO)
       testJSONWithEq' eqProfileBody "ProfileBody" (na :: ProfileBody)
 
   where
@@ -49,7 +50,15 @@ spec = do
     in ap' == bp' && ad == bd
 
   eqProfileDTO :: ProfileDTO -> ProfileDTO -> Bool
-  eqProfileDTO (ProfileDTO ap ad) (ProfileDTO bp bd) = ap == bp && case (ad,bd) of
+  eqProfileDTO (ProfileDTO ap ad ar) (ProfileDTO bp bd br) =
+    ap == bp && ar == br && case (ad,bd) of
+      (Just a, Just b) -> eqDAppDTO a b
+      (Nothing, Nothing) -> True
+      _ -> False
+
+  eqProfileSummaryDTO :: ProfileSummaryDTO -> ProfileSummaryDTO -> Bool
+  eqProfileSummaryDTO (ProfileSummaryDTO ap ar ad aRuns as ) (ProfileSummaryDTO bp br bd bRuns bs ) =
+    ap == bp && ar == br && as == bs && aRuns == bRuns && case (ad,bd) of
     (Just a, Just b) -> eqDAppDTO a b
     (Nothing, Nothing) -> True
     _ -> False
@@ -61,5 +70,3 @@ spec = do
       (Just _, Nothing) -> a { dappGitHubToken = Nothing } == b
       (Nothing,Just _) -> a == b { dappGitHubToken = Nothing}
       _ -> False
-
-

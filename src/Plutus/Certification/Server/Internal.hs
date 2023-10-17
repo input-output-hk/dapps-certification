@@ -29,7 +29,6 @@ import Data.Text as Text hiding (elem,replicate, last)
 import Data.Text.Encoding
 import Data.UUID
 import Control.Monad.Except
-import Control.Exception hiding (Handler)
 import Plutus.Certification.WalletClient (WalletAddress)
 import Plutus.Certification.Internal
 
@@ -85,6 +84,10 @@ data CreateAuditorReportField
   -- ifpfs cid
   | CreateAuditorReportIpfsCid !DB.IpfsCid
 
+data UpdateProfileRolesField
+  = UpdateProfileRolesFieldProfileId DB.ProfileId
+  | UpdateProfileRolesFieldRoles [DB.UserRole]
+
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
@@ -109,6 +112,11 @@ data ServerEventSelector f where
   GetAdaUsdPrice :: ServerEventSelector DB.AdaUsdPrice
   CreateAuditorReport :: ServerEventSelector CreateAuditorReportField
   GetProfileWalletAddress :: ServerEventSelector DB.ProfileId
+  UpdateProfile :: ServerEventSelector DB.ProfileId
+  UpdateProfileRoles :: ServerEventSelector UpdateProfileRolesField
+  GetProfileRoles :: ServerEventSelector DB.ProfileId
+  GetAllProfilesByRole :: ServerEventSelector DB.UserRole
+  GetProfilesSummary :: ServerEventSelector DB.ProfileId
   InternalError :: forall a. ToJSON a => ServerEventSelector a
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
@@ -167,6 +175,16 @@ renderServerEventSelector CreateAuditorReport = ("create-auditor-report", \case
   )
 renderServerEventSelector InternalError =
   ("internal-error", ("something-went-wrong",) . toJSON )
+renderServerEventSelector UpdateProfile = ("update-profile", renderProfileId)
+renderServerEventSelector UpdateProfileRoles = ("update-profile-roles", \case
+    UpdateProfileRolesFieldProfileId pid -> ("profile-id", toJSON (show pid))
+    UpdateProfileRolesFieldRoles roles -> ("roles", toJSON roles)
+  )
+renderServerEventSelector GetProfileRoles = ("get-profile-roles", renderProfileId)
+renderServerEventSelector GetAllProfilesByRole = ("get-all-profiles-by-role",
+  \role' -> ("role", toJSON role'))
+renderServerEventSelector GetProfilesSummary = ("get-profiles-summary", renderProfileId)
+
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

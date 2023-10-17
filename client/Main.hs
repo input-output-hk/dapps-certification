@@ -663,7 +663,7 @@ main = do
     CmdRun (Get ref) ->
       handle $ apiClient.getRun ref
     CmdRun (Abort (AbortRunArgs ref auth deleteRun)) ->
-      withAuth auth $ \c authKey -> True <$ c.abortRun authKey ref deleteRun
+      withAuth auth $ \c authKey -> True <$ c.abortRun ref deleteRun authKey
     --TODO: investigate why ZonedTime doesn't serialize properly
     CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
       handle $ apiClient.getLogs ref zt act
@@ -677,11 +677,11 @@ main = do
     CmdCurrentProfile (GetCurrentProfile auth) ->
       withAuth auth $ \c authKey -> c.getCurrentProfile authKey
     CmdCurrentProfile (UpdateCurrentProfile (UpdateCurrentProfileArgs auth profileBody)) -> do
-      withAuth auth $ \c authKey -> c.updateCurrentProfile authKey profileBody
+      withAuth auth $ \c authKey -> c.updateCurrentProfile profileBody authKey
     CmdCurrentProfile (GetProfileWalletAddress auth) ->
-      withAuth auth $ \c authKey -> c.getProfileWalletAddress authKey
+      withAuth auth $ \c authKey -> c.getCurrentProfileWalletAddress authKey
     CmdCurrentProfile (GetProfileBalance auth) ->
-      withAuth auth $ \c authKey -> c.getProfileBalance authKey
+      withAuth auth $ \c authKey -> c.getCurrentProfileBalance authKey
     CmdLogin loginBody -> do
       handle $ apiClient.login loginBody
     CmdServerTimestamp ->
@@ -691,10 +691,10 @@ main = do
     CmdGetAllTiers ->
       handle $ apiClient.getAllTiers
     CmdSubscriptions (GetSubscriptions (GetSubscriptionsArgs auth all')) ->
-      withAuth auth $ \c authKey -> c.getProfileSubscriptions authKey (Just (not all'))
+      withAuth auth $ \c authKey -> c.getCurrentProfileSubscriptions (Just (not all')) authKey
     CmdSubscriptions (Subscribe (SubscribeArgs auth tierId')) ->
       withAuth auth $ \c authKey -> c.subscribe authKey tierId'
     CmdSubscriptions (CancelPendingSubscriptions auth) ->
-      withAuth auth $ \c authKey -> c.cancelPendingSubscriptions authKey
+      withAuth auth $ \c authKey -> c.cancelCurrentProfilePendingSubscriptions authKey
     CmdSubscriptions (GetActiveFeatures auth) ->
-      withAuth auth $ \c authKey -> c.getActiveFeatures authKey
+      withAuth auth $ \c authKey -> c.getCurrentProfileActiveFeatures authKey

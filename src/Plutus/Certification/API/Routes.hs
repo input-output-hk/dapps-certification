@@ -12,8 +12,9 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PolyKinds            #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -52,36 +53,43 @@ import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import qualified Data.Aeson.KeyMap as KM
+import IOHK.Certification.Persistence (ProfileId)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
-type VersionRoute = "version"
+type VersionRoute
+   = "version"
   :> Description "Get the api version"
   :> Get '[JSON] VersionV1
 
-type VersionHeadRoute = "version"
+type VersionHeadRoute
+   = "version"
   :> Description "Get the api version (Response Headers only)"
   :> HeadNoContent
 
-type CreateRunRoute (auth :: Symbol) = "run"
+type CreateRunRoute (auth :: Symbol)
+   = "run"
   :> Description "Create a new testing run"
   :> AuthProtect auth
   :> ReqBody '[PlainText] CommitOrBranch
   :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
 
-type GetRunRoute = "run"
+type GetRunRoute
+   = "run"
   :> Description "Get the status of a run"
   :> Capture "id" RunIDV1
   :> Get '[JSON] RunStatusV1
 
-type AbortRunRoute (auth :: Symbol) = "run"
+type AbortRunRoute (auth :: Symbol)
+   = "run"
   :> Description "Abort a run and deletes the history entry if query param is provided"
-  :> AuthProtect auth
   :> Capture "id" RunIDV1
   :> QueryParam "delete" Bool
+  :> AuthProtect auth
   :> DeleteNoContent
 
-type GetLogsRoute = "run"
+type GetLogsRoute
+   = "run"
   :> Description "Get the logs of a run"
   :> Capture "id" RunIDV1
   :> "logs"
@@ -89,33 +97,52 @@ type GetLogsRoute = "run"
   :> QueryParam "action-type" KnownActionType
   :> Get '[JSON] [Cicero.Run.RunLog]
 
-type GetRunsRoute (auth :: Symbol) = "run"
+type GetRunsRoute (auth :: Symbol)
+   = "run"
   :> Description "Query through multiple runs belonging to the profile identified by the auth-key"
   :> AuthProtect auth
   :> QueryParam "after" UTCTime
   :> QueryParam "count" Int
   :> Get '[JSON] [DB.Run]
 
-type GetRunDetailsRoute = "run"
+type GetRunDetailsRoute
+   = "run"
   :> Description "Get the details of a run"
   :> Capture "id" RunIDV1
   :> "details"
   :> Get '[JSON] DB.Run
 
-type GetCurrentProfileRoute (auth :: Symbol) = "profile"
-  :> Description "Get the current profile information"
-  :> "current"
+type GetCurrentProfileRoute (auth :: Symbol)
+   = GetProfileRoute' auth "current" "Get the current profile information"
+
+type GetProfileRoute (auth :: Symbol)
+   = GetProfileRoute' auth (Capture "id" ProfileId)  "Get the profile information"
+
+type GetProfileRoute' (auth :: Symbol) p description
+   = "profile"
+  :> Description description
+  :> p
   :> AuthProtect auth
   :> Get '[JSON] DB.ProfileDTO
 
-type UpdateCurrentProfileRoute (auth :: Symbol) = "profile"
-  :> Description "Update the current profile information"
-  :> "current"
-  :> AuthProtect auth
+type UpdateCurrentProfileRoute (auth :: Symbol) =
+  UpdateProfileRoute' auth "current"
+    "Update the current profile information"
+
+type UpdateProfileRoute (auth :: Symbol) =
+  UpdateProfileRoute' auth (Capture "id" ProfileId)
+    "Update the profile information"
+
+type UpdateProfileRoute' (auth :: Symbol) p description
+   = "profile"
+  :> Description description
   :> ReqBody '[JSON] ProfileBody
+  :> p
+  :> AuthProtect auth
   :> Put '[JSON] DB.ProfileDTO
 
-type CreateL1CertificationRoute (auth :: Symbol) = "run"
+type CreateL1CertificationRoute (auth :: Symbol)
+   = "run"
   :> Description "Store the L1 Report into IPFS and broadcasts the Certificate onchain"
   :> AuthProtect auth
   :> Capture "id" RunIDV1
@@ -124,9 +151,17 @@ type CreateL1CertificationRoute (auth :: Symbol) = "run"
   :> QueryParam "dry-run" Bool
   :> Post '[JSON] Metadata.FullMetadata
 
-type GetBalanceRoute (auth :: Symbol) = "profile"
-  :> Description "Get the current balance of the profile"
-  :> "current"
+type GetCurrentProfileBalanceRoute (auth :: Symbol)
+   = Description "Get the current balance of the profile"
+  :> GetProfileBalanceRoute' auth "current"
+
+type GetProfileBalanceRoute (auth :: Symbol)
+   = Description "Get the balance of a given profile"
+  :> GetProfileBalanceRoute' auth (Capture "id" ProfileId)
+
+type GetProfileBalanceRoute' (auth :: Symbol) p
+   = "profile"
+  :> p
   :> "balance"
   :> AuthProtect auth
   :> Get '[JSON] Int64
@@ -135,46 +170,72 @@ type WalletAddressRoute = "wallet-address"
   :> Description "Get the wallet address the backend operates with"
   :> Get '[JSON] WalletAddress
 
-type GetProfileWalletAddressRoute (auth :: Symbol) = "profile"
-  :> Description "Get the wallet address of the profile"
-  :> "current"
+type GetCurrentProfileWalletAddressRoute (auth :: Symbol)
+   = "profile"
+  :> Description "Get the wallet address of the current profile"
+  :> GetProfileWalletAddressRoute' auth "current"
+
+type GetProfileWalletAddressRoute (auth :: Symbol)
+   = Description "Get the wallet address of a given profile"
+  :> GetProfileWalletAddressRoute' auth (Capture "id" ProfileId)
+
+type GetProfileWalletAddressRoute' (auth :: Symbol) p
+   = "profile"
+  :> p
   :> "wallet-address"
   :> AuthProtect auth
   :> Get '[JSON] (Maybe (DB.WalletAddressStatus,WalletAddress))
 
-type GitHubRoute = "repo"
+type GitHubRoute
+   = "repo"
   :> Description "Get the github repo information"
   :> Capture "owner" Text
   :> Capture "repo" Text
   :> Servant.Header "Authorization" ApiGitHubAccessToken
   :> Get '[JSON] RepositoryInfo
 
-type GenerateGitHubTokenRoute = "github" :> "access-token"
+type GenerateGitHubTokenRoute
+   = "github"
+  :> "access-token"
   :> Description "Generate a github access token"
   :> Capture "code" Text
   :> Post '[JSON] AccessTokenGenerationResponse
 
-type GetGitHubClientId = "github" :> "client-id"
+type GetGitHubClientId
+   = "github"
+  :> "client-id"
   :> Description "Get the application client id"
   :> Get '[JSON] Text
 
-type LoginRoute = "login"
+type LoginRoute
+   = "login"
   :> Description "Get a jwt token based on the provided credentials"
   :> ReqBody '[JSON] LoginBody
   :> Post '[JSON] Text
 
-type ServerTimestamp = "server-timestamp"
+type ServerTimestamp
+   = "server-timestamp"
   :> Description "Get the current server timestamp"
   :> Get '[JSON] Integer
 
-type GetProfileSubscriptionsRoute (auth :: Symbol) = "profile"
-  :> Description "Get the current profile subscriptions. Expiration isn't checked, so it's possible to get expired subscriptions"
-  :> "current"
+type GetCurrentProfileSubscriptionsRoute (auth :: Symbol)
+   = Description "Get the current profile subscriptions. Expiration isn't checked, so it's possible to get expired subscriptions"
+  :> GetProfileSubscriptionsRoute' auth "current"
+
+type GetProfileSubscriptionsRoute (auth :: Symbol)
+   = Description "Get the profile subscriptions. Expiration isn't checked, so it's possible to get expired subscriptions"
+  :> GetProfileSubscriptionsRoute' auth (Capture "id" ProfileId)
+
+type GetProfileSubscriptionsRoute' (auth :: Symbol) p
+   = "profile"
+  :> QueryParam "just-enabled" Bool
+  :> p
   :> "subscriptions"
   :> AuthProtect auth
-  :> QueryParam "just-enabled" Bool
   :> Get '[JSON] [DB.SubscriptionDTO]
 
+--TODO: in the future we might want to create a new subscription
+-- directly from support dashboard
 type SubscribeRoute (auth :: Symbol) = "profile"
   :> Description "Create a new profile subscription"
   :> "current"
@@ -183,37 +244,103 @@ type SubscribeRoute (auth :: Symbol) = "profile"
   :> Capture "tier" Int64
   :> PostCreated '[JSON] DB.SubscriptionDTO
 
-type CancelProfilePendingSubscriptionsRoute (auth :: Symbol) = "profile"
-  :> Description "Cancel a pending subscription"
-  :> "current"
+type CancelCurrentProfilePendingSubscriptionsRoute (auth :: Symbol) =
+  CancelProfilePendingSubscriptionsRoute' auth "current"
+    "Cancel the current profile pending subscriptions"
+
+type CancelProfilePendingSubscriptionsRoute (auth :: Symbol) =
+  CancelProfilePendingSubscriptionsRoute' auth (Capture "id" ProfileId)
+    "Cancel a given profile pending subscriptions"
+
+type CancelProfilePendingSubscriptionsRoute' (auth :: Symbol) p description
+   = "profile"
+  :> Description description
+  :> p
   :> "subscriptions"
   :> "pending"
   :> AuthProtect auth
   :> Delete '[JSON] Int
 
-type GetTiersRoute = "tiers"
+type GetTiersRoute
+   = "tiers"
   :> Description "Get the available tiers"
   :> Get '[JSON] [DB.TierDTO]
 
-type GetProfileActiveFeaturesRoute (auth :: Symbol) = "profile"
-  :> Description "Get the active features of the profile"
-  :> "current"
+type GetCurrentProfileActiveFeaturesRoute (auth :: Symbol) =
+  GetProfileActiveFeaturesRoute' auth "current"
+    "Get the active features of the current profile"
+
+type GetProfileActiveFeaturesRoute (auth :: Symbol) =
+  GetProfileActiveFeaturesRoute' auth (Capture "id" ProfileId)
+    "Get the active features of a given profile"
+
+type GetProfileActiveFeaturesRoute' (auth :: Symbol) p description
+   = "profile"
+  :> Description description
+  :> p
   :> "subscriptions"
   :> "active-features"
   :> AuthProtect auth
   :> Get '[JSON] [DB.FeatureType]
 
-type GetAdaUsdPriceRoute = "ada-usd-price"
+type GetAdaUsdPriceRoute
+   = "ada-usd-price"
   :> Description "Get the current ADA/USD price"
   :> Get '[JSON] DB.AdaUsdPrice
 
-type CreateAuditorReport (auth :: Symbol) = "auditor"
+type CreateAuditorReport (auth :: Symbol)
+   = "auditor"
   :> Description "Fetches the auditor report L0 | L2"
   :> "reports"
   :> QueryParam "dry-run" Bool
   :> ReqBody '[JSON] Metadata.AuditorCertificationInput
   :> AuthProtect auth
   :> Post '[JSON] Metadata.FullMetadata
+
+--------------------------------------------------------------------------------
+-- | Roles
+
+type UpdateProfileRolesRoute (auth :: Symbol)
+   = "profile"
+  :> Description "Update the roles of a given profile"
+  :> Capture "id" ProfileId
+  :> "roles"
+  :> ReqBody '[JSON] [DB.UserRole]
+  :> AuthProtect auth
+  :> GetNoContent
+
+type GetCurrentProfileRolesRoute (auth :: Symbol)
+   = Description "Get current profile roles"
+  :> GetProfileRolesRoute' auth "current"
+
+type GetProfileRolesRoute (auth :: Symbol)
+   = Description "Get the roles of a given profile"
+  :> GetProfileRolesRoute' auth (Capture "id" ProfileId)
+
+type GetProfileRolesRoute' (auth :: Symbol) p
+   = "profile"
+  :> p
+  :> "roles"
+  :> AuthProtect auth
+  :> Get '[JSON] [DB.UserRole]
+
+type GetAllProfileIdsByRole (auth :: Symbol)
+   = "roles"
+  :> Description "Get all profile ids by role"
+  :> Capture "role" DB.UserRole
+  :> "profiles"
+  :> "summary"
+  :> AuthProtect auth
+  :> Get '[JSON] [DB.ProfileId]
+
+--------------------------------------------------------------------------------
+-- | GLOBAL ELEVATED ROUTES
+
+type GetProfilesSummaryRoute  (auth :: Symbol)
+  = "profiles"
+  :> Description "Getting all profiles with their maximum role and their dapp if any"
+  :> AuthProtect auth
+  :> Get '[JSON] [DB.ProfileSummaryDTO]
 
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
@@ -225,6 +352,18 @@ instance ToHttpApiData ApiGitHubAccessToken where
 instance FromHttpApiData ApiGitHubAccessToken where
   -- | Parse a 'GitHubAccessToken' from a 'Text' value.
   parseUrlPiece  = left Text.pack . fmap ApiGitHubAccessToken . ghAccessTokenFromText
+
+
+instance FromHttpApiData DB.ProfileWalletAddress where
+  parseUrlPiece  = left Text.pack . DB.mkPatternedText
+
+
+instance FromHttpApiData ProfileId where
+  parseUrlPiece  = left Text.pack . maybe (Left "Invalid profile id") (Right . DB.toId) . readMaybe . Text.unpack
+
+instance ToHttpApiData ProfileId where
+  toUrlPiece  = Text.pack . show . DB.fromId
+
 
 data LoginBody = LoginBody
   { address :: !WalletAddress
@@ -287,24 +426,38 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getLogs :: mode :- GetLogsRoute
   , getRuns :: mode :- GetRunsRoute auth
   , getCurrentProfile :: mode :- GetCurrentProfileRoute auth
+  , getProfile :: mode :- GetProfileRoute auth
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
+  , updateProfile :: mode :- UpdateProfileRoute auth
+  , getCurrentProfileWalletAddress :: mode :- GetCurrentProfileWalletAddressRoute auth
   , getProfileWalletAddress :: mode :- GetProfileWalletAddressRoute auth
   , createCertification :: mode :- CreateL1CertificationRoute auth
   , walletAddress :: mode :- WalletAddressRoute
-  , getProfileBalance :: mode :- GetBalanceRoute auth
+  , getCurrentProfileBalance :: mode :- GetCurrentProfileBalanceRoute auth
+  , getProfileBalance :: mode :- GetProfileBalanceRoute auth
   , getRunDetails :: mode :- GetRunDetailsRoute
   , getRepositoryInfo :: mode :- GitHubRoute
   , login :: mode :- LoginRoute
   , serverTimestamp :: mode :- ServerTimestamp
   , generateGitHubToken :: mode :- GenerateGitHubTokenRoute
   , getGitHubClientId :: mode :- GetGitHubClientId
+  , getCurrentProfileSubscriptions :: mode :- GetCurrentProfileSubscriptionsRoute auth
   , getProfileSubscriptions :: mode :- GetProfileSubscriptionsRoute auth
   , subscribe :: mode :- SubscribeRoute auth
-  , cancelPendingSubscriptions :: mode :- CancelProfilePendingSubscriptionsRoute auth
+  , cancelCurrentProfilePendingSubscriptions ::
+      mode :- CancelCurrentProfilePendingSubscriptionsRoute auth
+  , cancelProfilePendingSubscriptions ::
+      mode :- CancelProfilePendingSubscriptionsRoute auth
   , getAllTiers :: mode :- GetTiersRoute
-  , getActiveFeatures :: mode :- GetProfileActiveFeaturesRoute auth
+  , getCurrentProfileActiveFeatures :: mode :- GetCurrentProfileActiveFeaturesRoute auth
+  , getProfileActiveFeatures :: mode :- GetProfileActiveFeaturesRoute auth
   , getAdaUsdPrice :: mode :- GetAdaUsdPriceRoute
   , createAuditorReport :: mode :- CreateAuditorReport auth
+  , updateProfileRoles :: mode :- UpdateProfileRolesRoute auth
+  , getCurrentProfileRoles :: mode :- GetCurrentProfileRolesRoute auth
+  , getProfileRoles :: mode :- GetProfileRolesRoute auth
+  , getAllProfilesByRole :: mode :- GetAllProfileIdsByRole auth
+  , getProfilesSummary :: mode :- GetProfilesSummaryRoute auth
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
@@ -492,6 +645,18 @@ instance ToHttpApiData KnownActionType where
   toUrlPiece Generate = "generate"
   toUrlPiece Build    = "build"
   toUrlPiece Certify  = "certify"
+
+instance FromHttpApiData DB.UserRole where
+  parseUrlPiece "support" = Right DB.Support
+  parseUrlPiece "admin"   = Right DB.Admin
+  parseUrlPiece "no-role" = Right DB.NoRole
+  parseUrlPiece _         = Left "Unknown UserRole"
+
+instance ToHttpApiData DB.UserRole where
+  toUrlPiece DB.Admin   = "admin"
+  toUrlPiece DB.Support = "support"
+  toUrlPiece DB.NoRole  = "no-role"
+
 
 instance ToSchema VersionV1
 instance ToSchema RunStatusV1

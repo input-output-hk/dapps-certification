@@ -3,16 +3,16 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE OverloadedRecordDot   #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
 
 module IOHK.Certification.Persistence.API where
 
 import Control.Monad
 import Data.Maybe
 import Data.List (nub)
-import Database.Selda
+import Database.Selda hiding (Set)
 import Database.Selda.Backend hiding (withConnection)
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
@@ -24,13 +24,10 @@ import Data.Time.Clock
 import Data.Fixed
 import Data.Int
 import Data.Bifunctor
-
-import Database.Selda.SQLite
-
 import Data.Functor
+import Data.Set (Set,toList)
 
 import qualified Data.Map as Map
-import Database.Selda.Unsafe
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -270,13 +267,17 @@ upsertProfileWallet ProfileWallet{..} = do
     [ProfileWallet{..}]
 
 getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
-getProfile pid = fmap (fmap toProfileDTO . listToMaybe ) $ query $ getProfileQ pid
+getProfile pid = do
+   ret <- listToMaybe <$> query (getProfileQ pid)
+   userRoles <- getUserRoles pid
+   maxUserRole <- case userRoles of
+      _ | null userRoles || userRoles == [NoRole] -> pure Nothing
+      _ | userRole <- maximum userRoles -> pure $ Just userRole
+   pure $ ret <&> \(r :*: dapp) ->
+    ProfileDTO r (DAppDTO <$> dapp) maxUserRole
 
 getProfileDApp :: MonadSelda m => ID Profile -> m (Maybe DApp)
 getProfileDApp pid = fmap listToMaybe $ query $ getProfileDAppQ pid
-
-toProfileDTO :: (Profile :*: Maybe DApp) -> ProfileDTO
-toProfileDTO (profile :*: dapp) = ProfileDTO profile (DAppDTO <$> dapp)
 
 getProfileIdQ:: ProfileWalletAddress -> Query t (Col t (ID Profile))
 getProfileIdQ  address = do
@@ -630,28 +631,126 @@ getAllTransactions justOutput = do
       , mtxMetadata = wtxMetadata
       }
 
+--------------------------------------------------------------------------------
+-- | USER ROLES
+
+-- | Add a role to a profile
+addUserRole :: MonadSelda m => ID Profile -> UserRole -> m Int
+addUserRole pid role = insert profileRoles [ProfileRole pid role]
+
+updateUserRoles :: MonadSelda m => ID Profile -> Set UserRole -> m Int
+updateUserRoles pid roles = do
+  -- remove all the roles
+  _ <- removeAllUserRoles pid
+  -- add the new roles
+  insert profileRoles (map (ProfileRole pid) (toList  roles))
+
+-- | Get all the roles for a profile
+getUserRoles :: MonadSelda m => ID Profile -> m [UserRole]
+getUserRoles pid = query $ do
+  role <- select profileRoles
+  restrict (role ! #profileId .== literal pid)
+  pure (role ! #role)
+
+-- | Check if a profile has at least one of the given roles
+hasSomeUserRoles :: MonadSelda m => ID Profile -> [UserRole] -> m Bool
+hasSomeUserRoles pid roles = do
+  userRoles <- getUserRoles pid
+  pure $ any (`elem` roles) userRoles
+
+-- | Check if a profile has at least a given role level
+-- e.g.
+--
+-- 1. Profile (Support)
+-- hasAtLeastUserRole pid Support == True
+-- hasAtLeastUserRole pid Admin == False
+--
+-- 2. Profile (Admin)
+-- hasAtLeastUserRole pid Support == True
+-- hasAtLeastUserRole pid Admin == True
+--
+hasAtLeastUserRole :: MonadSelda m => ID Profile -> UserRole -> m Bool
+hasAtLeastUserRole pid role = do
+  roles <- query $ hasAtLeastUserRole' pid role
+  pure $ not $ null roles
+
+hasAtLeastUserRole' :: ID Profile -> UserRole -> Query t (Col t UserRole)
+hasAtLeastUserRole' pid role = do
+  role' <- select profileRoles
+  restrict (role' ! #profileId .== literal pid
+       .&& role' ! #role .>= literal role)
+  pure (role' ! #role)
+
+-- | Remove all the roles for a profile
+-- returns the number of deleted roles
+removeAllUserRoles :: MonadSelda m => ID Profile -> m Int
+removeAllUserRoles pid =
+  deleteFrom profileRoles (\role -> role ! #profileId .== literal pid)
+
+-- | Remove a role for a profile
+-- returns True if the role was removed
+-- returns False if the role was not found
+removeUserRole :: MonadSelda m => ID Profile -> UserRole -> m Bool
+removeUserRole pid role = do
+  deleted <- deleteFrom profileRoles (\role' -> role' ! #profileId .== literal pid
+         .&& role' ! #role .== literal role)
+  pure $ deleted > 0
+
+ensureAdminExists :: (MonadSelda m) => Bool -> ProfileWalletAddress -> m Int
+ensureAdminExists forceAdminAlways walletAddress = do
+  -- first ensure there is at least one admin
+  admins <- query $ do
+    role <- select profileRoles
+    restrict (role ! #role .== literal Admin)
+    pure (role ! #profileId)
+  -- get the profile
+  profileM <- getProfileByAddress walletAddress
+  case profileM of
+    Just profile
+      -- if there are no admins
+      | null admins
+      -- or when forceAdminAlways is True and the profile is not an admin
+      || (forceAdminAlways && (profile.profileId `notElem` admins)) ->
+         -- add the admin role to the profile and return the number of admins
+         -- (including the new one)
+         (+ length admins) <$> addUserRole (profile.profileId) Admin
+    _ -> pure (length admins)
+
+getAllProfilesByRole :: MonadSelda m => UserRole -> m [ID Profile]
+getAllProfilesByRole userRole = query $ do
+  role <- select profileRoles
+  restrict (role ! #role .== literal userRole)
+  pure (role ! #profileId)
+
+data Impersonation
+  = ImpersonationNotAllowed
+  | ImpersonationProfile (ID Profile, ProfileWalletAddress)
+  | ImpersonationNotFound
+
+-- verify minimum role and return the profileId
+-- and the address of the impersonated user
+verifyImpersonation :: MonadSelda m
+                    => ID Profile
+                    -> UserRole
+                    -> ID Profile
+                    -> m Impersonation
+verifyImpersonation ownerPid role pid = do
+  -- check if the impersonated user has at least the given role
+  hasRole <- hasAtLeastUserRole ownerPid role
+  if hasRole
+  then do
+    -- get the address of the impersonated user
+    addressM <- getProfileAddress pid
+    case addressM of
+      Nothing -> pure ImpersonationNotFound
+      Just address -> pure $ ImpersonationProfile (pid, address)
+  else pure ImpersonationNotAllowed
+
+--------------------------------------------------------------------------------
 -- | Polimorphic function to run a Selda computation with a connection
 withConnection :: (MonadIO m, MonadMask m)
                => SeldaConnection b
                -> (forall n. (MonadSelda n,MonadMask n) => n a)
                -> m a
 withConnection = flip runSeldaT
-
-withSQLiteConnection :: forall m a. (MonadIO m, MonadMask m) => SeldaConnection SQLite -> SeldaT SQLite m a -> m a
-withSQLiteConnection = flip runSeldaT
-
-sqlLiteGetAllTables :: (MonadIO m,MonadMask m) => SeldaT SQLite m [Text]
-sqlLiteGetAllTables = query sqlLiteGetAllTablesQ
-  where
-  sqlLiteGetAllTablesQ :: Query s (Col s Text)
-  sqlLiteGetAllTablesQ = do
-    let fragment = inj col
-    rawQuery1 "name" fragment
-    where
-    col :: Col s Text
-    col = do
-      rawExp "SELECT name FROM sqlite_schema WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY 1"
-
--- >>> sqliteOpen "certification.sqlite" >>= runSeldaT sqlLiteGetAllTables
--- ["certification","dapp","feature","jwt-secret","l1Certification","onchain_certifications","profile","profile_wallet","run","subscription","tier","tier_feature","transaction","transaction_entry"]
 
