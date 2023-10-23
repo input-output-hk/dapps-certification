@@ -192,13 +192,13 @@ data SubscriptionLite = SubscriptionLite
 } deriving (Generic, Show,Eq)
 
 instance ToJSON SubscriptionLite where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 3 }
 
 instance FromJSON SubscriptionLite where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 3 }
 
 instance ToSchema SubscriptionLite where
-  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 3 }
 
 instance SqlRow SubscriptionLite
 
