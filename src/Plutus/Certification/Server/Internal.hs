@@ -254,22 +254,35 @@ consumeRuns = await >>= \case
   Just s -> pure s
 
 -- | this will create a new profile if there isn't any with the given address
-ensureProfile :: forall m env. ( MonadIO m , MonadError ServerError m, MonadMask m
-                               , MonadReader env m, HasDb env
-                               )
-              => ByteString -> m (DB.ProfileId,ProfileWalletAddress)
-ensureProfile bs = do
+ensureProfileFromBs :: forall m env.
+                    ( MonadIO m
+                    , MonadError ServerError m
+                    , MonadMask m
+                    , MonadReader env m
+                    , HasDb env )
+                    => ByteString
+                    -> m (DB.ProfileId,ProfileWalletAddress)
+ensureProfileFromBs bs = do
   case DB.mkPatternedText (decodeUtf8 bs) of
     Left err -> throwError $ err400 { errBody = BS.fromStrict $ BS.pack err }
     Right address' -> do
+      retM <- ensureProfile address'
+      case retM of
+        Nothing -> throwError $ err500 { errBody = "Profile couldn't be created" }
+        Just ret -> pure (ret,address')
+
+ensureProfile :: forall m env.
+              ( MonadIO m
+              , MonadMask m
+              , MonadReader env m
+              , HasDb env )
+              => DB.ProfileWalletAddress
+              -> m (Maybe DB.ProfileId)
+ensureProfile address' = do
       profileIdM <- withDb $ DB.getProfileId address'
-      ensureProfile' profileIdM address'
+      ensureProfile' profileIdM
   where
-  ensureProfile'  (Just pid) address' = pure (pid, address')
-  ensureProfile'  Nothing address' = do
-    pidM <- withDb $ DB.upsertProfile
+  ensureProfile'  (Just pid) = pure $ Just pid
+  ensureProfile'  Nothing = withDb $ DB.upsertProfile
       (DB.Profile undefined address' Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
       Nothing
-    case pidM of
-      Nothing -> throwError $ err500 { errBody = "Profile couldn't be created" }
-      Just pid -> pure (pid, address')
