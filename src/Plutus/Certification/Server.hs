@@ -7,4 +7,5 @@ import Plutus.Certification.Server.Internal as X
   , ServerEventSelector(..)
   , renderServerEventSelector
   , ensureProfile
+  , ensureProfileFromBs
   )

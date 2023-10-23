@@ -379,7 +379,7 @@ plainAddressAuthHandler withDb whitelist = mkAuthHandler handler
   handler req = do
      bs <- either throw401 pure $ extractAddress req
      verifyWhiteList whitelist (decodeUtf8 bs)
-     runReaderT (ensureProfile bs) (WithDBWrapper withDb)
+     runReaderT (ensureProfileFromBs bs) (WithDBWrapper withDb)
   maybeToEither e = maybe (Left e) Right
   extractAddress = maybeToEither "Missing Authorization header" . lookup "Authorization" . requestHeaders
 
@@ -447,6 +447,9 @@ verifyTheAdmin :: EventBackend IO r RootEventSelector -> WithDB -> Args -> IO ()
 verifyTheAdmin eb withDb Args{..}
   | Nothing <- adminWallet = pure ()
   | Just adminWallet' <- adminWallet = withEvent eb EnsureAdminExists \ev -> do
+    pidM <- runReaderT (ensureProfile adminWallet') (WithDBWrapper withDb)
+    -- throw error if the profile wasn't created or did
+    unless (isJust pidM) $ error "The admin wallet is not in the db and couldn't be enforced"
     addField ev $ EnsureAdminExistsFieldAddress adminWallet'
     -- if no admin enforce the provided one
     allAdmins <- withDb $ DB.ensureAdminExists forceAdminAlways adminWallet'

@@ -249,7 +249,7 @@ server ServerArgs{..} = NamedAPI
       -- verify whitelist
       verifyWhiteList serverWhitelist address
       -- ensure the profile exists
-      (pid,userAddress) <- runDbReader (ensureProfile $ encodeUtf8 address)
+      (pid,userAddress) <- runDbReader (ensureProfileFromBs $ encodeUtf8 address)
       --verify the wallet signature validation
       verifySignature key signature address
       -- verify the message timestamp
