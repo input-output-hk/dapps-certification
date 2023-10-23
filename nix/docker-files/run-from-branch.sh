@@ -34,9 +34,9 @@ fi
 
 echo "Docker is installed, the daemon is running"
 
-if [ $# -ne 1 ] && [ $# -ne 3 ]; then
-  echo "Usage: $0 <brach-name> [--env-file <env-file>]"
-  exit 1
+if [ $# -ne 1 ] && [ $# -ne 3 ] && [ $# -ne 5 ]; then
+    echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>]"
+    exit 1
 fi
 
 # create the base url for the raw files
@@ -44,6 +44,7 @@ baseUrl=https://raw.githubusercontent.com/input-output-hk/dapps-certification
 folder=nix/docker-files
 
 branch="$1"
+shift
 # replace slashes with dashes from the branch name
 imageTag=${branch//\//-}
 echo "Image tag: \"$imageTag\""
@@ -52,8 +53,9 @@ imageName=ghcr.io/demoiog/plutus-certification:$imageTag
 echo "Image name: \"$imageName\""
 
 #prepare to fetch the env vars but also verify if the branch exists
-envVarsFile=default.env
+envVarsFile=""
 envVarToShell=$baseUrl/$branch/$folder/default.env
+adminAddress=""
 
 echo "Verify the branch \"$branch\" by fetching the env vars from $envVarToShell ..."
 response=$(curl -s -o /dev/null -w "%{http_code}" "$envVarToShell")
@@ -64,23 +66,35 @@ if [ "$response" -ne 200 ]; then
   exit 1
 fi
 
-# choose the env file between the local one and the remote one
-# if the local one is chosen then the remote one is ignored
-if [ $# -eq 3 ]; then
-    if [ "$2" != "--env-file" ]; then
-      echo "Usage: $0 <brach-name> [--env-file <env-file>]"
-      exit 1
-    fi
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --env-file)
+        envVarsFile="$2"
+        shift
+        shift
+        ;;
+        --admin-address)
+        adminAddress="$2"
+        shift
+        shift
+        ;;
+        *)
+        echo "Unknown argument: $key"
+        echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>]"
+        exit 1
+        ;;
+    esac
+done
 
-    envVarsFile=$3
-
+if [[ -n $envVarsFile ]]; then
     # using local env file
     echo "Using local env file: $envVarsFile ..."
 
     # test if file exists
-    if [ ! -f "$envVarsFile" ]; then
-      echo "Error: The file \"$envVarsFile\" does not exist!"
-      exit 1
+    if [[ ! -f "$envVarsFile" ]]; then
+        echo "Error: The file \"$envVarsFile\" does not exist!"
+        exit 1
     fi
 
     vars=$($envVarsFile)
@@ -92,6 +106,19 @@ else
     echo "DONE!"
 fi
 
+# Use the adminAddress variable if it has been set
+if [[ -n $adminAddress ]]; then
+    echo "Admin address is set to: $adminAddress"
+fi
+
+echo "Setting environment variables ..."
+
+# add the admin address if it has been set (ADMIN_WALLET)
+if [[ -n $adminAddress ]]; then
+    vars="$vars ADMIN_WALLET=$adminAddress FORCE_ADMIN_ALWAYS=1"
+fi
+echo $vars
+
 echo "Checking if the image \"$imageName\" exists..."
 script="docker manifest inspect \"$imageName\" > /dev/null 2>&1"
 echo $script >&2
@@ -102,10 +129,11 @@ eval "$script" || {
 
 echo "DONE!"
 
+export $vars
+
 runDockerFile=run-docker-from-registry.sh
 urlToShell=$baseUrl/$branch/$folder/run-docker-from-registry.sh
 
-export $vars
 script="curl -sSfL -H 'Cache-Control: no-cache' $urlToShell | bash -s \"$imageName\""
 echo $script >&2
 eval "$script"

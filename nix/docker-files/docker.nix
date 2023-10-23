@@ -34,7 +34,12 @@
         ${addParameter "min-amount-for-address-reservation" "MIN_AMOUNT_FOR_ADDRESS_RESERVATION"}
         ${addParameter "github-client-id" "GITHUB_CLIENT_ID"}
         ${addParameter "github-client-secret" "GITHUB_CLIENT_SECRET"}
+        ${addParameter "admin-wallet" "ADMIN_WALLET"}
 
+        # if FORCE_ADMIN_ALWAYS is set to 1 then add the parameter force-admin-always
+        if [ -n "${"$"}FORCE_ADMIN_ALWAYS" ] && [ "${"$"}FORCE_ADMIN_ALWAYS" -eq 1 ]; then
+          args="$args --force-admin-always"
+        fi
         if [ -n "$JWT_SECRET" ];
         then
             args="$args --jwt-secret $JWT_SECRET"
@@ -146,7 +151,8 @@
           ${addEnvVar "MIN_AMOUNT_FOR_ADDRESS_RESERVATION"}
           ${addEnvVar "GITHUB_CLIENT_ID"}
           ${addEnvVar "GITHUB_CLIENT_SECRET"}
-
+          ${addEnvVar "ADMIN_WALLET"}
+          ${addEnvVar "FORCE_ADMIN_ALWAYS"}
           if [[ -z "$PORT" ]]; then
             export PORT=9671
           fi

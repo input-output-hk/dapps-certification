@@ -27,7 +27,7 @@ In order to modify parameters, you can edit ~./nix/docker-files/default.env~.
 Regularly the developers are pushing into the docker registry the latest version of every branch.
 To run the service without building it locally or even pulling the code, you can run the following command:
 
-~bash <( curl -L -s bit.ly/46nuQIp ) <brach-name> [--env-file <env-file>]~
+~bash <( curl -L -s bit.ly/46nuQIp ) <brach-name> [--env-file <env-file>] [--admin-address <stake-address>]~
 
 > [!NOTE]
 > You can find how the default env file looks at ~./nix/docker-files/default.env~.
@@ -37,6 +37,7 @@ Examples:
 
 - ~bash <( curl -L -s bit.ly/46nuQIp ) master~
 - ~bash <( curl -L -s bit.ly/46nuQIp ) master --env-file ./nix/docker-files/default.env~
+- ~bash <( curl -L -s bit.ly/46nuQIp ) master --admin-address stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd~
 
 ** Pushing the docker image to the registry
 

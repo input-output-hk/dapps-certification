@@ -14,7 +14,7 @@ import Database.Selda
 import Database.Selda.SQLite
 import Database.Selda.Backend (SeldaConnection)
 
-import           IOHK.Certification.Interface  as X
+import IOHK.Certification.Interface  as X
   ( GitHubAccessToken(..)
   , GitHubAccessTokenType(..)
   , ghAccessTokenPattern

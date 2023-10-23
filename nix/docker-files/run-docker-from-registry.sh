@@ -88,6 +88,13 @@ if [ -n "$GITHUB_CLIENT_SECRET" ]; then
   docker_args="$docker_args -e GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET"
 fi
 
+if [ -n "$ADMIN_WALLET" ]; then
+  docker_args="$docker_args -e ADMIN_WALLET=$ADMIN_WALLET"
+fi
+
+if [ -n "$FORCE_ADMIN_ALWAYS" ]; then
+  docker_args="$docker_args -e FORCE_ADMIN_ALWAYS=$FORCE_ADMIN_ALWAYS"
+fi
 
 if [[ -z "$PORT" ]]; then
   export PORT=9671
