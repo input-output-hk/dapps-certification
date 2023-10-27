@@ -30,6 +30,7 @@ type UnnamedApi (auth :: Symbol)
      = VersionRoute
   :<|> VersionHeadRoute
   :<|> CreateRunRoute auth
+  :<|> CreateRunOnCurrentProfileRoute auth
   :<|> GetRunRoute
   :<|> AbortRunRoute auth
   :<|> GetLogsRoute

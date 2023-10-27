@@ -121,18 +121,11 @@ server ServerArgs{..} = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
   , walletAddress = withEvent eb I.WalletAddress . const $ pure serverWalletArgs.walletAddress
-  , createRun = \(profileId,_) commitOrBranch -> withEvent eb CreateRun \ev -> do
+  , createRunOnCurrentProfile = \commitOrBranch (profileId,_) -> do
       -- ensure the profile has an active feature for L1Run
       validateFeature L1Run profileId
-      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
-      let githubToken' =  profileAccessToken <|> serverGithubToken
-      -- ensure the ref is in the right format before start the job
-      (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
-      addField ev $ CreateRunRef fref
-      res <- submitJob (setAncestor $ reference ev) githubToken' fref
-      addField ev $ CreateRunID res
-      createDbRun fref profileId res commitDate commitHash
-      pure res
+      createRun' commitOrBranch profileId
+  , createRun = impersonate DB.Support . createRun'
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
       ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
       ) >>= runDbReader . dbSync uuid
@@ -141,10 +134,15 @@ server ServerArgs{..} = NamedAPI
       -- get the run details from the db
       withDb ( DB.getRun uuid )
         >>= maybeToServerError err404 "Run not found"
-  --TODO: elevate this to admin
   , abortRun = \rid@RunID{..} deleteRun (profileId,_) -> withEvent eb AbortRun \ev -> do
       addField ev rid
-      requireRunIdOwner profileId uuid
+
+      -- ensure the user has necessary rights to start a run
+      -- ( has at least support role or is the owner of the run )
+      hasNecessaryRole <- withDb (DB.hasAtLeastUserRole profileId DB.Support)
+      unless hasNecessaryRole $
+        requireRunIdOwner profileId uuid
+
       -- abort the run if is still running
       status <- runConduit $
         getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
@@ -179,6 +177,7 @@ server ServerArgs{..} = NamedAPI
       runConduit
          $ getLogs (setAncestor $ reference ev) actionTypeM rid
         .| (dropWhileC dropCond >> sinkList)
+  -- TODO: elevate this to admin
   , getRuns = \(profileId,_) afterM countM ->
       withDb $ DB.getRuns profileId afterM countM
 
@@ -359,6 +358,26 @@ server ServerArgs{..} = NamedAPI
       withDb DB.getProfilesSummary
   }
   where
+    createRun' commitOrBranch profileId = withEvent eb CreateRun \ev -> do
+      -- get the flake ref and the github token from the db
+      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
+
+      -- get one of the github tokens. from the profile if it has one
+      -- or from the server arguments
+      let githubToken' =  profileAccessToken <|> serverGithubToken
+      --
+      -- ensure the ref is in the right format before starting the job
+      (commitDate,commitHash) <- getCommitDateAndHash githubToken' fref
+      addField ev $ CreateRunRef fref
+
+      -- submit the job
+      res <- submitJob (setAncestor $ reference ev) githubToken' fref
+      addField ev $ CreateRunID res
+
+      -- insert the run info in the db
+      createDbRun fref profileId res commitDate commitHash
+      pure res
+
   --------------------------------------------------------------------------------
   -- | common profile handlers
     getProfileRoles profileId = withEvent eb GetProfileRoles \ev -> do

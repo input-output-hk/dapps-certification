@@ -67,11 +67,20 @@ type VersionHeadRoute
   :> Description "Get the api version (Response Headers only)"
   :> HeadNoContent
 
-type CreateRunRoute (auth :: Symbol)
+type CreateRunOnCurrentProfileRoute (auth :: Symbol)
    = "run"
-  :> Description "Create a new testing run"
-  :> AuthProtect auth
+  :> Description "Create a new testing run attached to the current profile"
   :> ReqBody '[PlainText] CommitOrBranch
+  :> AuthProtect auth
+  :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
+
+type CreateRunRoute (auth :: Symbol)
+   = "profile"
+  :> Description "Create a new testing run attached to a different profile"
+  :> ReqBody '[PlainText] CommitOrBranch
+  :> Capture "id" ProfileId
+  :> "run"
+  :> AuthProtect auth
   :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
 
 type GetRunRoute
@@ -420,6 +429,7 @@ newtype CertificateCreationResponse = CertificateCreationResponse
 data NamedAPI (auth :: Symbol) mode = NamedAPI
   { version :: mode :- VersionRoute
   , versionHead :: mode :- VersionHeadRoute
+  , createRunOnCurrentProfile :: mode :- CreateRunOnCurrentProfileRoute auth
   , createRun :: mode :- CreateRunRoute auth
   , getRun :: mode :- GetRunRoute
   , abortRun :: mode :- AbortRunRoute auth
