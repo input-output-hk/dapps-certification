@@ -180,8 +180,7 @@ type WalletAddressRoute = "wallet-address"
   :> Get '[JSON] WalletAddress
 
 type GetCurrentProfileWalletAddressRoute (auth :: Symbol)
-   = "profile"
-  :> Description "Get the wallet address of the current profile"
+   = Description "Get the wallet address of the current profile"
   :> GetProfileWalletAddressRoute' auth "current"
 
 type GetProfileWalletAddressRoute (auth :: Symbol)
