@@ -20,6 +20,10 @@ spec:
             value: "1000000"
           - name: PORT
             value: "80"
+          - name: ADMIN_WALLET
+            value: stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd
+          - name: FORCE_ADMIN_ALWAYS
+            value: 1
           - name: WALLET_PASSPHRASE
             valueFrom:
               secretKeyRef:
@@ -37,7 +41,7 @@ spec:
                 name: github-secrets
           - name: DB_PATH
             value: "/db/certification.sqlite"
-        image: ghcr.io/demoiog/plutus-certification:19
+        image: ghcr.io/demoiog/plutus-certification:20
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
