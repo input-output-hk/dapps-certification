@@ -734,7 +734,7 @@ instance ToSchema ProfileBody where
     profileDtoSchema <- declareSchema (Proxy :: Proxy DB.ProfileDTO)
     pure $ NamedSchema (Just "ProfileBody") $ profileDtoSchema
         -- remove address from properties
-        & properties %~ HM.delete "address"
+        & properties %~ HM.delete "address" . HM.delete "role"
         -- remove address from required
         & required %~ Prelude.filter (/= "address")
 
