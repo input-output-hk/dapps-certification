@@ -315,7 +315,7 @@ type UpdateProfileRolesRoute (auth :: Symbol)
   :> "roles"
   :> ReqBody '[JSON] [DB.UserRole]
   :> AuthProtect auth
-  :> GetNoContent
+  :> PutNoContent
 
 type GetCurrentProfileRolesRoute (auth :: Symbol)
    = Description "Get current profile roles"
