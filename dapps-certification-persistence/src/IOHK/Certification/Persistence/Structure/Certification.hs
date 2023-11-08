@@ -25,9 +25,11 @@ import           GHC.OverloadedLabels
 import           IOHK.Certification.Persistence.Structure.Profile
 import           Control.Exception ( throw)
 import           IOHK.Certification.Persistence.Structure.Run
+import           IOHK.Certification.Persistence.Structure.Internal
 import           IOHK.Certification.Persistence.Pattern
 
 import qualified Data.Aeson.KeyMap as KM
+import Control.Lens.Internal.CTypes (Int64)
 
 --------------------------------------------------------------------------------
 -- | Certification
@@ -248,3 +250,38 @@ l1Certifications = table "l1Certification"
   , #l1CertId :- unique
   ]
 
+data AuditorReportEvent = AuditorReportEvent
+  { areId :: ID AuditorReportEvent
+  , areProfileId :: ID Profile
+  , areCertLevel :: CertificationLevel
+  , areCreatedAt :: UTCTime
+  , areOffchainContentId :: Text
+  } deriving (Generic,Show,Eq)
+
+instance ToJSON (ID AuditorReportEvent) where
+  toJSON = toJSON . fromId
+
+instance FromJSON  (ID AuditorReportEvent) where
+  parseJSON = withScientific "ID AuditorReportEvent" $
+    pure . toId . scientificToInt64
+
+instance ToSchema (ID AuditorReportEvent) where
+  declareNamedSchema _ = declareNamedSchema (Proxy :: Proxy Int64)
+
+instance ToJSON AuditorReportEvent where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 3 }
+
+instance FromJSON AuditorReportEvent where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 3 }
+
+instance ToSchema AuditorReportEvent where
+  declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 3 }
+
+instance SqlRow AuditorReportEvent
+
+auditorReportEvents :: Table AuditorReportEvent
+auditorReportEvents = table "auditor_report_events"
+  [ #areId :- autoPrimary
+  , #areProfileId :- foreignKey profiles #profileId
+  , #areCreatedAt :- index
+  ]

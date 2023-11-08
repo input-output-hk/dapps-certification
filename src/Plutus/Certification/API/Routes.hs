@@ -14,7 +14,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -54,6 +56,7 @@ import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 import qualified Data.Aeson.KeyMap as KM
 import IOHK.Certification.Persistence (ProfileId)
+import Plutus.Certification.Metrics (RunTimeMetric)
 
 type API (auth :: Symbol)  = NamedRoutes (NamedAPI auth)
 
@@ -341,14 +344,104 @@ type GetAllProfileIdsByRole (auth :: Symbol)
   :> AuthProtect auth
   :> Get '[JSON] [DB.ProfileId]
 
---------------------------------------------------------------------------------
--- | GLOBAL ELEVATED ROUTES
-
 type GetProfilesSummaryRoute  (auth :: Symbol)
   = "profiles"
   :> Description "Getting all profiles with their maximum role and their dapp if any"
   :> AuthProtect auth
   :> Get '[JSON] [DB.ProfileSummaryDTO]
+
+newtype SlotSelector = SlotSelector (UTCTime, UTCTime)
+
+data RunTimeArguments = RunTimeArguments
+  { interval :: !SlotSelector
+  , minRunTime :: !(Maybe NominalDiffTime)
+  }
+
+type GetRunTimeMetricsRoute (auth :: Symbol)
+   = "metrics"
+  :> Description "Get the run times"
+  :> "run-times"
+  :> ReqBody '[JSON] RunTimeArguments
+  :> AuthProtect auth
+  :> Post '[JSON] [RunTimeMetric]
+
+
+type GetSubscriptionsStartingInIntervalRoute (auth :: Symbol)
+  = "metrics"
+  :> Description "Get all subscriptions created in a given interval"
+  :> "subscriptions"
+  :> "started"
+  :> "in-interval"
+  :> ReqBody '[JSON] SlotSelector
+  :> AuthProtect auth
+  :> Post '[JSON] [DB.SubscriptionDTO]
+
+type GetSubscriptionsEndingInIntervalRoute (auth :: Symbol)
+  = "metrics"
+  :> Description "Get all subscriptions expiring in a given interval"
+  :> "subscriptions"
+  :> "ending"
+  :> "in-interval"
+  :> ReqBody '[JSON] SlotSelector
+  :> AuthProtect auth
+  :> Post '[JSON] [DB.SubscriptionDTO]
+
+type GetAuditorReportMetrics (auth :: Symbol)
+  = "metrics"
+  :> Description "Get the auditor report metrics"
+  :> "auditor-reports"
+  :> ReqBody '[JSON] SlotSelector
+  :> AuthProtect auth
+  :> Post '[JSON] [DB.AuditorReportEvent]
+
+instance FromJSON SlotSelector where
+  parseJSON = withObject "SlotSelector" $ \o -> do
+    from' <- o .: "from"
+    to' <- o .: "to"
+    pure $ SlotSelector (from', to')
+
+instance ToJSON SlotSelector where
+  toJSON (SlotSelector (from', to')) = object
+    [ "from" .= from'
+    , "to" .= to'
+    ]
+
+instance ToSchema SlotSelector where
+  declareNamedSchema _ = do
+    fromSchema <- declareSchemaRef (Proxy @UTCTime)
+    toSchema' <- declareSchemaRef (Proxy @UTCTime)
+    pure $ NamedSchema (Just "SlotSelector") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~ fromList
+        [ ("from", fromSchema)
+        , ("to", toSchema')
+        ]
+      & required .~ ["from", "to"]
+
+instance FromJSON RunTimeArguments where
+  parseJSON = withObject "RunTimeArguments" $ \o -> do
+    interval <- o .: "interval"
+    minRunTimeSeconds <- o .:? "minRunTime"
+    let minRunTime = secondsToNominalDiffTime <$> minRunTimeSeconds
+    pure RunTimeArguments{..}
+
+instance ToJSON RunTimeArguments where
+  toJSON RunTimeArguments{..} = object
+    [ "interval" .= interval
+    , "minRunTime" .= (nominalDiffTimeToSeconds <$> minRunTime)
+    ]
+
+instance ToSchema RunTimeArguments where
+  declareNamedSchema _ = do
+    slotSelectorSchema <- declareSchemaRef (Proxy @SlotSelector)
+    minRunTimeSchema <- declareSchemaRef (Proxy @NominalDiffTime)
+    pure $ NamedSchema (Just "RunTimeArguments") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("interval", slotSelectorSchema)
+          , ("minRunTime", minRunTimeSchema)
+          ]
+      & required .~ ["interval"]
 
 newtype ApiGitHubAccessToken = ApiGitHubAccessToken { unApiGitHubAccessToken :: GitHubAccessToken }
   deriving (Generic)
@@ -467,6 +560,10 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getProfileRoles :: mode :- GetProfileRolesRoute auth
   , getAllProfilesByRole :: mode :- GetAllProfileIdsByRole auth
   , getProfilesSummary :: mode :- GetProfilesSummaryRoute auth
+  , getRunTimeMetrics :: mode :- GetRunTimeMetricsRoute auth
+  , getSubscriptionsStartingInIntervalRoute :: mode :- GetSubscriptionsStartingInIntervalRoute auth
+  , getSubscriptionsEndingInIntervalRoute :: mode :- GetSubscriptionsEndingInIntervalRoute auth
+  , getAuditorReportMetrics :: mode :- GetAuditorReportMetrics auth
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
@@ -507,7 +604,7 @@ instance MimeRender PlainText CommitOrBranch where
 
 newtype RunIDV1 = RunID { uuid :: UUID }
   deriving newtype (FromHttpApiData, ToHttpApiData, ToJSON )
-  deriving stock (Generic)
+  deriving stock (Generic,Show,Eq)
 
 instance MimeRender PlainText RunIDV1 where
   mimeRender _ rid = toLazyASCIIBytes rid.uuid

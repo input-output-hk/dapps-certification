@@ -41,6 +41,8 @@ import Plutus.Certification.API.Routes as X
   , ApiGitHubAccessToken(..)
   , LoginBody(..)
   , ProfileBody(..)
+  , RunTimeArguments(..)
+  , SlotSelector(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson

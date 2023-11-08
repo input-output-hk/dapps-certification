@@ -17,12 +17,12 @@ import Data.Maybe
 import Database.Selda
 import Database.Selda.SqlType as Selda
 import IOHK.Certification.Persistence.Structure.Profile
+import IOHK.Certification.Persistence.Structure.Internal
 import IOHK.Certification.Persistence.Pattern
 import Data.Text hiding (drop)
 import Control.Exception ( throw)
 import Data.Aeson
 import Data.Swagger
-import Data.Char as Char
 import Control.Lens
 import Data.Proxy
 import Data.Int
@@ -83,13 +83,6 @@ data Feature = Feature
   { featureId :: FeatureType
   , featureName :: Text
   } deriving (Generic, Show)
-
-dropAndLowerFirst :: Int -> String ->  String
-dropAndLowerFirst n = toLowerFirst . drop n
-  where
-  toLowerFirst :: String -> String
-  toLowerFirst [] = []
-  toLowerFirst (x:xs) = Char.toLower x : xs
 
 instance ToJSON Feature where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = dropAndLowerFirst 7 }

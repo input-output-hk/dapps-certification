@@ -21,6 +21,7 @@ import           Observe.Event.Render.JSON
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V0 as V0
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V1 as V1
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V2 as V2
+import qualified IOHK.Certification.Persistence.Migration.SQLite.V3 as V3
 import Control.Monad (forM_)
 import Data.Aeson (ToJSON(toJSON))
 
@@ -43,6 +44,8 @@ createTables = do
   createTable subscriptions
   createTable l1Certifications
   createTable lookupValues
+  -- v3
+  createTable auditorReportEvents
 
 
 --------------------------------------------------------------------------------
@@ -60,8 +63,12 @@ createTablesV2 :: (MonadSelda m,MonadMask m) => m ()
 createTablesV2 = do
   mapM_ rawStm V2.createTables
 
+createTablesV3 :: (MonadSelda m,MonadMask m) => m ()
+createTablesV3 = do
+  mapM_ rawStm V3.createTables
+
 steps :: (MonadSelda m,MonadMask m) => [m ()]
-steps = [createTablesV0,createTablesV1,createTablesV2]
+steps = [createTablesV0,createTablesV1,createTablesV2,createTablesV3]
 
 getDBVersion :: (MonadSelda m,MonadMask m) => m Int
 getDBVersion = do

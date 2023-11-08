@@ -28,6 +28,7 @@ import           Data.Int (Int64)
 
 import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
+import           IOHK.Certification.Persistence.Structure.Internal
 import           IOHK.Certification.Persistence.Pattern
 import           Data.Text hiding (index)
 

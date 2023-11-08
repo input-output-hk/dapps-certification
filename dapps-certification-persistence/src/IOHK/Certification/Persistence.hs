@@ -29,6 +29,7 @@ import IOHK.Certification.Persistence.Structure.Certification as X
   , L1Certification(..)
   , CertificationLevel(..)
   , L1CertificationDTO(..)
+  , AuditorReportEvent(..)
   )
 import IOHK.Certification.Persistence.Migration as X
   ( ensureTables
@@ -72,21 +73,11 @@ import IOHK.Certification.Persistence.Structure.Subscription as X
   , SubscriptionLite(..)
   , SubscriptionStatus(..)
   )
-import IOHK.Certification.Persistence.API as X
-  ( MinimalTransaction(..)
-  , MinimalTransactionEntry(..)
-  , AdaUsdPrice
-  , upsertProfile
-  , upsertTransaction
-  , getProfile
-  , getProfileDApp
-  , createRun
+import IOHK.Certification.Persistence.API.Run as X
+  ( createRun
   , getRun
   , updateFinishedRun
   , getRuns
-  , withConnection
-  , getProfileId
-  , getProfileAddress
   , syncRun
   , getRunOwner
   , getL1Certification
@@ -97,6 +88,40 @@ import IOHK.Certification.Persistence.API as X
   , markAsReadyForCertification
   , getAllCertifiedRunsForAddress
   , getRunsToCertify
+  , markAllRunningAsAborted
+  , getRunsInInterval
+  )
+import IOHK.Certification.Persistence.API.Profile as X
+  ( getProfile
+  , getProfileDApp
+  , getProfileId
+  , getProfileAddress
+  , getProfileWallets
+  , getProfileWallet
+  , upsertProfileWallet
+  , verifyImpersonation
+  , Impersonation(..)
+  , ensureAdminExists
+  , getAllProfilesByRole
+  , addAuditorReportEvent
+  , getAuditorReportsInInterval
+  , upsertProfile
+  )
+import IOHK.Certification.Persistence.API.UserRole as X
+  ( removeUserRole
+  , removeAllUserRoles
+  , hasAtLeastUserRole
+  , hasSomeUserRoles
+  , getUserRoles
+  , addUserRole
+  , updateUserRoles
+  )
+import IOHK.Certification.Persistence.API as X
+  ( MinimalTransaction(..)
+  , MinimalTransactionEntry(..)
+  , AdaUsdPrice
+  , upsertTransaction
+  , withConnection
   , getProfileBalance
   , addInitialData
   , getProfileSubscriptions
@@ -110,23 +135,10 @@ import IOHK.Certification.Persistence.API as X
   , getJWTSecret
   , insertJWTSecret
   , getAllTransactions
-  , getProfileWallets
-  , getProfileWallet
-  , upsertProfileWallet
-  , markAllRunningAsAborted
-  , verifyImpersonation
-  , Impersonation(..)
-  , removeUserRole
-  , removeAllUserRoles
-  , hasAtLeastUserRole
-  , hasSomeUserRoles
-  , getUserRoles
-  , addUserRole
-  , updateUserRoles
-  , ensureAdminExists
-  , getAllProfilesByRole
   , getAllTransactionStatuses
   , deleteTransaction
+  , getSubscriptionsStartingInInterval
+  , getSubscriptionsEndingInInterval
   )
 {-
 

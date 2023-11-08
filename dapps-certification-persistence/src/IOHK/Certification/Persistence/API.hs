@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE OverloadedRecordDot   #-}
@@ -17,7 +16,6 @@ import Database.Selda.Backend hiding (withConnection)
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
 import IOHK.Certification.Persistence.Structure.Run
-import IOHK.Certification.Persistence.Structure.Certification
 import IOHK.Certification.Persistence.Structure
 import IOHK.Certification.Persistence.Pattern
 import Data.Time.Clock
@@ -25,9 +23,10 @@ import Data.Fixed
 import Data.Int
 import Data.Bifunctor
 import Data.Functor
-import Data.Set (Set,toList)
 
 import qualified Data.Map as Map
+import IOHK.Certification.Persistence.API.Run
+import IOHK.Certification.Persistence.API.Profile
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -46,8 +45,8 @@ getAllTransactionStatuses = do
   pure $ map (\(a :*: b :*: c) -> (a,b,c)) ret
 
 deleteTransaction :: MonadSelda m => ID Transaction -> m Int
-deleteTransaction txIds = do
-  deleteFrom transactions (\tx -> tx ! #wtxId .== literal txIds)
+deleteTransaction txId = do
+  deleteFrom transactions (\tx -> tx ! #wtxId .== literal txId)
 
 -- | inserts or updates a transaction
 -- NOTE: if the transaction exists Nothing will be returned and entries
@@ -101,16 +100,6 @@ upsertLookupValue property value = do
      (`with` [ #lookupValue := literal value ])
      [Lookup property value]
 
-
--- get all ready for certification runs
--- in ascending order
-getRunsToCertify :: MonadSelda m => m [Run]
-getRunsToCertify = query $ do
-  run <- select runs
-  restrict (run ! #runStatus .== literal ReadyForCertification)
-  order (run ! #created) ascending
-  pure run
-
 getPendingSubscriptions :: MonadSelda m => m [Subscription]
 getPendingSubscriptions = query $ do
   sub <- select subscriptions
@@ -137,16 +126,6 @@ activateSubscription sub = do
       else
         pure Nothing
     Nothing -> pure Nothing
-
-getAllCertifiedRunsForAddress :: MonadSelda m => ProfileWalletAddress -> m [Run]
-getAllCertifiedRunsForAddress address = query $ do
-  -- get the profile id for the address
-  profileId <- getProfileIdQ address
-  run <- select runs
-  restrict (run ! #profileId .== profileId)
-  restrict (run ! #runStatus .== literal Certified)
-  order (run ! #created) descending
-  pure run
 
 getAllPaidSubscriptions :: MonadSelda m => ID Profile -> m [Subscription]
 getAllPaidSubscriptions profileId = query $ do
@@ -186,274 +165,6 @@ getProfileBalance address = do
   getWalletCredits Nothing = 0
   getWalletCredits (Just (_, Nothing)) = 0
   getWalletCredits (Just (_, Just ProfileWallet{..})) = profileWalletCredits
-
-upsertProfile :: (MonadSelda m, MonadMask m) => Profile -> Maybe DApp -> m (Maybe (ID Profile))
-upsertProfile profile@Profile{..} dappM = do
-  void $ upsert profiles
-     (\p -> p ! #ownerAddress .== literal ownerAddress)
-     (`with`
-      [ #website      := fromMaybe' website
-      , #twitter      := fromMaybe' twitter
-      , #linkedin     := fromMaybe' linkedin
-      , #email        := fromMaybe' email
-      , #contactEmail := fromMaybe' contactEmail
-      , #companyName  := fromMaybe' companyName
-      , #fullName     := fromMaybe' fullName
-      ])
-     [#profileId (def :: ID Profile) profile]
-  -- we query this because upsert returns id only when inserts
-  profileIdM <- getProfileId ownerAddress
-  forM_ profileIdM $ \pid -> case dappM of
-    -- if there is no dapp we delete the dapp entry
-    Nothing -> do
-        void $ deleteFrom dapps (\dapp -> dapp ! #dappId .== literal pid)
-    -- if there is a dapp we upsert it
-    Just dapp@DApp{..} -> do
-      void $ upsert dapps
-          (\dapp' -> dapp' ! #dappId .== literal pid)
-          (`with`
-           [ #dappName := text dappName
-           , #dappOwner := text dappOwner
-           , #dappRepo := text dappRepo
-           , #dappVersion := literal dappVersion
-           , #dappId := literal profileId
-           , #dappGitHubToken := literal dappGitHubToken
-           , #dappSubject := literal dappSubject
-           ]
-          )
-          [dapp { dappId = pid }]
-  pure profileIdM
-  where
-  fromMaybe' :: SqlType a => Maybe a -> Col s (Maybe a)
-  fromMaybe' = maybe null_ (just . literal)
-
-getProfileByAddress :: MonadSelda m => ProfileWalletAddress -> m (Maybe Profile)
-getProfileByAddress address = listToMaybe <$> query (do
-    p <- select profiles
-    restrict (p ! #ownerAddress .== literal address)
-    pure p
-  )
-
-getProfileQ :: ID Profile -> Query t (Row t Profile :*: Row t (Maybe DApp))
-getProfileQ pid = do
-  profile <- select profiles
-  dapp <- leftJoin  (\dapp -> dapp ! #dappId .== literal pid) (select dapps)
-  restrict (profile ! #profileId .== literal pid)
-  pure (profile :*: dapp)
-
-getProfileDAppQ :: ID Profile -> Query t (Row t DApp)
-getProfileDAppQ pid = do
-  dapp <- select dapps
-  restrict (dapp ! #dappId .== literal pid)
-  pure dapp
-
-getProfileWalletQ :: ProfileId -> Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
-getProfileWalletQ profileId = do
-  p <- select profiles
-  restrict (p ! #profileId .== literal profileId)
-  profileWallet <- leftJoin  (\pw -> pw ! #profileWalletId .== p ! #profileId) (select profileWallets)
-  pure (p :*: profileWallet)
-
-getProfileWallet :: MonadSelda f => ProfileId -> f (Maybe (Profile , Maybe ProfileWallet))
-getProfileWallet profileId = fmap toTuple . listToMaybe <$> query (getProfileWalletQ profileId)
-
-toTuple ::  a :*: b -> (a, b)
-toTuple (p :*: pw) = (p,pw)
-
-getProfileWalletsQ :: Query t (Row t Profile :*: Row t (Maybe ProfileWallet))
-getProfileWalletsQ = do
-  p <- select profiles
-  profileWallet <- leftJoin  (\pw -> pw ! #profileWalletId .== p ! #profileId) (select profileWallets)
-  pure (p :*: profileWallet)
-
-getProfileWallets :: MonadSelda m => m [(Profile, Maybe ProfileWallet)]
-getProfileWallets = map toTuple <$> query getProfileWalletsQ
-
-upsertProfileWallet :: (MonadSelda m,MonadMask m) => ProfileWallet -> m ()
-upsertProfileWallet ProfileWallet{..} = do
-  void $ upsert profileWallets
-    (\pw -> pw ! #profileWalletId .==  literal profileWalletId)
-    (`with`
-     [ #profileWalletAddress := text profileWalletAddress
-     , #profileWalletStatus := literal profileWalletStatus
-     , #profileWalletCredits := literal profileWalletCredits
-     ])
-    [ProfileWallet{..}]
-
-getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
-getProfile pid = do
-   ret <- listToMaybe <$> query (getProfileQ pid)
-   userRoles <- getUserRoles pid
-   maxUserRole <- case userRoles of
-      _ | null userRoles || userRoles == [NoRole] -> pure Nothing
-      _ | userRole <- maximum userRoles -> pure $ Just userRole
-   pure $ ret <&> \(r :*: dapp) ->
-    ProfileDTO r (DAppDTO <$> dapp) maxUserRole
-
-getProfileDApp :: MonadSelda m => ID Profile -> m (Maybe DApp)
-getProfileDApp pid = fmap listToMaybe $ query $ getProfileDAppQ pid
-
-getProfileIdQ:: ProfileWalletAddress -> Query t (Col t (ID Profile))
-getProfileIdQ  address = do
-  p <- select profiles
-  restrict (p ! #ownerAddress .== literal address)
-  pure (p ! #profileId)
-
-getProfileId :: MonadSelda m => ProfileWalletAddress -> m (Maybe ProfileId)
-getProfileId = fmap listToMaybe . query . getProfileIdQ
-
-getProfileAddressQ :: ID Profile -> Query t (Col t ProfileWalletAddress)
-getProfileAddressQ  pid = do
-  p <- select profiles
-  restrict (p ! #profileId .== literal pid)
-  pure (p ! #ownerAddress)
-
-getProfileAddress :: MonadSelda m => ID Profile -> m (Maybe ProfileWalletAddress)
-getProfileAddress = fmap listToMaybe . query . getProfileAddressQ
-
-createRun :: MonadSelda m
-          => UUID
-          -> UTCTime
-          -> Text
-          -> UTCTime
-          -> CommitHash
-          -> CertificationPrice
-          -> ID Profile
-          -> m ()
-createRun runId time repo commitDate commitHash certificationPrice pid = void $
-  insert runs [Run runId time (Just time) time repo
-    commitDate commitHash Queued pid certificationPrice Nothing]
-
-getRunOwnerQ :: UUID -> Query t (Col t (ID Profile))
-getRunOwnerQ runId = do
-    p <- select runs
-    restrict (p ! #runId .== literal runId )
-    pure (p ! #profileId)
-
-getRunOwner :: MonadSelda m => UUID -> m (Maybe (ID Profile))
-getRunOwner = fmap listToMaybe . query . getRunOwnerQ
-
-updateFinishedRun :: MonadSelda m => UUID -> Bool -> UTCTime -> m Int
-updateFinishedRun runId succeeded time = do
-  update runs
-    (\run -> (run ! #runId .== literal runId) .&& (run ! #runStatus .== literal Queued))
-    (`with`
-      [ #runStatus := literal (if succeeded then Succeeded else Failed)
-      , #syncedAt := literal time
-      , #finishedAt := literal (Just time)
-      ]
-    )
-
-syncRun :: MonadSelda m => UUID ->  UTCTime -> m Int
-syncRun runId time= update runs
-    (\run -> run ! #runId .== literal runId)
-    (`with` [ #syncedAt := literal time ])
-
-deleteRun :: MonadSelda m => UUID -> m Int
-deleteRun runId = deleteFrom runs
-  (\run -> (run ! #runId .== literal runId )
-  .&& (run ! #runStatus ./= literal Certified)
-  .&& (run ! #runStatus ./= literal ReadyForCertification))
-
-markAsAborted :: MonadSelda m => UUID -> UTCTime -> m Int
-markAsAborted runId time = update runs
-    (\run -> (run ! #runId .== literal runId) .&& (run ! #runStatus .== literal Queued))
-    (`with`
-      [ #runStatus := literal Aborted
-      , #syncedAt := literal time
-      , #finishedAt := literal (Just time)
-      ]
-    )
-
-markAllRunningAsAborted :: MonadSelda m => UTCTime -> m Int
-markAllRunningAsAborted time = update runs
-    (\run -> run ! #runStatus .== literal Queued)
-    (`with`
-      [ #runStatus := literal Aborted
-      , #syncedAt := literal time
-      , #finishedAt := literal (Just time)
-      ]
-    )
-
-markAsReadyForCertification :: (MonadSelda m,MonadMask m)
-                            => UUID
-                            -> IpfsCid
-                            -> UTCTime
-                            -> m Int
-markAsReadyForCertification runId IpfsCid{..}  time = update runs
-  (\run -> (run ! #runId .== literal runId) .&& (run ! #runStatus .== literal Succeeded))
-  (`with` [ #runStatus := literal ReadyForCertification
-          , #syncedAt := literal time
-          , #reportContentId := literal (Just ipfsCid)
-          ])
-
-createL1Certificate :: (MonadSelda m,MonadMask m)
-                  => UUID
-                  -> TxId
-                  -> UTCTime
-                  -> m (Maybe L1CertificationDTO)
-createL1Certificate runId TxId{..} time = transaction $ do
-  result <- query $ do
-    run <- select runs
-    restrict (run ! #runId .== literal runId)
-    restrict ( run ! #runStatus .== literal ReadyForCertification)
-    pure run
-  case result of
-    [_] -> do
-      void $ update runs
-        (\run -> run ! #runId .== literal runId)
-        (`with` [ #runStatus := literal Certified
-                , #syncedAt := literal time
-                ])
-      let cert = Certification def txId time
-      certId <- insertWithPK certifications [cert]
-      -- and now add a l1Certification
-      let l1Cert = L1Certification runId certId
-      _ <-  insert l1Certifications [l1Cert]
-      pure $ Just (L1CertificationDTO l1Cert (#certId certId cert))
-    _ -> pure Nothing
-
-getL1CertificationQuery :: UUID -> Query t (Row t Certification :*: Row t L1Certification)
-getL1CertificationQuery runID = do
-    l1Cert <- select l1Certifications
-    restrict (l1Cert ! #l1CertRunId .== literal runID )
-    c <- innerJoin
-      (\t -> t ! #certId .== l1Cert ! #l1CertId)
-      (select certifications)
-    pure (c :*: l1Cert)
-
-getL1Certification :: MonadSelda m => UUID -> m (Maybe L1CertificationDTO)
-getL1Certification pid = fmap (fmap toL1CertificationDTO . listToMaybe ) $ query $ getL1CertificationQuery pid
-
-toL1CertificationDTO :: (Certification :*: L1Certification) -> L1CertificationDTO
-toL1CertificationDTO  (cert :*: l1Cert) = L1CertificationDTO l1Cert cert
-
-getRun :: MonadSelda m => UUID -> m (Maybe Run)
-getRun rid = listToMaybe <$> query (do
-  run <- select runs
-  restrict (run ! #runId .== literal rid)
-  pure run)
-
-getRunStatus :: MonadSelda m => UUID -> m (Maybe Status)
-getRunStatus rid = listToMaybe <$> query (do
-  run <- select runs
-  restrict (run ! #runId .== literal rid)
-  pure (run ! #runStatus))
-
-getRuns :: MonadSelda m => ID Profile -> Maybe UTCTime -> Maybe Int -> m [Run]
-getRuns pid afterM topM = query $
-  case topM of
-    Just top -> limit 0 top select'
-    Nothing  -> select'
-  where
-  select' = do
-    run <- select runs
-    restrict (run ! #profileId .== literal pid)
-    case afterM of
-      Just after -> restrict (run ! #created .< literal after)
-      Nothing    -> pure ()
-    order (run ! #created) descending
-    pure run
 
 addInitialData :: MonadSelda m => m ()
 addInitialData = void $ do
@@ -645,122 +356,28 @@ getAllTransactions justOutput = do
       , mtxMetadata = wtxMetadata
       }
 
---------------------------------------------------------------------------------
--- | USER ROLES
+getSubscriptionsStartingInInterval :: MonadSelda m => UTCTime -> UTCTime -> m [SubscriptionDTO]
+getSubscriptionsStartingInInterval start end = do
+  subscription <- query $ do
+    subscription <- select subscriptions
+    restrict ( subscription ! #subscriptionStartDate .>= literal start
+             .&& subscription ! #subscriptionStartDate .< literal end)
+    pure subscription
 
--- | Add a role to a profile
-addUserRole :: MonadSelda m => ID Profile -> UserRole -> m Int
-addUserRole pid role = insert profileRoles [ProfileRole pid role]
+  mapM toSubscriptionDTO subscription
 
-updateUserRoles :: MonadSelda m => ID Profile -> Set UserRole -> m Int
-updateUserRoles pid roles = do
-  -- remove all the roles
-  _ <- removeAllUserRoles pid
-  -- add the new roles
-  insert profileRoles (map (ProfileRole pid) (toList  roles))
+getSubscriptionsEndingInInterval :: MonadSelda m => UTCTime -> UTCTime -> m [SubscriptionDTO]
+getSubscriptionsEndingInInterval start end = do
+  subscription <- query $ do
+    subscription <- select subscriptions
+    restrict ( subscription ! #subscriptionEndDate .>= literal start
+             .&& subscription ! #subscriptionEndDate .< literal end
+             .&& subscription ! #subscriptionStatus .== literal ActiveSubscription
+             )
+    pure subscription
 
--- | Get all the roles for a profile
-getUserRoles :: MonadSelda m => ID Profile -> m [UserRole]
-getUserRoles pid = query $ do
-  role <- select profileRoles
-  restrict (role ! #profileId .== literal pid)
-  pure (role ! #role)
+  mapM toSubscriptionDTO subscription
 
--- | Check if a profile has at least one of the given roles
-hasSomeUserRoles :: MonadSelda m => ID Profile -> [UserRole] -> m Bool
-hasSomeUserRoles pid roles = do
-  userRoles <- getUserRoles pid
-  pure $ any (`elem` roles) userRoles
-
--- | Check if a profile has at least a given role level
--- e.g.
---
--- 1. Profile (Support)
--- hasAtLeastUserRole pid Support == True
--- hasAtLeastUserRole pid Admin == False
---
--- 2. Profile (Admin)
--- hasAtLeastUserRole pid Support == True
--- hasAtLeastUserRole pid Admin == True
---
-hasAtLeastUserRole :: MonadSelda m => ID Profile -> UserRole -> m Bool
-hasAtLeastUserRole pid role = do
-  roles <- query $ hasAtLeastUserRole' pid role
-  pure $ not $ null roles
-
-hasAtLeastUserRole' :: ID Profile -> UserRole -> Query t (Col t UserRole)
-hasAtLeastUserRole' pid role = do
-  role' <- select profileRoles
-  restrict (role' ! #profileId .== literal pid
-       .&& role' ! #role .>= literal role)
-  pure (role' ! #role)
-
--- | Remove all the roles for a profile
--- returns the number of deleted roles
-removeAllUserRoles :: MonadSelda m => ID Profile -> m Int
-removeAllUserRoles pid =
-  deleteFrom profileRoles (\role -> role ! #profileId .== literal pid)
-
--- | Remove a role for a profile
--- returns True if the role was removed
--- returns False if the role was not found
-removeUserRole :: MonadSelda m => ID Profile -> UserRole -> m Bool
-removeUserRole pid role = do
-  deleted <- deleteFrom profileRoles (\role' -> role' ! #profileId .== literal pid
-         .&& role' ! #role .== literal role)
-  pure $ deleted > 0
-
-ensureAdminExists :: (MonadSelda m) => Bool -> ProfileWalletAddress -> m Int
-ensureAdminExists forceAdminAlways walletAddress = do
-  -- first ensure there is at least one admin
-  admins <- query $ do
-    role <- select profileRoles
-    restrict (role ! #role .== literal Admin)
-    pure (role ! #profileId)
-  -- get the profile
-  profileM <- getProfileByAddress walletAddress
-  case profileM of
-    Just profile
-      -- if there are no admins
-      | null admins
-      -- or when forceAdminAlways is True and the profile is not an admin
-      || (forceAdminAlways && (profile.profileId `notElem` admins)) ->
-         -- add the admin role to the profile and return the number of admins
-         -- (including the new one)
-         (+ length admins) <$> addUserRole (profile.profileId) Admin
-    _ -> pure (length admins)
-
-getAllProfilesByRole :: MonadSelda m => UserRole -> m [ID Profile]
-getAllProfilesByRole userRole = query $ do
-  role <- select profileRoles
-  restrict (role ! #role .== literal userRole)
-  pure (role ! #profileId)
-
-data Impersonation
-  = ImpersonationNotAllowed
-  | ImpersonationProfile (ID Profile, ProfileWalletAddress)
-  | ImpersonationNotFound
-
--- verify minimum role and return the profileId
--- and the address of the impersonated user
-verifyImpersonation :: MonadSelda m
-                    => ID Profile
-                    -> UserRole
-                    -> ID Profile
-                    -> m Impersonation
-verifyImpersonation ownerPid role pid = do
-  -- check if the impersonated user has at least the given role
-  hasRole <- hasAtLeastUserRole ownerPid role
-  if hasRole
-  then do
-    -- get the address of the impersonated user
-    addressM <- getProfileAddress pid
-    case addressM of
-      Nothing -> pure ImpersonationNotFound
-      Just address -> pure $ ImpersonationProfile (pid, address)
-  else pure ImpersonationNotAllowed
-
---------------------------------------------------------------------------------
 -- | Polimorphic function to run a Selda computation with a connection
 withConnection :: (MonadIO m, MonadMask m)
                => SeldaConnection b

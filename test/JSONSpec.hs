@@ -32,6 +32,7 @@ spec = do
       testJSON' "CertificateIssuer" (na :: CertificateIssuer)
       testJSON' "Profile" (na :: Profile)
       testJSON' "DApp" (na :: DApp)
+      testJSON' "AuditorReportEvent" (na :: AuditorReportEvent)
       testJSONWithEq' eqDAppDTO "DAppDTO" (na :: DAppDTO)
       testJSONWithEq' eqProfileDTO "ProfileDTO" (na :: ProfileDTO)
       testJSONWithEq' eqProfileSummaryDTO "ProfileSummaryDTO" (na :: ProfileSummaryDTO)

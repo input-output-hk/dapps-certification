@@ -210,7 +210,7 @@ synchronizeDbTransactions eb transactions firstSyncRef =
       (Just time,_) -> do
         let dbTx  = DB.Transaction
                   { DB.wtxId         = undefined
-                  , DB.wtxExternalId =txId'
+                  , DB.wtxExternalId = txId'
                   -- IMPORTANT: based on the direction of the transaction
                   -- we set the amount to be positive or negative
                   , DB.wtxAmount = amountDirection * fromIntegral ( walletTxData.walletTxAmount.quantity )
