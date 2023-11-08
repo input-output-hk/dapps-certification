@@ -23,7 +23,7 @@ spec:
           - name: ADMIN_WALLET
             value: stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd
           - name: FORCE_ADMIN_ALWAYS
-            value: 1
+            value: "1"
           - name: WALLET_PASSPHRASE
             valueFrom:
               secretKeyRef:
