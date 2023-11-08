@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -249,7 +248,7 @@ instance Eq GenericStatusWithData where
 -- Right TxPending
 
 newtype TransactionId = TransactionId { txId :: Text }
-                      deriving (Show,Eq,ToJSON,FromJSON)
+                      deriving (Show,Eq,ToJSON,FromJSON,Ord)
 
 data WalletTransactionData = WalletTransactionData
     { walletTxId              :: !TransactionId

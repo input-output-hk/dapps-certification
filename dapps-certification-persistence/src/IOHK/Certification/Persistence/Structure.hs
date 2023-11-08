@@ -371,9 +371,10 @@ instance SqlEnum TxStatus where
   toText = Text.pack . show
   fromText = read . Text.unpack
 
+type TxExternalId = Text
 data Transaction = Transaction
     { wtxId         :: ID Transaction
-    , wtxExternalId :: Text
+    , wtxExternalId :: TxExternalId
     , wtxAmount     :: Int64
     , wtxTime       :: UTCTime
     , wtxDepth      :: Int64
