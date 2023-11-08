@@ -125,6 +125,8 @@ import IOHK.Certification.Persistence.API as X
   , updateUserRoles
   , ensureAdminExists
   , getAllProfilesByRole
+  , getAllTransactionStatuses
+  , deleteTransaction
   )
 {-
 

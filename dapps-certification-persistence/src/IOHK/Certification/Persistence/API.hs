@@ -38,6 +38,17 @@ getTransactionIdQ  externalAddress = do
 getTransactionId :: MonadSelda m => Text -> m (Maybe (ID Transaction))
 getTransactionId = fmap listToMaybe . query . getTransactionIdQ
 
+getAllTransactionStatuses :: MonadSelda m => m [(ID Transaction, Text, TxStatus)]
+getAllTransactionStatuses = do
+  ret <- query $ do
+        tx <- select transactions
+        pure ( tx ! #wtxId :*: (tx ! #wtxExternalId) :*: tx ! #wtxStatus)
+  pure $ map (\(a :*: b :*: c) -> (a,b,c)) ret
+
+deleteTransaction :: MonadSelda m => ID Transaction -> m Int
+deleteTransaction txIds = do
+  deleteFrom transactions (\tx -> tx ! #wtxId .== literal txIds)
+
 -- | inserts or updates a transaction
 -- NOTE: if the transaction exists Nothing will be returned and entries
 -- will not be updated
@@ -148,6 +159,9 @@ getAllPaidSubscriptions profileId = query $ do
 -- | get all available balance for a given address
 -- | this is the sum of all the transactions minus the cost of all the certified runs
 -- | if the address is not a profile owner Nothing will be returned
+-- | NOTE: the actual sum is not computed from the DB-stored transactions anymore
+-- | but synchronized from the synchronizer thread. see: ProfileWallet outside
+-- | of the persistence layer. TODO: this might be refactored in the future
 getProfileBalance :: MonadSelda m => ProfileWalletAddress -> m (Maybe Int64)
 getProfileBalance address = do
   profileIdM <- getProfileId address
