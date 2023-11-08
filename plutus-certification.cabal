@@ -85,6 +85,7 @@ library
     Plutus.Certification.Server.Internal
     Plutus.Certification.Server.Instance
     Plutus.Certification.CoinGeckoClient
+    Plutus.Certification.Metrics
   autogen-modules: Paths_plutus_certification
   default-language: Haskell2010
 

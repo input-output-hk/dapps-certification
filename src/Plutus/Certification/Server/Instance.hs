@@ -59,6 +59,7 @@ import qualified Plutus.Certification.WalletClient as Wallet
 import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Certification.Persistence.API.SQLite as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
+import Plutus.Certification.Metrics
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -327,6 +328,14 @@ server ServerArgs{..} = NamedAPI
             (createMetadataAndPushToIpfs reportInput)
             handleException
           addField ev $ CreateAuditorReportIpfsCid ipfs
+          now <- getNow
+          _ <- withDb $ DB.addAuditorReportEvent $ DB.AuditorReportEvent
+            { areId = undefined -- this will be replaced by persistence API
+            , areProfileId = profileId
+            , areCertLevel = reportInput.certificationLevel
+            , areCreatedAt = now
+            , areOffchainContentId = ipfs.ipfsCid
+            }
           pure fullMetadata
 
   , getCurrentProfileWalletAddress = \(pid,_) -> profileWalletAddress pid
@@ -356,6 +365,40 @@ server ServerArgs{..} = NamedAPI
       addField ev pid
       verifyRole pid DB.Support
       withDb DB.getProfilesSummary
+  , getRunTimeMetrics = \RunTimeArguments{..} (pid,_) -> withEvent eb GetRunTimeMetrics \ev -> do
+      let SlotSelector (start,end) = interval
+      verifyRole pid DB.Support
+      addField ev $ GetRunTimeMetricsFieldStart start
+      addField ev $ GetRunTimeMetricsFieldEnd end
+      runs <- withDb $ DB.getRunsInInterval start end
+      let runMetrics = List.map (runToMetric start end) runs
+      let filteredRuns = case minRunTime of
+            Nothing -> runMetrics
+            Just minRunTime' -> longRunning minRunTime' runMetrics
+      addField ev $ GetRunTimeMetricsFieldRuns (List.length filteredRuns)
+      mapM_ (addField ev . GetRunTimeMetricsFieldMinimumTime) minRunTime
+      pure filteredRuns
+  , getSubscriptionsStartingInIntervalRoute = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetSubscriptionsStartingInInterval \ev -> do
+      verifyRole pid DB.Support
+      addField ev $ GetSubscriptionsInIntervalFieldStart start
+      addField ev $ GetSubscriptionsInIntervalFieldEnd end
+      subs <- withDb $ DB.getSubscriptionsStartingInInterval start end
+      addField ev $ GetSubscriptionsInIntervalFieldSubscriptions (List.length subs)
+      pure subs
+  , getSubscriptionsEndingInIntervalRoute = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetSubscriptionsEndingInInterval \ev -> do
+      verifyRole pid DB.Support
+      addField ev $ GetSubscriptionsInIntervalFieldStart start
+      addField ev $ GetSubscriptionsInIntervalFieldEnd end
+      subs <- withDb $ DB.getSubscriptionsEndingInInterval start end
+      addField ev $ GetSubscriptionsInIntervalFieldSubscriptions (List.length subs)
+      pure subs
+  , getAuditorReportMetrics = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetAuditorReportMetrics \ev -> do
+      verifyRole pid DB.Support
+      addField ev $ GetAuditorReportMetricsFieldStart start
+      addField ev $ GetAuditorReportMetricsFieldEnd end
+      auditorReportEvs <- withDb $ DB.getAuditorReportsInInterval start end
+      addField ev $ GetAuditorReportMetricsFieldReports (List.length auditorReportEvs)
+      pure auditorReportEvs
   }
   where
     createRun' commitOrBranch profileId = withEvent eb CreateRun \ev -> do

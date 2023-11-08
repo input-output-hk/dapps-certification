@@ -63,6 +63,10 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetProfileRolesRoute auth
   :<|> GetAllProfileIdsByRole auth
   :<|> GetProfilesSummaryRoute auth
+  :<|> GetRunTimeMetricsRoute auth
+  :<|> GetSubscriptionsStartingInIntervalRoute auth
+  :<|> GetSubscriptionsEndingInIntervalRoute auth
+  :<|> GetAuditorReportMetrics auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

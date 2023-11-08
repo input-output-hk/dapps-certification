@@ -257,7 +257,6 @@ instance Arbitrary SubscriptionLite where
     <*> arbitrary
     <*> arbitrary
 
-
 --ActiveSubscription | InactiveSubscription | PendingSubscription
 instance Arbitrary SubscriptionStatus where
   arbitrary = elements [ActiveSubscription, InactiveSubscription, PendingSubscription]
@@ -285,3 +284,15 @@ instance Arbitrary ProfileSummaryDTO where
 
 instance Arbitrary ProfileBody where
   arbitrary = ProfileBody <$> arbitrary <*> arbitrary
+
+-- data CertificationLevel = L0 | L1 | L2 | L3
+instance Arbitrary CertificationLevel where
+  arbitrary = elements [L0, L1, L2, L3]
+
+instance Arbitrary AuditorReportEvent where
+  arbitrary = AuditorReportEvent
+    <$> (toId . (+1) . abs <$> arbitrary)
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> genArbitraryName

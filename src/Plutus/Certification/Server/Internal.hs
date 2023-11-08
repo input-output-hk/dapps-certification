@@ -88,6 +88,22 @@ data UpdateProfileRolesField
   = UpdateProfileRolesFieldProfileId DB.ProfileId
   | UpdateProfileRolesFieldRoles [DB.UserRole]
 
+data GetRunTimeMetricsField
+  = GetRunTimeMetricsFieldStart UTCTime
+  | GetRunTimeMetricsFieldEnd UTCTime
+  | GetRunTimeMetricsFieldRuns Int
+  | GetRunTimeMetricsFieldMinimumTime NominalDiffTime
+
+data GetSubscriptionsInIntervalField
+  = GetSubscriptionsInIntervalFieldStart UTCTime
+  | GetSubscriptionsInIntervalFieldEnd UTCTime
+  | GetSubscriptionsInIntervalFieldSubscriptions Int
+
+data GetAuditorReportMetricsField
+  = GetAuditorReportMetricsFieldStart UTCTime
+  | GetAuditorReportMetricsFieldEnd UTCTime
+  | GetAuditorReportMetricsFieldReports Int
+
 data ServerEventSelector f where
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
@@ -117,7 +133,12 @@ data ServerEventSelector f where
   GetProfileRoles :: ServerEventSelector DB.ProfileId
   GetAllProfilesByRole :: ServerEventSelector DB.UserRole
   GetProfilesSummary :: ServerEventSelector DB.ProfileId
+  GetRunTimeMetrics :: ServerEventSelector GetRunTimeMetricsField
+  GetSubscriptionsStartingInInterval :: ServerEventSelector GetSubscriptionsInIntervalField
+  GetSubscriptionsEndingInInterval :: ServerEventSelector GetSubscriptionsInIntervalField
+  GetAuditorReportMetrics :: ServerEventSelector GetAuditorReportMetricsField
   InternalError :: forall a. ToJSON a => ServerEventSelector a
+
 
 renderServerEventSelector :: RenderSelectorJSON ServerEventSelector
 renderServerEventSelector Version = ("version", absurd)
@@ -184,7 +205,27 @@ renderServerEventSelector GetProfileRoles = ("get-profile-roles", renderProfileI
 renderServerEventSelector GetAllProfilesByRole = ("get-all-profiles-by-role",
   \role' -> ("role", toJSON role'))
 renderServerEventSelector GetProfilesSummary = ("get-profiles-summary", renderProfileId)
-
+renderServerEventSelector GetRunTimeMetrics = ("get-run-time-metrics", \case
+  GetRunTimeMetricsFieldStart start -> ("start", toJSON start)
+  GetRunTimeMetricsFieldEnd end -> ("end", toJSON end)
+  GetRunTimeMetricsFieldRuns runs -> ("runs", toJSON runs)
+  GetRunTimeMetricsFieldMinimumTime minimumTime -> ("minimum-time", toJSON minimumTime)
+  )
+renderServerEventSelector GetSubscriptionsStartingInInterval = ("get-subscriptions-starting-in-interval", \case
+  GetSubscriptionsInIntervalFieldStart start -> ("start", toJSON start)
+  GetSubscriptionsInIntervalFieldEnd end -> ("end", toJSON end)
+  GetSubscriptionsInIntervalFieldSubscriptions subs -> ("subscriptions", toJSON subs)
+  )
+renderServerEventSelector GetSubscriptionsEndingInInterval = ("get-subscriptions-ending-in-interval", \case
+  GetSubscriptionsInIntervalFieldStart start -> ("start", toJSON start)
+  GetSubscriptionsInIntervalFieldEnd end -> ("end", toJSON end)
+  GetSubscriptionsInIntervalFieldSubscriptions subs -> ("subscriptions", toJSON subs)
+  )
+renderServerEventSelector GetAuditorReportMetrics = ("get-auditor-report-metrics", \case
+  GetAuditorReportMetricsFieldStart start -> ("start", toJSON start)
+  GetAuditorReportMetricsFieldEnd end -> ("end", toJSON end)
+  GetAuditorReportMetricsFieldReports reports -> ("reports", toJSON reports)
+  )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

@@ -32,3 +32,4 @@ spec = describe "Migration" $ do
 
   it "migrates from v0" $ migrateSpec certificationV0
   it "migrates from v1" $ migrateSpec certificationV1
+  it "migrates from v2" $ migrateSpec certificationV2
