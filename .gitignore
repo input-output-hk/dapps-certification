@@ -13,6 +13,7 @@ Makefile
 *.ignore.*
 todo.*
 *.pir
+run.x86.sh
 
 #except all test/Data files
 !test/Data/**

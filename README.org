@@ -27,17 +27,26 @@ In order to modify parameters, you can edit ~./nix/docker-files/default.env~.
 Regularly the developers are pushing into the docker registry the latest version of every branch.
 To run the service without building it locally or even pulling the code, you can run the following command:
 
-~bash <( curl -L -s bit.ly/46nuQIp ) <brach-name> [--env-file <env-file>] [--admin-address <stake-address>]~
+~bash <( curl -L -s bit.ly/46nuQIp ) <brach-name> [--env-file <env-file>] [--admin-address <stake-address>] [--docker-volume-prefix <volume-prefix-name>]~
 
-> [!NOTE]
+> [!NOTE] 1.
 > You can find how the default env file looks at ~./nix/docker-files/default.env~.
 > If not specified, the script will use the default one.
+>
+> [!NOTE] 2.
+> The container will use two persistend volumes <cache> and <root>. In order to be used accross multiple code versions.
+> After deploying a new version, the old ~nix/store~ will be used by the new version.
+> By default the names of these volumes are ~nix-cache~ and ~nix-root~ mapped to ~/nix` and respectively ~/root~.
+> If you want to use different names, you can specify them using the ~--docker-volume-prefix~ parameter.
+> For example, if you want to use ~my-new-version~ you will endup with ~my-new-version-cache~ and ~my-new-version-root~.
+> Also, if you don't want to change the default names, but you want to reset the volumes, you can simple delete them using ~docker volume rm <volume-name>~.
 
 Examples:
 
 - ~bash <( curl -L -s bit.ly/46nuQIp ) master~
 - ~bash <( curl -L -s bit.ly/46nuQIp ) master --env-file ./nix/docker-files/default.env~
 - ~bash <( curl -L -s bit.ly/46nuQIp ) master --admin-address stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd~
+- ~bash <( curl -L -s bit.ly/46nuQIp ) master --docker-volume-prefix my-prefix~
 
 ** Pushing the docker image to the registry
 

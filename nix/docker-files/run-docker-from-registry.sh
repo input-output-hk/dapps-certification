@@ -22,7 +22,7 @@ containerName=$(basename "$dockerImage")
 #remove the ':' character and replace it with '_'
 containerName=${containerName//:/_}
 
-docker_args="-t --platform linux/amd64 --name $containerName --restart on-failure"
+docker_args="-t --platform linux/amd64 --name $containerName"
 
 if [ -n "$WALLET_ID" ]; then
   docker_args="$docker_args -e WALLET_ID=$WALLET_ID"
@@ -101,7 +101,24 @@ if [[ -z "$PORT" ]]; then
 fi
 docker_args="$docker_args -p $PORT:$PORT"
 
+if [[ -z "$DOCKER_VOLUME" ]];
+then
+  nixCacheVolume="dapps-cert-storage-cache"
+  nixRootVolume="dapps-cert-root"
+else
+  # prefix with $DOCKER_VOLUME
+  nixCacheVolume="$DOCKER_VOLUME-storage-cache"
+  nixRootVolume="$DOCKER_VOLUME-root"
+fi
 
-script="docker run $docker_args $dockerImage"
+
+# first run the docker just by copying the nix store to $CLONE_NIX_STORE
+echo "Running docker image to clone the nix store from /nix/store to /persisted-store/store ..." >&2
+script="docker run --rm -v $nixCacheVolume:/persisted-store -e CLONE_NIX_STORE=/persisted-store $docker_args $dockerImage"
+echo $script >&2
+eval "$script"
+
+echo "Running docker image in normal mode..." >&2
+script="docker run --rm -v $nixCacheVolume:/nix $docker_args $dockerImage"
 echo $script >&2
 eval "$script"

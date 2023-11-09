@@ -34,8 +34,8 @@ fi
 
 echo "Docker is installed, the daemon is running"
 
-if [ $# -ne 1 ] && [ $# -ne 3 ] && [ $# -ne 5 ]; then
-    echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>]"
+if [ $# -ne 1 ] && [ $# -ne 3 ] && [ $# -ne 5 ] && [ $# -ne 7 ]; then
+    echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>] [--docker-volume-prefix <volume-prefix-name>]"
     exit 1
 fi
 
@@ -56,6 +56,7 @@ echo "Image name: \"$imageName\""
 envVarsFile=""
 envVarToShell=$baseUrl/$branch/$folder/default.env
 adminAddress=""
+dockerVolume=""
 
 echo "Verify the branch \"$branch\" by fetching the env vars from $envVarToShell ..."
 response=$(curl -s -o /dev/null -w "%{http_code}" "$envVarToShell")
@@ -79,9 +80,14 @@ while [[ $# -gt 0 ]]; do
         shift
         shift
         ;;
+        --docker-volume-prefix)
+        dockerVolume="$2"
+        shift
+        shift
+        ;;
         *)
         echo "Unknown argument: $key"
-        echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>]"
+        echo "Usage: $0 <branch-name> [--env-file <env-file>] [--admin-address <address>] [--docker-volume-prefix <volume-prefix-name>]"
         exit 1
         ;;
     esac
@@ -117,6 +123,11 @@ echo "Setting environment variables ..."
 if [[ -n $adminAddress ]]; then
     vars="$vars ADMIN_WALLET=$adminAddress FORCE_ADMIN_ALWAYS=1"
 fi
+
+if [[ -n $dockerVolume ]]; then
+    vars="$vars DOCKER_VOLUME=$dockerVolume"
+fi
+
 echo $vars
 
 echo "Checking if the image \"$imageName\" exists..."
