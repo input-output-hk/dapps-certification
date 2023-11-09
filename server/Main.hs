@@ -457,6 +457,7 @@ verifyTheAdmin eb withDb Args{..}
 
 main :: IO ()
 main = do
+  print "!!!!!!!!!!!!!!!!!!!!! INITIALIZING !!!!!!!!!!!!!!!!!!!!!"
   args :: Args <- execParser opts
   eb <- jsonHandleBackend stderr renderJSONException renderRoot
   withEvent eb Initializing \initEv -> do
