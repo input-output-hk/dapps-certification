@@ -1,4 +1,4 @@
-{ inputs', pkgs, l, ... }: let
+{ inputs, pkgs, lib, ... }: let
     imgAttributes = {
       name = "plutus-certification";
       tag = "22";
@@ -68,7 +68,7 @@
         echo $script >&2
         eval "$script"
 
-        script="${inputs'.self.apps.plutus-certification.program} $args"
+        script="${inputs.self.apps.plutus-certification.program} $args"
         echo $script >&2
         eval "$script"
       '').outPath;
@@ -80,8 +80,8 @@
       finalImageName = "nixos/nix";
       finalImageTag = "2.15.0";
     };
-    genFlake = inputs'.self.packages.generate-flake;
-    buildFlake = inputs'.self.packages.build-flake;
+    genFlake = inputs.self.packages.generate-flake;
+    buildFlake = inputs.self.packages.build-flake;
     image = pkgs.dockerTools.buildImage (imgAttributes // {
       fromImage = nixImage;
       diskSize = 5120;
@@ -200,7 +200,7 @@ rec {
       type = "app";
       program = (pkgs.writeShellScript "run-docker-image" ''
           set -eEo pipefail
-          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          export PATH="${lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
           echo "Executing ${loadDockerImage.program}..." >&2
           ${loadDockerImage.program}
           docker_args="-t --platform linux/amd64 --name ${imgAttributes.name}"
@@ -221,7 +221,7 @@ rec {
       program = (pkgs.writeShellScript "push-docker-image" ''
           source ${headerScript.program}
 
-          export PATH="${l.makeBinPath [ pkgs.docker pkgs.coreutils]}"
+          export PATH="${lib.makeBinPath [ pkgs.docker pkgs.coreutils]}"
           ${loadDockerImage.program}
           echo "Pushing docker image ${image}" >&2
           originalImageName="${imgAttributes.name}:${imgAttributes.tag}"
@@ -247,7 +247,7 @@ rec {
           # from `nix/docker-files/run-from-branch.sh`
 
           set -eEo pipefail
-          export PATH="${l.makeBinPath [ pkgs.coreutils]}"
+          export PATH="${lib.makeBinPath [ pkgs.coreutils]}"
 
           scriptPath="${runDockerFromRegistryScript}"
           echo $scriptPath >&2
@@ -303,7 +303,7 @@ rec {
           # run the tests
           echo "Running the tests..." >&2
 
-          script="${inputs'.self.apps.plutus-certification-test-plutus-certification-test.program} $args"
+          script="${inputs.self.apps.plutus-certification-test.program} $args"
           echo $script >&2
           eval "$script"
 
