@@ -11,9 +11,10 @@
 {-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE OverloadedRecordDot        #-}
 
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-ambiguous-fields   #-}
+{-# OPTIONS_GHC -Wno-orphans            #-}
 
 module IOHK.Certification.Persistence.Structure where
 
@@ -191,16 +192,21 @@ instance ToJSON ProfileDTO where
   toJSON ProfileDTO{..} = object $
       ("dapp" .= dapp)
     : ("role" .= userRole)
+    : ("id" .= pid)
     : profileJSONPairs profile
+    where
+    pid  = fromId profile.profileId
 
 instance ToSchema ProfileDTO where
   declareNamedSchema _ = do
     profileSchema <- declareSchema (Proxy :: Proxy Profile)
     dappSchema <- declareSchemaRef (Proxy :: Proxy DApp)
     roleSchema <- declareSchemaRef (Proxy :: Proxy UserRole)
+    profileIdSchema <- declareSchemaRef (Proxy :: Proxy (ID Profile))
     return $ NamedSchema (Just "ProfileDTO") $ profileSchema
       & properties %~ (`mappend`
-          [ ("dapp", dappSchema), ("role", roleSchema) ])
+          [ ("dapp", dappSchema), ("role", roleSchema), ("id", profileIdSchema) ])
+      & required %~  (<> [ "profileId" ])
 
 data ProfileSummaryDTO = ProfileSummaryDTO
   { summaryProfile :: !Profile
