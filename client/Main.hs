@@ -668,7 +668,7 @@ main = do
     CmdRun (GetLogs (GetLogsArgs ref zt act)) ->
       handle $ apiClient.getLogs ref zt act
     CmdRun (GetRuns (GetRunsArgs pubKey after' count')) ->
-      withAuth pubKey $ \c authKey -> c.getRuns authKey after' count'
+      withAuth pubKey $ \c authKey -> c.getCurrentProfileRuns authKey after' count'
     CmdGetRepositoryInfo (GetGitHubAddressArgs owner' repo' gitHubAccessToken') ->
       handle $ apiClient.getRepositoryInfo owner' repo' gitHubAccessToken'
     CmdRun (CreateCertification (CreateCertificationArgs ref auth certInput dryRun)) ->

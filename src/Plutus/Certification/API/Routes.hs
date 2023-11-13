@@ -109,12 +109,22 @@ type GetLogsRoute
   :> QueryParam "action-type" KnownActionType
   :> Get '[JSON] [Cicero.Run.RunLog]
 
-type GetRunsRoute (auth :: Symbol)
+type GetCurrentProfileRunsRoute (auth :: Symbol)
    = "run"
-  :> Description "Query through multiple runs belonging to the profile identified by the auth-key"
+  :> Description "Query through multiple runs belonging to the current profile"
   :> AuthProtect auth
   :> QueryParam "after" UTCTime
   :> QueryParam "count" Int
+  :> Get '[JSON] [DB.Run]
+
+type GetProfileRunsRoute (auth :: Symbol)
+   = "profile"
+  :> Description "Query through multiple profile runs"
+  :> Capture "id" ProfileId
+  :> "runs"
+  :> QueryParam "after" UTCTime
+  :> QueryParam "count" Int
+  :> AuthProtect auth
   :> Get '[JSON] [DB.Run]
 
 type GetRunDetailsRoute
@@ -526,7 +536,8 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getRun :: mode :- GetRunRoute
   , abortRun :: mode :- AbortRunRoute auth
   , getLogs :: mode :- GetLogsRoute
-  , getRuns :: mode :- GetRunsRoute auth
+  , getCurrentProfileRuns :: mode :- GetCurrentProfileRunsRoute auth
+  , getProfileRuns :: mode :- GetProfileRunsRoute auth
   , getCurrentProfile :: mode :- GetCurrentProfileRoute auth
   , getProfile :: mode :- GetProfileRoute auth
   , updateCurrentProfile :: mode :- UpdateCurrentProfileRoute auth
