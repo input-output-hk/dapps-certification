@@ -34,7 +34,8 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetRunRoute
   :<|> AbortRunRoute auth
   :<|> GetLogsRoute
-  :<|> GetRunsRoute auth
+  :<|> GetProfileRunsRoute auth
+  :<|> GetCurrentProfileRunsRoute auth
   :<|> GetRunDetailsRoute
   :<|> GetCurrentProfileRoute auth
   :<|> GetProfileRoute auth

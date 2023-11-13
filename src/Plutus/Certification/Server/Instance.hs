@@ -126,7 +126,13 @@ server ServerArgs{..} = NamedAPI
       -- ensure the profile has an active feature for L1Run
       validateFeature L1Run profileId
       createRun' commitOrBranch profileId
-  , createRun = impersonate DB.Support . createRun'
+  , createRun = \commitOrBranch profileId (ownerId,_) -> do
+      hasRole <- withDb (DB.hasAtLeastUserRole profileId DB.Support)
+      case (hasRole,ownerId == profileId) of
+        (False,False) -> throwError err403
+        (False,True) -> validateFeature L1Run ownerId
+        (True,_) -> pure ()
+      createRun' commitOrBranch profileId
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
       ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
       ) >>= runDbReader . dbSync uuid
@@ -179,16 +185,17 @@ server ServerArgs{..} = NamedAPI
          $ getLogs (setAncestor $ reference ev) actionTypeM rid
         .| (dropWhileC dropCond >> sinkList)
   -- TODO: elevate this to admin
-  , getRuns = \(profileId,_) afterM countM ->
+  -- ELEVATE and HERE
+  , getCurrentProfileRuns = \(profileId,_) afterM countM ->
       withDb $ DB.getRuns profileId afterM countM
-
+  , getProfileRuns = \profileId afterM countM -> impersonate DB.Support
+      (const $ withDb $ DB.getRuns profileId afterM countM) profileId
   , updateCurrentProfile = updateProfile
   , updateProfile = impersonateWithAddress DB.Admin . updateProfile
 
   , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
   , getProfile = impersonateWithAddress DB.Support (\(profileId,_) -> getProfileDTO profileId)
 
-  -- TODO: Add instrumentation
   -- TODO: There might be an issue if more than one certification is started at
   -- the same time for the same Run:
   -- Multiple transactions are going to be broadcasted at the same time and
@@ -513,12 +520,14 @@ server ServerArgs{..} = NamedAPI
                            -> DB.ProfileId
                            -> (DB.ProfileId, ProfileWalletAddress)
                            -> m a
-    impersonateWithAddress role f impersonatedId (ownerId,_) = do
-      impersonation <- withDb (DB.verifyImpersonation ownerId role impersonatedId)
-      case impersonation of
-        DB.ImpersonationNotAllowed -> throwError err403
-        DB.ImpersonationNotFound -> throwError err404
-        DB.ImpersonationProfile (pid,address)-> f (pid,address)
+    impersonateWithAddress role f impersonatedId (ownerId,address')
+      | impersonatedId == ownerId = f (ownerId,address')
+      | otherwise = do
+        impersonation <- withDb (DB.verifyImpersonation ownerId role impersonatedId)
+        case (impersonation, impersonatedId == ownerId) of
+          (DB.ImpersonationNotAllowed, _ )-> throwError err403
+          (DB.ImpersonationNotFound , _)-> throwError err404
+          (DB.ImpersonationProfile (pid,address), _)-> f (pid,address)
 
     -- faster if we don't need the address
     impersonate :: ( MonadMask m
@@ -530,10 +539,11 @@ server ServerArgs{..} = NamedAPI
                 -> DB.ProfileId
                 -> (DB.ProfileId, ProfileWalletAddress)
                 -> m a
-    impersonate role f profileId (ownerId,_) = do
-      hasRole <- withDb (DB.hasAtLeastUserRole ownerId role)
-      if hasRole then f profileId
-                 else throwError err403
+    impersonate role f profileId (ownerId,_)
+      | profileId == ownerId = f profileId
+      | otherwise = do
+          hasRole <- withDb (DB.hasAtLeastUserRole ownerId role)
+          if hasRole then f profileId else throwError err403
 
     uploadRunReportToIpfs ev runStatus certResultM uuid = do
       -- ensure the run is finished
