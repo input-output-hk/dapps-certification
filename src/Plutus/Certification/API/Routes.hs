@@ -73,14 +73,14 @@ type VersionHeadRoute
 type CreateRunOnCurrentProfileRoute (auth :: Symbol)
    = "run"
   :> Description "Create a new testing run attached to the current profile"
-  :> ReqBody '[PlainText] CommitOrBranch
+  :> ReqBody '[PlainText,JSON] CreateRunOptions
   :> AuthProtect auth
   :> PostCreated '[OctetStream, PlainText, JSON] RunIDV1
 
 type CreateRunRoute (auth :: Symbol)
    = "profile"
   :> Description "Create a new testing run attached to a different profile"
-  :> ReqBody '[PlainText] CommitOrBranch
+  :> ReqBody '[PlainText,JSON] CreateRunOptions
   :> Capture "id" ProfileId
   :> "run"
   :> AuthProtect auth
@@ -594,8 +594,49 @@ newtype FlakeRefV1 = FlakeRef { uri :: URI }
 newtype CommitOrBranch = CommitOrBranch { commitOrBranch :: Text }
                    deriving(Generic)
 
+instance FromJSON CommitOrBranch where
+  parseJSON = withText "CommitOrBranch" $ \t -> pure $ CommitOrBranch t
+
+instance ToJSON CommitOrBranch where
+  toJSON (CommitOrBranch t) = toJSON t
+
+instance ToJSON FlakeRefV1 where
+  toJSON (FlakeRef uri) = toJSON $ show uri
+
+data CreateRunOptions = CreateRunOptions {
+  croCommitOrBranch :: CommitOrBranch,
+  croCertArgs :: CertifyArgs
+  }
+
+instance FromJSON CreateRunOptions where
+  parseJSON = withObject "CreateRunOptions" $ \v -> do
+    commitOrBranch <- v .: "commitOrBranch"
+    certArgs <- v .: "certArgs"
+    pure $ CreateRunOptions commitOrBranch certArgs
+
+instance ToJSON CreateRunOptions where
+  toJSON (CreateRunOptions commitOrBranch certArgs) = object [
+    "commitOrBranch" .= commitOrBranch,
+    "certArgs" .= certArgs
+    ]
+
+instance ToSchema CreateRunOptions where
+  declareNamedSchema _ = do
+    commitOrBranchSchema <- declareSchemaRef (Proxy :: Proxy CommitOrBranch)
+    certArgsSchema <- declareSchemaRef (Proxy :: Proxy CertifyArgs)
+    pure $ NamedSchema (Just "CreateRunOptions") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("commitOrBranch", commitOrBranchSchema)
+          , ("certArgs", certArgsSchema)
+          ]
+      & required .~ ["commitOrBranch", "certArgs"]
+
 instance MimeUnrender PlainText CommitOrBranch where
   mimeUnrender _ = Right . CommitOrBranch . decodeUtf8 . BSL8.toStrict
+
+instance MimeUnrender PlainText CreateRunOptions where
+  mimeUnrender _ = Right . flip CreateRunOptions DefaultCertifyArgs . CommitOrBranch . decodeUtf8 . BSL8.toStrict
 
 instance MimeUnrender PlainText FlakeRefV1 where
   mimeUnrender _ uriBs = case parseAbsoluteURI uriStr of
@@ -612,6 +653,8 @@ instance MimeRender PlainText FlakeRefV1 where
 instance MimeRender PlainText CommitOrBranch where
   mimeRender _ = BSL8.pack . Text.unpack . commitOrBranch
 
+instance MimeRender PlainText CreateRunOptions where
+  mimeRender _ = BSL8.pack . Text.unpack . commitOrBranch . croCommitOrBranch
 
 newtype RunIDV1 = RunID { uuid :: UUID }
   deriving newtype (FromHttpApiData, ToHttpApiData, ToJSON )

@@ -45,11 +45,12 @@ createRun :: MonadSelda m
           -> UTCTime
           -> CommitHash
           -> CertificationPrice
+          -> Bool
           -> ID Profile
           -> m ()
-createRun runId time repo commitDate commitHash certificationPrice pid = void $
+createRun runId time repo commitDate commitHash certificationPrice withOptions pid = void $
   insert runs [Run runId time (Just time) time repo
-    commitDate commitHash Queued pid certificationPrice Nothing]
+    commitDate commitHash Queued pid certificationPrice Nothing withOptions]
 
 getRunOwnerQ :: UUID -> Query t (Col t (ID Profile))
 getRunOwnerQ runId = do

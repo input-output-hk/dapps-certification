@@ -22,6 +22,7 @@ import qualified IOHK.Certification.Persistence.Migration.SQLite.V0 as V0
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V1 as V1
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V2 as V2
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V3 as V3
+import qualified IOHK.Certification.Persistence.Migration.SQLite.V4 as V4
 import Control.Monad (forM_)
 import Data.Aeson (ToJSON(toJSON))
 
@@ -67,8 +68,12 @@ createTablesV3 :: (MonadSelda m,MonadMask m) => m ()
 createTablesV3 = do
   mapM_ rawStm V3.createTables
 
+createTablesV4 :: (MonadSelda m,MonadMask m) => m ()
+createTablesV4 = do
+  mapM_ rawStm V4.createTables
+
 steps :: (MonadSelda m,MonadMask m) => [m ()]
-steps = [createTablesV0,createTablesV1,createTablesV2,createTablesV3]
+steps = [createTablesV0,createTablesV1,createTablesV2,createTablesV3,createTablesV4]
 
 getDBVersion :: (MonadSelda m,MonadMask m) => m Int
 getDBVersion = do

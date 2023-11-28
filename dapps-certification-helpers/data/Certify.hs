@@ -23,6 +23,7 @@ import "dapps-certification-interface" IOHK.Certification.Interface qualified as
 import "unix" System.Posix.IO
 import "plutus-tx" PlutusTx.Coverage
 import "uuid" Data.UUID.V4
+import "optparse-applicative" Options.Applicative
 
 taskName :: CertificationTask -> I.CertificationTaskName
 taskName UnitTestsTask = I.UnitTestsTask
@@ -140,8 +141,15 @@ getHtmlReport rep = do
   let fn = uuid ++ ".html"
   readFile fn <* removeFile fn
 
+argsInfo :: ParserInfo I.CertifyArgs
+argsInfo = info (I.parseCertifyArgs <**> helper)
+  ( fullDesc
+ <> header "run-certify — Run the certification"
+  )
 main :: HasCallStack => IO ()
 main = do
+  certifyArgs <- execParser argsInfo
+  putStrLn $ "Running certify with args: " <> show certifyArgs
   out <- dup stdOutput
   _ <- dupTo stdError stdOutput
 
@@ -157,7 +165,30 @@ main = do
           { certOptOutput = False
           , certEventChannel = Just eventChan
           }
-    (res, _) <- concurrently (certifyWithOptions certOpts certification) (postProgress eventChan msgChan)
+        certOptNumTests' = case certifyArgs of
+            I.CertifyArgsNumTests args -> defaultCertOptNumTests
+                { numStandardProperty = case I.numStandardProperty args of
+                    Nothing -> numStandardProperty defaultCertOptNumTests
+                    Just n -> n
+                , numNoLockedFunds  = case I.numNoLockedFunds args of
+                    Nothing -> numNoLockedFunds defaultCertOptNumTests
+                    Just n -> n
+                , numNoLockedFundsLight = case I.numNoLockedFundsLight args of
+                    Nothing -> numNoLockedFundsLight defaultCertOptNumTests
+                    Just n -> n
+                , numCrashTolerance = case I.numCrashTolerance args of
+                    Nothing -> numCrashTolerance defaultCertOptNumTests
+                    Just n -> n
+                , numWhiteList = case I.numWhiteList args of
+                    Nothing -> numWhiteList defaultCertOptNumTests
+                    Just n -> n
+                , numDLTests = case I.numDLTests args of
+                    Nothing -> numDLTests defaultCertOptNumTests
+                    Just n -> n
+                }
+            _ -> defaultCertOptNumTests
+    (res, _) <- concurrently (certifyWithCheckOptions certOpts certification certOptNumTests') (postProgress eventChan msgChan)
     report <- getHtmlReport (res ^. certRes_coverageReport)
 
     emitMessage msgChan . I.Success $ I.CertificationResult (res,report)
+

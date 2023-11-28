@@ -87,7 +87,7 @@ ciceroServerCaps :: forall c m r . (MonadMask m, HasClient c Cicero.API)
                  -> ServerCaps m r
 ciceroServerCaps backend CiceroCaps {..} = ServerCaps {..}
   where
-    submitJob mods ghAccessTokenM ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req
+    submitJob mods _ ghAccessTokenM ref = RunID . (.id.uuid) <$> runClientOrDie clientCaps backend' req
       where
         backend' = modifyEventBackend mods backend
         uri = ref.uri -- aesonQQ's parser doesn't support RecordDot yet

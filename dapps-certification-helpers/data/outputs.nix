@@ -1,4 +1,5 @@
-{ plutus-apps, dapps-certification, repo, ... }: let
+# --sha256: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= 
+{ plutus-apps, dapps-certification, optparse-applicative, plutus-contract-certification, repo, ... }: let
   origProject = repo.iog.x86_64-linux.dapp;
 
   inherit (origProject) pkgs;
@@ -13,11 +14,18 @@
     cabalProjectLocal = lib.mkForce ((x : if isNull x then "" else x)(origProject.args.cabalProjectLocal) + ''
       source-repository-package
         type: git
-        location: https://github.com/input-output-hk/plutus-apps
-        tag: ${plutus-apps.rev}
+        location: https://github.com/pcapriotti/optparse-applicative
+        tag: ${optparse-applicative.rev}
+        --sha256: sha256-r34aiVBik+acpq9FJ1Nkvw3xf1ldpt1fMHCqvcEgS+k=
+
+
+      source-repository-package
+        type: git
+        location: https://github.com/Ali-Hill/plutus-contract-certification
+        tag: ${plutus-contract-certification.rev}
         --sha256: ${import (pkgs.stdenv.mkDerivation {
-          name = "plutus-apps-sha.nix";
-          exportReferencesGraph.plutus-apps = plutus-apps;
+          name = "plutus-contract-certification-sha.nix";
+          exportReferencesGraph.plutus-apps = plutus-contract-certification;
           __structuredAttrs = true;
           PATH = pkgs.lib.makeBinPath [ pkgs.coreutils pkgs.jq ];
           builder = builtins.toFile "builder" ''
@@ -25,8 +33,7 @@
             jq '."plutus-apps"[0].narHash' < .attrs.json > "$(jq -r .outputs.out < .attrs.json)"
           '';
         })}
-        subdir:
-          plutus-contract-certification
+
       source-repository-package
         type: git
         location: https://github.com/input-output-hk/dapps-certification

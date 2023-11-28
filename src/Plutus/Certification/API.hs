@@ -3,6 +3,10 @@ module Plutus.Certification.API
   , Cicero.Run.RunLog(..)
   ) where
 
+import IOHK.Certification.Interface as X
+  ( CertifyArgs(..)
+  , CertOptNumTestsArgs
+  )
 import Plutus.Certification.Internal as X
   ( WithDBWrapper(..)
   , WithDB
@@ -43,6 +47,7 @@ import Plutus.Certification.API.Routes as X
   , ProfileBody(..)
   , RunTimeArguments(..)
   , SlotSelector(..)
+  , CreateRunOptions(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson
