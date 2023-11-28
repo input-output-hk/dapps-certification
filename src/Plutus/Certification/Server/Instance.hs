@@ -63,7 +63,7 @@ import Plutus.Certification.Metrics
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
-  { submitJob = \mods ghAccessTokenM -> nt . submitJob mods ghAccessTokenM
+  { submitJob = \mods certifyArgs ghAccessTokenM -> nt . submitJob mods certifyArgs ghAccessTokenM
   , getRuns = \mods -> transPipe nt . getRuns mods
   , abortRuns = \mods -> nt . abortRuns mods
   , getLogs = \mods act -> transPipe nt . getLogs mods act
@@ -122,17 +122,17 @@ server ServerArgs{..} = NamedAPI
   { version = withEvent eb Version . const . pure $ VersionV1 Package.version
   , versionHead = withEvent eb Version . const $ pure NoContent
   , walletAddress = withEvent eb I.WalletAddress . const $ pure serverWalletArgs.walletAddress
-  , createRunOnCurrentProfile = \commitOrBranch (profileId,_) -> do
+  , createRunOnCurrentProfile = \options (profileId,_) -> do
       -- ensure the profile has an active feature for L1Run
       validateFeature L1Run profileId
-      createRun' commitOrBranch profileId
-  , createRun = \commitOrBranch profileId (ownerId,_) -> do
+      createRun' options profileId
+  , createRun = \options profileId (ownerId,_) -> do
       hasRole <- withDb (DB.hasAtLeastUserRole profileId DB.Support)
       case (hasRole,ownerId == profileId) of
         (False,False) -> throwError err403
         (False,True) -> validateFeature L1Run ownerId
         (True,_) -> pure ()
-      createRun' commitOrBranch profileId
+      createRun' options profileId
   , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
       ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
       ) >>= runDbReader . dbSync uuid
@@ -213,7 +213,10 @@ server ServerArgs{..} = NamedAPI
     status <- runConduit (getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns)
 
     -- sync the run with the db and return the db-run information
-    DB.Run{runStatus,reportContentId} <- getRunAndSync rid status
+    DB.Run{runStatus,reportContentId,withCustomOptions} <- getRunAndSync rid status
+
+    -- if withCustomOptions is true, throw 405
+    when withCustomOptions $ throwError err405 { errBody = "Run has custom options" }
 
     subject <- getProfileDAppSubject profileId
 
@@ -408,9 +411,9 @@ server ServerArgs{..} = NamedAPI
       pure auditorReportEvs
   }
   where
-    createRun' commitOrBranch profileId = withEvent eb CreateRun \ev -> do
+    createRun' CreateRunOptions{..} profileId = withEvent eb CreateRun \ev -> do
       -- get the flake ref and the github token from the db
-      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId commitOrBranch
+      (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId croCommitOrBranch
 
       -- get one of the github tokens. from the profile if it has one
       -- or from the server arguments
@@ -421,11 +424,11 @@ server ServerArgs{..} = NamedAPI
       addField ev $ CreateRunRef fref
 
       -- submit the job
-      res <- submitJob (setAncestor $ reference ev) githubToken' fref
+      res <- submitJob (setAncestor $ reference ev) croCertArgs githubToken' fref
       addField ev $ CreateRunID res
 
       -- insert the run info in the db
-      createDbRun fref profileId res commitDate commitHash
+      createDbRun fref profileId res commitDate commitHash (croCertArgs /= DefaultCertifyArgs)
       pure res
 
   --------------------------------------------------------------------------------
@@ -720,11 +723,11 @@ server ServerArgs{..} = NamedAPI
         owner:repo:path':_ -> pure (owner,repo,path')
         _ -> throwError err400 { errBody = "Wrong flake-ref details"}
 
-    createDbRun FlakeRef{..} profileId res commitDate commitHash= do
+    createDbRun FlakeRef{..} profileId res commitDate commitHash withCustomOptions = do
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
       withDb $ DB.createRun (uuid res) now uriTxt commitDate
-        commitHash (serverWalletArgs.walletCertificationPrice) profileId
+        commitHash (serverWalletArgs.walletCertificationPrice) withCustomOptions profileId
     runDbReader :: ReaderT WithDBWrapper m a -> m a
     runDbReader dbWork = runReaderT dbWork (WithDBWrapper withDb)
 

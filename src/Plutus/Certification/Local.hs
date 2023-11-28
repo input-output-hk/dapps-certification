@@ -78,7 +78,7 @@ localServerCaps backend = do
   let
     freeCancellation jobId = atomicModifyIORef' cancellations (\rs -> (Map.delete jobId rs, ()))
     addCancellation jobId run= atomicModifyIORef' cancellations (\rs -> (Map.insert jobId (cancel run) rs, ()))
-    submitJob mods ghAccessTokenM  (FlakeRef uri) = withEvent (modifyEventBackend mods backend) SubmitJob \ev -> do
+    submitJob mods certifyArgs ghAccessTokenM  (FlakeRef uri) = withEvent (modifyEventBackend mods backend) SubmitJob \ev -> do
       addField ev $ SubmittedRef uri
 
       jobId <- nextRandom
@@ -124,7 +124,7 @@ localServerCaps backend = do
                     go
                   Nothing -> pure ()
             onException
-              (runConduitRes $ runCertify (addLogEntry Certify) (certifyOut </> "bin" </> "certify") .| go)
+              (runConduitRes $ runCertify (addLogEntry Certify) certifyArgs (certifyOut </> "bin" </> "certify") .| go)
               (addStatus' $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
 
       async ( finally runJob (freeCancellation jobId)) >>= addCancellation jobId

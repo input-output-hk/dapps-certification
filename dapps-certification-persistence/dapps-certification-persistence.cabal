@@ -24,6 +24,7 @@ library
                     , IOHK.Certification.Persistence.Migration.SQLite.V1
                     , IOHK.Certification.Persistence.Migration.SQLite.V2
                     , IOHK.Certification.Persistence.Migration.SQLite.V3
+                    , IOHK.Certification.Persistence.Migration.SQLite.V4
 
     build-depends: base
                  , selda

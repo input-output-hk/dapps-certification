@@ -17,8 +17,6 @@ createTables =
         "areOffchainContentId" TEXT NOT NULL,
         CONSTRAINT "fk0_areProfileId" FOREIGN KEY ("areProfileId") REFERENCES "profile"("profileId")
      );
-  , [r|
-    CREATE INDEX ixauditor_report_events_areCreatedAt ON "auditor_report_events" ("areCreatedAt");
     |]
     -- increment version
   , [r| UPDATE "lookup" SET "lookupValue" = '3' WHERE "lookupProp" = 'version'; |]

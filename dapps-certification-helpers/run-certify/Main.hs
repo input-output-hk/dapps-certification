@@ -14,7 +14,8 @@ import Control.Monad.Trans.Resource
 
 data Args = Args
   { buildOut :: !FilePath
-  }
+  , certifyArgs :: !CertifyArgs
+  } deriving (Show)
 
 argsParser :: Parser Args
 argsParser =  Args
@@ -22,6 +23,8 @@ argsParser =  Args
               ( metavar "BUILD_OUT"
              <> help "the path to the output from build-flake"
               )
+          <*> parseCertifyArgs
+
 argsInfo :: ParserInfo Args
 argsInfo = info (argsParser <**> helper)
   ( fullDesc
@@ -45,7 +48,8 @@ printMessage = await >>= \case
 
 main :: IO ()
 main = do
-  Args {..} <- execParser argsInfo
+  ss@Args {..} <- execParser argsInfo
+  putStrLn $ "Running certify with args: " <> show ss
   let noLogExtraction = const $ pure ()
       certifyPath = buildOut </> "bin" </> "certify"
-  runConduitRes $ runCertify noLogExtraction certifyPath .| printMessage
+  runConduitRes $ runCertify noLogExtraction certifyArgs certifyPath .| printMessage

@@ -70,6 +70,7 @@ data Run = Run
   , profileId           :: ID Profile
   , certificationPrice  :: CertificationPrice
   , reportContentId     :: Maybe Text
+  , withCustomOptions   :: Bool
   } deriving (Generic,Show)
 
 instance ToSchema Status where
@@ -87,6 +88,7 @@ instance ToSchema Run where
     statusSchema <- declareSchemaRef (Proxy :: Proxy Status)
     uuidSchema <- declareSchemaRef (Proxy :: Proxy UUID)
     intSchema <- declareSchemaRef (Proxy :: Proxy Int)
+    boolSchema <- declareSchemaRef (Proxy :: Proxy Bool)
     return $ NamedSchema (Just "Run") $ mempty
       & type_ ?~ SwaggerObject
       & properties .~
@@ -100,6 +102,7 @@ instance ToSchema Run where
           , ("runStatus", statusSchema)
           , ("certificationPrice", intSchema)
           , ("reportContentId", textSchema)
+          , ("withCustomOptions", boolSchema)
           ]
       & required .~ [ "runId", "created", "utcSchema", "repoUrl"
                     , "commitDate","commitHash", "runStatus", "certificationPrice"]
@@ -116,6 +119,7 @@ instance ToJSON Run where
       , "runStatus" .= runStatus
       , "certificationPrice" .= certificationPrice
       , "reportContentId" .= reportContentId
+      , "withCustomOptions" .= withCustomOptions
       ]
 
 instance FromJSON Run where
@@ -131,6 +135,7 @@ instance FromJSON Run where
         <*> pure def
         <*> v .: "certificationPrice"
         <*> v .:? "reportContentId" .!= Nothing
+        <*> v .:? "withCustomOptions" .!= False
 
 instance SqlRow Run
 instance IsLabel "profileId" (ID Profile -> Profile -> Profile) where

@@ -659,7 +659,7 @@ main = do
     CmdWalletAddress ->
       handle $ apiClient.walletAddress
     CmdRun (Create (CreateRunArgs ref auth)) ->
-      withAuth auth $ \c authKey -> c.createRunOnCurrentProfile ref authKey
+      withAuth auth $ \c authKey -> c.createRunOnCurrentProfile (CreateRunOptions ref DefaultCertifyArgs) authKey
     CmdRun (Get ref) ->
       handle $ apiClient.getRun ref
     CmdRun (Abort (AbortRunArgs ref auth deleteRun)) ->

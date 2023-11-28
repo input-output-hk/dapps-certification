@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DeriveDataTypeable        #-}
+{-# LANGUAGE OverloadedLists            #-}
+
 module IOHK.Certification.Interface where
 
 import GHC.Generics
@@ -16,6 +18,7 @@ import Data.Text as Text hiding (index)
 import Data.Swagger
 import Data.Char (isAlphaNum)
 import Control.Lens hiding ((.=))
+import Options.Applicative as Opts hiding (Success, Error)
 
 import qualified Data.Swagger.Lens as SL
 
@@ -290,3 +293,118 @@ instance FromJSON Message where
       success o = Success <$> o .: "success"
       stat o = Status <$> o .: "status"
       plan o = Plan <$> o .: "plan"
+
+data CertOptNumTestsArgs = CertOptNumTestsArgs
+                         { numStandardProperty   :: !(Maybe Int)
+                         , numNoLockedFunds      :: !(Maybe Int)
+                         , numNoLockedFundsLight :: !(Maybe Int)
+                         , numCrashTolerance     :: !(Maybe Int)
+                         , numWhiteList          :: !(Maybe Int)
+                         , numDLTests            :: !(Maybe Int)
+                         } deriving (Show, Eq, Generic)
+
+data CertifyArgs = CertifyArgsNumTests CertOptNumTestsArgs
+                 | DefaultCertifyArgs
+                 deriving (Show, Eq, Generic)
+
+instance FromJSON CertifyArgs where
+  parseJSON = withObject "CertifyArgs" \o ->
+    (CertifyArgsNumTests <$> o .: "numTests")
+   <|> pure DefaultCertifyArgs
+
+instance ToJSON CertifyArgs where
+  toJSON (CertifyArgsNumTests n) = object
+    [ "numTests" .= n ]
+  toJSON DefaultCertifyArgs = object
+    [ ]
+
+
+instance ToSchema CertifyArgs where
+  declareNamedSchema _ = do
+    certOptNumTestsSchema <- declareSchemaRef (Proxy :: Proxy CertOptNumTestsArgs)
+    return $ NamedSchema (Just "CertifyArgs") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~
+          [ ("certOptNumTests", certOptNumTestsSchema) ]
+
+instance FromJSON CertOptNumTestsArgs where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON CertOptNumTestsArgs where
+  toJSON = genericToJSON defaultOptions
+
+instance ToSchema CertOptNumTestsArgs where
+  declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
+
+parseCertifyArgs :: Parser CertifyArgs
+parseCertifyArgs =
+  customOptionsParser <|> pure DefaultCertifyArgs
+
+customOptionsParser :: Parser CertifyArgs
+customOptionsParser  = hsubparser
+  (command "custom-options" customCertifyArgsInfo)
+
+customCertifyArgsInfo :: ParserInfo CertifyArgs
+customCertifyArgsInfo = Opts.info parseCustomCertifyArgs
+  ( fullDesc
+ <> header "custom-options — to run the certification process with custom options"
+  )
+
+parseCustomCertifyArgs :: Parser CertifyArgs
+parseCustomCertifyArgs = CertifyArgsNumTests <$> certOptNumTestsParser
+
+
+numTestsParser :: Parser Int
+numTestsParser = option auto
+      ( long "num-tests"
+     <> metavar "NUM_TESTS"
+     <> help "Number of tests to run"
+      )
+certOptNumTestsParser :: Parser CertOptNumTestsArgs
+certOptNumTestsParser = CertOptNumTestsArgs
+    <$> optional (option auto
+          ( long "num-standard-property"
+         <> metavar "NUM_STANDARD_PROPERTY"
+         <> help "Number of tests to run for standard property"
+          ))
+    <*> optional (option auto
+          ( long "num-no-locked-funds"
+         <> metavar "NUM_NO_LOCKED_FUNDS"
+         <> help "Number of tests to run for no locked funds property"
+          ))
+    <*> optional (option auto
+          ( long "num-no-locked-funds-light"
+         <> metavar "NUM_NO_LOCKED_FUNDS_LIGHT"
+         <> help "Number of tests to run for no locked funds light property"
+          ))
+    <*> optional (option auto
+          ( long "num-crash-tolerance"
+         <> metavar "NUM_CRASH_TOLERANCE"
+         <> help "Number of tests to run for crash tolerance property"
+          ))
+    <*> optional (option auto
+          ( long "num-whitelist"
+         <> metavar "NUM_WHITELIST"
+         <> help "Number of tests to run for whitelist property"
+          ))
+    <*> optional (option auto
+          ( long "num-dl-tests"
+         <> metavar "NUM_DL_TESTS"
+         <> help "Number of tests to run for DL tests"
+          ))
+
+certifyArgsToCommandList :: CertifyArgs -> [String]
+certifyArgsToCommandList (CertifyArgsNumTests CertOptNumTestsArgs{..}) =
+    -- remove empty lines
+    Prelude.filter (not . Prelude.null) allLines
+    where
+    allLines =
+      [ "custom-options" ]
+      ++ maybe [] (\n -> ["--num-standard-property",show n]) numStandardProperty
+      ++ maybe [] (\n -> ["--num-no-locked-funds",show n]) numNoLockedFunds
+      ++ maybe [] (\n -> ["--num-no-locked-funds-light",show n]) numNoLockedFundsLight
+      ++ maybe [] (\n -> ["--num-crash-tolerance",show n]) numCrashTolerance
+      ++ maybe [] (\n -> ["--num-whitelist",show n]) numWhiteList
+      ++ maybe [] (\n -> ["--num-dl-tests",show n]) numDLTests
+
+certifyArgsToCommandList DefaultCertifyArgs = []

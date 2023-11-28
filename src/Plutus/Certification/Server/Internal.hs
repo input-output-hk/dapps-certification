@@ -38,7 +38,7 @@ import Control.Monad.RWS (MonadReader)
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
   { -- | Submit a new certification job
-    submitJob :: !(EventBackendModifiers r r -> Maybe GitHubAccessToken -> FlakeRefV1 -> m RunIDV1)
+    submitJob :: !(EventBackendModifiers r r -> CertifyArgs -> Maybe GitHubAccessToken -> FlakeRefV1 -> m RunIDV1)
   , -- | Get the status of all runs associated with a job
     getRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () RunStatusV1 m ())
   , -- | Delete all runs associated with a job

@@ -69,6 +69,14 @@ generateFlake backend addLogEntry ghAccessTokenM flakeref output = withEvent bac
     hPutStrLn h "      url = \"github:input-output-hk/plutus-apps/68efca7eda4afd1c14698adf697d70acb5a489e2\";"
     hPutStrLn h "      flake = false;"
     hPutStrLn h "    };"
+    hPutStrLn h "    plutus-contract-certification = {"
+    hPutStrLn h "      url = \"github:Ali-Hill/plutus-contract-certification/292d17093237fec27e69b7a6340ab8d513f61df1\";"
+    hPutStrLn h "      flake = false;"
+    hPutStrLn h "    };"
+    hPutStrLn h "    optparse-applicative = {"
+    hPutStrLn h "      url = \"github:pcapriotti/optparse-applicative/d307e46e3b233a395989dc3c3ed2299fcf5963a6\";"
+    hPutStrLn h "      flake = false;"
+    hPutStrLn h "    };"
     hPutStrLn h "    dapps-certification = {"
     hPutStrLn h "      url = \"github:input-output-hk/dapps-certification\";"
     hPutStrLn h "      flake = false;"
@@ -113,8 +121,8 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
                        , "--print-build-logs"
                        ] ++ accessTokenToArg ghAccessTokenM
 
-runCertify :: (Text -> IO ()) -> FilePath -> ConduitT () Message ResIO ()
-runCertify addLogEntry certify = do
+runCertify :: (Text -> IO ()) -> CertifyArgs -> FilePath -> ConduitT () Message ResIO ()
+runCertify addLogEntry certifyArgs certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
@@ -130,7 +138,7 @@ runCertify addLogEntry certify = do
     sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
   where
     cfg = setStdout createPipe
-        $ proc certify []
+        $ proc certify (certifyArgsToCommandList certifyArgs)
 
 acquireProcessWait :: ProcessConfig i o e -> Acquire (Process i o e)
 acquireProcessWait cfg = mkAcquireType (startProcess cfg) cleanup
