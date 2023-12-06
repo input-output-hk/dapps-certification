@@ -41,7 +41,7 @@ spec:
                 name: github-secrets
           - name: DB_PATH
             value: "/db/certification.sqlite"
-        image: ghcr.io/demoiog/plutus-certification:24
+        image: ghcr.io/demoiog/plutus-certification:26
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
