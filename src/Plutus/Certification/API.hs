@@ -46,6 +46,7 @@ import Plutus.Certification.API.Routes as X
   , RunTimeArguments(..)
   , SlotSelector(..)
   , CreateRunOptions(..)
+  , RawHtml(..)
   )
 import Plutus.Certification.API.RunLog as X
   ( RunLog(..)

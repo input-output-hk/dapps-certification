@@ -60,6 +60,7 @@ import qualified IOHK.Certification.Persistence as DB
 import qualified IOHK.Certification.Persistence.API.SQLite as DB
 import qualified Plutus.Certification.Web3StorageClient  as IPFS
 import Plutus.Certification.Metrics
+import qualified Plutus.Certification.Htmx as Htmx
 
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
@@ -408,8 +409,21 @@ server ServerArgs{..} = NamedAPI
       auditorReportEvs <- withDb $ DB.getAuditorReportsInInterval start end
       addField ev $ GetAuditorReportMetricsFieldReports (List.length auditorReportEvs)
       pure auditorReportEvs
+  , htmx = homePage
+       :<|> htmxPage
+       :<|> getProfileSummaryRow
+       :<|> transactionsPage
+       :<|> billingPage
   }
   where
+    homePage = pure $ RawHtml Htmx.homePage
+    transactionsPage = pure $ RawHtml Htmx.transactionsPage
+    billingPage = pure $ RawHtml Htmx.billingPage
+    htmxPage = withDb DB.getProfilesSummary <&> RawHtml . Htmx.accountsPage
+    getProfileSummaryRow profileId =
+      withDb (DB.getProfileSummary profileId) >>= \case
+        Nothing -> throwError err404 { errBody = "Profile not found" }
+        Just summary -> pure $ RawHtml $ Htmx.renderSummaryTrDetailed summary
     createRun' CreateRunOptions{..} profileId = withEvent eb CreateRun \ev -> do
       -- get the flake ref and the github token from the db
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId croCommitOrBranch
