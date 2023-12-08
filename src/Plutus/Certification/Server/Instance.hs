@@ -191,7 +191,7 @@ server ServerArgs{..} = NamedAPI
   , getProfileRuns = \profileId afterM countM -> impersonate DB.Support
       (const $ withDb $ DB.getRuns profileId afterM countM) profileId
   , updateCurrentProfile = updateProfile
-  , updateProfile = impersonateWithAddress DB.Admin . updateProfile
+  , updateProfile = impersonateWithAddress DB.Support . updateProfile
 
   , getCurrentProfile = \(profileId,_) -> getProfileDTO profileId
   , getProfile = impersonateWithAddress DB.Support (\(profileId,_) -> getProfileDTO profileId)
