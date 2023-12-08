@@ -1,0 +1,100 @@
+<tr id="pid_$profileId'"
+  class="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+    $address'
+  </td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+    $dapp'
+  </td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+      $labels'
+  </td>
+  <td
+    class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+  >
+    $totalRuns'
+  </td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-expanded="false"
+      aria-controls="radix-:r1:"
+      data-state="closed"
+    >
+      <button
+        class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-2 py-1 bg-transparent text-black hover:bg-gray-200 active:bg-gray-300 rounded"
+        type="button"
+        onclick="toggleElementsByClass('pid_${profileId'}_details')"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="w-4 h-4"
+        >
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="12" cy="5" r="1"></circle>
+          <circle cx="12" cy="19" r="1"></circle>
+        </svg>
+      </button>
+    </button>
+  </td>
+</tr>
+<tr
+  class="pid_${profileId'}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+  style="display: none"
+>
+  <td class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0" colspan="2">
+    $companyName'
+  </td>
+  <td class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0">
+    Subscribed on: $subscribedOn
+  </td>
+  <td class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0" colspan="2">
+    Succeeded: $succeededRuns
+  </td>
+</tr>
+<tr
+  class="pid_${profileId'}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+  style="display: none"
+>
+  <td class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0" colspan="2">
+    ProfileId: $profileId'
+  </td>
+  <td class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0" >
+    Expires on: $expiresOn
+  </td>
+  <td class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0" colspan="2">
+    Failed: $failedRuns
+  </td>
+</tr>
+<tr
+  class="border-b bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+>
+  <td
+    class="pid_${profileId'}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+    style="display: none"
+    colspan="2"
+    >
+    $dappRepo'
+  </td>
+  <td
+    class="pid_${profileId'}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+    style="display: none"
+    >Subscription: $subscriptionStatus</td>
+  <td
+    class="pid_${profileId'}_details px-4 pt-1 pb-4  align-middle [&amp;:has([role=checkbox])]:pr-0"
+    style="display: none"
+    colspan="2"
+    >
+    Aborted: $abortedRuns
+  </td>
+</tr>

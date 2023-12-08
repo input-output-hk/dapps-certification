@@ -60,6 +60,24 @@ library
     typed-process,
     resourcet,
 
+    -- for html
+    lucid,
+    servant-lucid,
+    raw-strings-qq,
+
+    shakespeare,
+
+    blaze,
+    blaze-html,
+    servant-blaze,
+    xml-html-qq,
+
+    template-haskell,
+
+    neat-interpolation,
+    http-media,
+
+    -- internal
     dapps-certification-signature-verification,
     dapps-certification-persistence,
     dapps-certification-interface,
@@ -78,6 +96,7 @@ library
     Plutus.Certification.Synchronizer
     Plutus.Certification.Metadata
     Plutus.Certification.ProfileWallet
+    Plutus.Certification.Htmx
   other-modules:
     Paths_plutus_certification
     Plutus.Certification.Metadata.Types
@@ -93,6 +112,7 @@ library
     Plutus.Certification.Server.Instance
     Plutus.Certification.CoinGeckoClient
     Plutus.Certification.Metrics
+    Plutus.Certification.Htmx.Internal
   autogen-modules: Paths_plutus_certification
   default-language: Haskell2010
 
