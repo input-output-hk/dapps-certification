@@ -50,6 +50,7 @@ import IOHK.Certification.SignatureVerification
 import Plutus.Certification.Metadata as Metadata
 import Data.Int
 import Data.HashMap.Strict.InsOrd as HM
+import Network.HTTP.Media ((//), (/:))
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
@@ -355,6 +356,30 @@ type GetAllProfileIdsByRole (auth :: Symbol)
   :> AuthProtect auth
   :> Get '[JSON] [DB.ProfileId]
 
+--------------------------------------------------------------------------------
+-- | HTML
+
+type HTMLMain = "control-panel" :>
+  ( Get '[HTML] RawHtml
+  :<|> "accounts" :> Get '[HTML] RawHtml
+  :<|> "accounts" :> (Capture "profileId" DB.ProfileId :> Get '[HTML] RawHtml)
+  :<|> "transactions" :> Get '[HTML] RawHtml
+  :<|> "billing" :> Get '[HTML] RawHtml
+  )
+
+data HTML = HTML
+
+newtype RawHtml = RawHtml { unRaw :: Text }
+
+instance Accept HTML where
+  contentType _ = "text" // "html" /: ("charset", "utf-8")
+
+instance MimeRender HTML RawHtml where
+  mimeRender _ = BSL8.fromStrict . encodeUtf8 . unRaw
+
+--------------------------------------------------------------------------------
+-- | GLOBAL ELEVATED ROUTES
+
 type GetProfilesSummaryRoute  (auth :: Symbol)
   = "profiles"
   :> Description "Getting all profiles with their maximum role and their dapp if any"
@@ -576,6 +601,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getSubscriptionsStartingInIntervalRoute :: mode :- GetSubscriptionsStartingInIntervalRoute auth
   , getSubscriptionsEndingInIntervalRoute :: mode :- GetSubscriptionsEndingInIntervalRoute auth
   , getAuditorReportMetrics :: mode :- GetAuditorReportMetrics auth
+  , htmx :: mode :- HTMLMain
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
@@ -671,6 +697,10 @@ instance MimeUnrender OctetStream RunIDV1 where
   mimeUnrender _ ridbs = case fromByteString ridbs of
     Just rid -> pure $ RunID rid
     Nothing -> Left $ "couldn't parse '" ++ BSL8.unpack ridbs ++ "' as a run ID"
+
+
+instance MimeUnrender HTML RawHtml where
+  mimeUnrender _ = Right . RawHtml . decodeUtf8 . BSL8.toStrict
 
 data StepState
   = Running

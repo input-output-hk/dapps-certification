@@ -18,6 +18,7 @@ module IOHK.Certification.Persistence.API.SQLite
 ( getProfilesSummary
 , sqlLiteGetAllTables
 , withSQLiteConnection
+, getProfileSummary
 ) where
 
 import Database.Selda hiding (Set)
@@ -33,6 +34,7 @@ import Data.Data
 import Data.FileEmbed
 import Data.ByteString.Char8 (ByteString,unpack)
 import Data.String (IsString(fromString))
+import Data.Maybe (listToMaybe)
 -- | SQLite query to get all the profiles with their maximum role
 -- | and their dapp if any
 
@@ -42,8 +44,13 @@ profileSummaryRawBS = $(makeRelativeToProject
   >>= embedFile
   )
 
-profileSummaryRawQ :: QueryFragment
-profileSummaryRawQ = fromString $ unpack profileSummaryRawBS
+profileSummaryRawQ :: Maybe ProfileId -> QueryFragment
+profileSummaryRawQ profileIdM  =
+  fromString $ (unpack profileSummaryRawBS <> case profileIdM of
+      Nothing -> ""
+      -- TODO:  improve this
+      Just _ -> " WHERE profileId = " <> show (fromId <$> profileIdM)
+    )
 
 allTablesRawQ :: Text
 allTablesRawQ =[r|
@@ -88,13 +95,22 @@ instance SqlRow ProfileSummaryDTO where
                + nestedCols (Proxy @RunStats)
                + nestedCols (Proxy @SubscriptionLite)
 
-getProfilesSummaryQ :: Query SQLite (Row SQLite ProfileSummaryDTO)
-getProfilesSummaryQ = rawQuery profileSummaryColumnNames profileSummaryRawQ
+getProfilesSummaryQ :: Maybe ProfileId -> Query SQLite (Row SQLite ProfileSummaryDTO)
+getProfilesSummaryQ = rawQuery profileSummaryColumnNames . profileSummaryRawQ
 
--- >>> sqliteOpen "certification.sqlite" >>= runSeldaT (query getProfilesSummaryQ) -- >>= pure . (fmap summaryDapp)
+-- >>> sqliteOpen "certification.sqlite" >>= runSeldaT (query getProfilesSummaryQ Nothing) 
 
 getProfilesSummary :: (MonadSelda m, Backend m ~ SQLite) => m [ProfileSummaryDTO]
-getProfilesSummary = query getProfilesSummaryQ
+getProfilesSummary = query $ getProfilesSummaryQ Nothing
+
+getProfileSummary :: (MonadSelda m, Backend m ~ SQLite)
+                  => ProfileId
+                  -> m (Maybe ProfileSummaryDTO)
+getProfileSummary profileId =
+  listToMaybe <$> query (getProfilesSummaryQ (Just profileId))
+
+
+--ss = sqliteOpen "certification.sqlite" >>= runSeldaT (query getProfilesSummaryQ ) -- >>= pure . (fmap summaryDapp)
 
 sqlLiteGetAllTables :: (MonadIO m,MonadMask m) => SeldaT SQLite m [Text]
 sqlLiteGetAllTables = query sqlLiteGetAllTablesQ
