@@ -127,9 +127,10 @@ server ServerArgs{..} = NamedAPI
       validateFeature L1Run profileId
       createRun' options profileId
   , createRun = \options profileId (ownerId,_) -> do
-      hasRole <- withDb (DB.hasAtLeastUserRole profileId DB.Support)
+      hasRole <- withDb (DB.hasAtLeastUserRole ownerId DB.Support)
       case (hasRole,ownerId == profileId) of
-        (False,False) -> throwError err403
+        (False,False) -> throwError err403 { errBody =
+          "You don't have the necessary rights to create a run for this profile" }
         (False,True) -> validateFeature L1Run ownerId
         (True,_) -> pure ()
       createRun' options profileId
@@ -512,7 +513,7 @@ server ServerArgs{..} = NamedAPI
                   -> m ()
     verifyRole profileId role = do
       hasRole <- withDb (DB.hasAtLeastUserRole profileId role)
-      unless hasRole $ throwError err403
+      unless hasRole $ throwError err403 {errBody = "You don't have the required rights"}
 
     impersonateWithAddress :: ( MonadMask m
                               , MonadIO m
