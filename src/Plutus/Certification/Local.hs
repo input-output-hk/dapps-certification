@@ -35,7 +35,7 @@ import Control.Monad
 import Data.Maybe (isNothing)
 
 data JobState = JobState
-  { statuses :: ![Maybe [CertificationTask] -> RunStatusV1]
+  { status :: !(Maybe [CertificationTask] -> RunStatusV1)
   , plan :: !(Maybe [CertificationTask])
   , logs :: !(LocalActionLogs T.Text)
   }
@@ -44,16 +44,13 @@ emptyLocalLog :: LocalActionLogs a
 emptyLocalLog = LocalActionLogs [] [] []
 
 emptyJobState :: JobState
-emptyJobState = JobState [] Nothing emptyLocalLog
-
-addStatus :: (Maybe [CertificationTask] -> RunStatusV1) -> JobState -> JobState
-addStatus st js = js { statuses = st : statuses js }
+emptyJobState = JobState (const $ Incomplete Queued) Nothing emptyLocalLog
 
 setPlan :: [CertificationTask] -> JobState -> JobState
 setPlan p js = js { plan = Just p }
 
-getStatuses :: JobState -> [RunStatusV1]
-getStatuses js = map (\f -> f $ plan js) $ statuses js
+getStatus :: JobState -> RunStatusV1
+getStatus js = status js $ plan js
 
 type LogEntry a = (ZonedTime,a)
 data LocalActionLogs a = LocalActionLogs
@@ -90,8 +87,8 @@ localServerCaps backend = do
         changeJobState :: (JobState -> JobState) -> IO ()
         changeJobState f = atomicModifyIORef' jobs (\js -> (Map.adjust f jobId js, ()))
 
-        addStatus' :: (Maybe [CertificationTask] -> RunStatusV1) -> IO ()
-        addStatus' st = changeJobState (addStatus st)
+        setStatus :: (Maybe [CertificationTask] -> RunStatusV1) -> IO ()
+        setStatus st = changeJobState (\s -> s { status = st })
 
         addLogEntry :: CertificationStage -> T.Text -> IO ()
         addLogEntry actionType text = do
@@ -101,23 +98,23 @@ localServerCaps backend = do
       -- Purposefully leak
       let runJob = withSubEvent ev RunningJob \rEv -> withSystemTempDirectory "generate-flake" \dir -> do
             addField rEv $ TempDir dir
-            addStatus' . const $ Incomplete (Preparing Running)
+            setStatus . const $ Incomplete (Preparing Running)
             catch
               (generateFlake (narrowEventBackend InjectGenerate $
                 subEventBackend rEv) (addLogEntry Generate) ghAccessTokenM uri dir)
               (\(ex :: SomeException) -> do
                 addLogEntry Generate (T.pack $ show ex)
-                addStatus' . const $ Incomplete (Preparing Failed)
+                setStatus . const $ Incomplete (Preparing Failed)
               )
-            addStatus' . const $ Incomplete (Building Running)
+            setStatus . const $ Incomplete (Building Running)
             certifyOut <- onException
               (buildFlake (narrowEventBackend InjectBuild $ subEventBackend rEv) (addLogEntry Build) ghAccessTokenM dir)
-              (addStatus' . const $ Incomplete (Building Failed))
-            addStatus' $ \p -> Incomplete (Certifying (CertifyingStatus Running Nothing p))
+              (setStatus . const $ Incomplete (Building Failed))
+            setStatus $ \p -> Incomplete (Certifying (CertifyingStatus Running Nothing p))
             let go = await >>= \case
-                  Just (Success res) -> liftIO $ addStatus' . const $ Finished res
+                  Just (Success res) -> liftIO $ setStatus . const $ Finished res
                   Just (Status pr) -> do
-                    liftIO . addStatus' $ \pl -> Incomplete (Certifying $ CertifyingStatus Running (Just pr) pl)
+                    liftIO . setStatus $ \pl -> Incomplete (Certifying $ CertifyingStatus Running (Just pr) pl)
                     go
                   Just (Plan p) -> do
                     liftIO $ changeJobState (setPlan p)
@@ -125,13 +122,13 @@ localServerCaps backend = do
                   Nothing -> pure ()
             onException
               (runConduitRes $ runCertify (addLogEntry Certify) certifyArgs (certifyOut </> "bin" </> "certify") .| go)
-              (addStatus' $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
+              (setStatus $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
 
       async ( finally runJob (freeCancellation jobId)) >>= addCancellation jobId
       pure $ coerce jobId
 
     getRuns _ (RunID jobId) = lift (readIORef jobs)
-      >>= yieldMany . getStatuses . Map.findWithDefault emptyJobState jobId
+      >>= yield . getStatus . Map.findWithDefault emptyJobState jobId
 
     abortRuns mods rid@(RunID jobId) = withEvent (modifyEventBackend mods backend) AbortJob \ev -> do
      addField ev rid
