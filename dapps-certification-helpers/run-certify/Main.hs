@@ -31,25 +31,16 @@ argsInfo = info (argsParser <**> helper)
  <> header "run-certify — Run the certification binary"
   )
 
-data PrefixJSON a = PrefixJSON [ Key ] a
-
-instance (ToJSON a) => ToJSON (PrefixJSON a) where
-  toJSON (PrefixJSON [] a) = toJSON a
-  toJSON (PrefixJSON (hd : tl) a) = object [ hd .= PrefixJSON tl a ]
-  toEncoding (PrefixJSON [] a) = toEncoding a
-  toEncoding (PrefixJSON (hd : tl) a) = pairs ( hd .= PrefixJSON tl a )
-
 printMessage :: ConduitT Message Void ResIO ()
 printMessage = await >>= \case
   Nothing -> pure ()
   Just m -> do
-    liftIO . BSL8.putStrLn . encode $ PrefixJSON [ "plutus-certification/run-certify" ] m
+    liftIO . BSL8.putStrLn $ encode m
     printMessage
 
 main :: IO ()
 main = do
-  ss@Args {..} <- execParser argsInfo
-  putStrLn $ "Running certify with args: " <> show ss
+  Args {..} <- execParser argsInfo
   let noLogExtraction = const $ pure ()
       certifyPath = buildOut </> "bin" </> "certify"
   runConduitRes $ runCertify noLogExtraction certifyArgs certifyPath .| printMessage
