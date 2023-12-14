@@ -15,6 +15,7 @@ import Observe.Event
 import Observe.Event.BackendModification
 import IOHK.Certification.Interface
 import IOHK.Certification.Actions
+import Data.Functor
 import Data.UUID
 import Data.UUID.V4
 import Data.Coerce
@@ -49,8 +50,8 @@ emptyJobState = JobState (const $ Incomplete Queued) Nothing emptyLocalLog
 setPlan :: [CertificationTask] -> JobState -> JobState
 setPlan p js = js { plan = Just p }
 
-getStatus :: JobState -> RunStatusV1
-getStatus js = status js $ plan js
+getStatus' :: JobState -> RunStatusV1
+getStatus' js = status js $ plan js
 
 type LogEntry a = (ZonedTime,a)
 data LocalActionLogs a = LocalActionLogs
@@ -127,8 +128,8 @@ localServerCaps backend = do
       async ( finally runJob (freeCancellation jobId)) >>= addCancellation jobId
       pure $ coerce jobId
 
-    getRuns _ (RunID jobId) = lift (readIORef jobs)
-      >>= yield . getStatus . Map.findWithDefault emptyJobState jobId
+    getStatus _ (RunID jobId) = readIORef jobs
+      <&> getStatus' . Map.findWithDefault emptyJobState jobId
 
     abortRuns mods rid@(RunID jobId) = withEvent (modifyEventBackend mods backend) AbortJob \ev -> do
      addField ev rid

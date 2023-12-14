@@ -64,7 +64,7 @@ import Plutus.Certification.Metrics
 hoistServerCaps :: (Monad m) => (forall x . m x -> n x) -> ServerCaps m r -> ServerCaps n r
 hoistServerCaps nt (ServerCaps {..}) = ServerCaps
   { submitJob = \mods certifyArgs ghAccessTokenM -> nt . submitJob mods certifyArgs ghAccessTokenM
-  , getRuns = \mods -> transPipe nt . getRuns mods
+  , getStatus = \mods -> nt . getStatus mods
   , abortRuns = \mods -> nt . abortRuns mods
   , getLogs = \mods act -> transPipe nt . getLogs mods act
   }
@@ -134,9 +134,8 @@ server ServerArgs{..} = NamedAPI
         (False,True) -> validateFeature L1Run ownerId
         (True,_) -> pure ()
       createRun' options profileId
-  , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev -> runConduit
-      ( getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
-      ) >>= runDbReader . dbSync uuid
+  , getRun = \rid@RunID{..} -> withEvent eb GetRun \ev ->
+      getStatus (setAncestor $ reference ev) rid >>= runDbReader . dbSync uuid
   , getRunDetails = \rid@RunID{..} -> withEvent eb GetRunDetails \ev -> do
       addField ev rid
       -- get the run details from the db
@@ -152,8 +151,7 @@ server ServerArgs{..} = NamedAPI
         requireRunIdOwner profileId uuid
 
       -- abort the run if is still running
-      status <- runConduit $
-        getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns
+      status <- getStatus (setAncestor $ reference ev) rid
       when (toDbStatus status == DB.Queued) $ do
         -- finally abort the run
         abortRuns (setAncestor $ reference ev) rid
@@ -211,7 +209,7 @@ server ServerArgs{..} = NamedAPI
     requireRunIdOwner profileId uuid
 
     -- get the runId report
-    status <- runConduit (getRuns (setAncestor $ reference ev) rid .| evalStateC Queued consumeRuns)
+    status <- getStatus (setAncestor $ reference ev) rid
 
     -- sync the run with the db and return the db-run information
     DB.Run{runStatus,reportContentId,withCustomOptions} <- getRunAndSync rid status
