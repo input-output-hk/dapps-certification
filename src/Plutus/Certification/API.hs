@@ -1,6 +1,5 @@
 module Plutus.Certification.API
   ( module X
-  , Cicero.Run.RunLog(..)
   ) where
 
 import IOHK.Certification.Interface as X
@@ -12,7 +11,6 @@ import Plutus.Certification.Internal as X
   , WithDB
   , HasDb(..)
   )
-import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
 
 import IOHK.Certification.Persistence as X
   ( Profile(..)
@@ -41,13 +39,16 @@ import Plutus.Certification.API.Routes as X
   , StepState(..)
   , CertifyingStatus(..)
   , IncompleteRunStatus(..)
-  , KnownActionType(..)
+  , CertificationStage(..)
   , ApiGitHubAccessToken(..)
   , LoginBody(..)
   , ProfileBody(..)
   , RunTimeArguments(..)
   , SlotSelector(..)
   , CreateRunOptions(..)
+  )
+import Plutus.Certification.API.RunLog as X
+  ( RunLog(..)
   )
 import Plutus.Certification.API.Swagger as X
   ( swaggerJson

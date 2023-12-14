@@ -62,7 +62,7 @@ data LocalActionLogs a = LocalActionLogs
   , certify :: ![LogEntry a]
   }
 
-addLocalLog:: KnownActionType -> LogEntry T.Text -> JobState -> JobState
+addLocalLog:: CertificationStage -> LogEntry T.Text -> JobState -> JobState
 addLocalLog actionType val js@JobState{..} = js { logs = newLogs}
   where
   newLogs = case actionType of
@@ -93,7 +93,7 @@ localServerCaps backend = do
         addStatus' :: (Maybe [CertificationTask] -> RunStatusV1) -> IO ()
         addStatus' st = changeJobState (addStatus st)
 
-        addLogEntry :: KnownActionType -> T.Text -> IO ()
+        addLogEntry :: CertificationStage -> T.Text -> IO ()
         addLogEntry actionType text = do
           time <- utcToZonedTime utc <$> getCurrentTime
           changeJobState (addLocalLog actionType (time,text))

@@ -19,7 +19,6 @@ library
       directory,
       network-uri,
       process,
-      unliftio-core,
       containers,
       filepath,
       async,

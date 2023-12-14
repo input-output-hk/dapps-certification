@@ -29,8 +29,6 @@ library
     build-depends: base
                  , selda
                  , selda-sqlite
-                 , selda-postgresql
-                 , uuid
                  , text
                  , time
                  , aeson

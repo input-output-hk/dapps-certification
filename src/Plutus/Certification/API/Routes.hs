@@ -53,7 +53,7 @@ import Data.HashMap.Strict.InsOrd as HM
 
 import qualified Data.Swagger.Lens as SL
 import qualified IOHK.Certification.Persistence as DB
-import qualified IOHK.Cicero.API.Run as Cicero.Run (RunLog(..))
+import qualified Plutus.Certification.API.RunLog as API (RunLog(..))
 import qualified Data.Aeson.KeyMap as KM
 import IOHK.Certification.Persistence (ProfileId)
 import Plutus.Certification.Metrics (RunTimeMetric)
@@ -100,14 +100,15 @@ type AbortRunRoute (auth :: Symbol)
   :> AuthProtect auth
   :> DeleteNoContent
 
+-- TODO: Deprecate or remove `action-type` in favor of `certification-stage`
 type GetLogsRoute
    = "run"
   :> Description "Get the logs of a run"
   :> Capture "id" RunIDV1
   :> "logs"
   :> QueryParam "after" ZonedTime
-  :> QueryParam "action-type" KnownActionType
-  :> Get '[JSON] [Cicero.Run.RunLog]
+  :> QueryParam "action-type" CertificationStage
+  :> Get '[JSON] [API.RunLog]
 
 type GetCurrentProfileRunsRoute (auth :: Symbol)
    = "run"
@@ -785,23 +786,20 @@ instance FromJSON RunStatusV1 where
           then Finished <$> o .: "result"
           else fail $ "unknown status " ++ show status
 --
--- | Types of Cicero actions we know and care about
-data KnownActionType
-  = -- | @plutus-certification/generate-flake@
-    Generate
-  | -- | @plutus-certification/build-flake@
-    Build
-  | -- | @plutus-certification/run-certify@
-    Certify
+-- | Certification job stages
+data CertificationStage
+  = Generate
+  | Build
+  | Certify
   deriving stock (Read,Show,Eq,Generic)
 
-instance FromHttpApiData KnownActionType where
+instance FromHttpApiData CertificationStage where
   parseUrlPiece "generate" = Right Generate
   parseUrlPiece "build"    = Right Build
   parseUrlPiece "certify"  = Right Certify
-  parseUrlPiece _          = Left "Unknown ActionType"
+  parseUrlPiece _          = Left "Unknown CertificationStage"
 
-instance ToHttpApiData KnownActionType where
+instance ToHttpApiData CertificationStage where
   toUrlPiece Generate = "generate"
   toUrlPiece Build    = "build"
   toUrlPiece Certify  = "certify"
@@ -824,7 +822,7 @@ instance ToSchema StepState
 instance ToSchema CertifyingStatus
 instance ToSchema RunIDV1
 instance ToParamSchema RunIDV1
-instance ToParamSchema KnownActionType
+instance ToParamSchema CertificationStage
 
 instance ToParamSchema ApiGitHubAccessToken where
   toParamSchema _ = mempty
@@ -853,16 +851,12 @@ instance ToSchema CommitOrBranch  where
     return $ NamedSchema (Just "CommitOrBranch") $ mempty
       & type_ ?~ SwaggerString
 
-instance ToSchema Cicero.Run.RunLog where
-  --TODO: find a way to embed aeson Value to the definition
-  declareNamedSchema _  = pure $ NamedSchema (Just "RunLog") mempty
-
 instance ToSchema IncompleteRunStatus where
   declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
 
 --NOTE: we keep Enum derivation explicitly to nail down the right action order
 -- and also make it future-proof for any data constructors rearrangements
-instance Enum KnownActionType where
+instance Enum CertificationStage where
   fromEnum Generate = 0
   fromEnum Build    = 1
   fromEnum Certify  = 2
@@ -870,9 +864,9 @@ instance Enum KnownActionType where
   toEnum 0 = Generate
   toEnum 1 = Build
   toEnum 2 = Certify
-  toEnum _ = errorWithoutStackTrace "Plutus.Certification.API.KnownActionType.toEnum: bad argument"
+  toEnum _ = errorWithoutStackTrace "Plutus.Certification.API.CertificationStage.toEnum: bad argument"
 
-instance Ord KnownActionType where
+instance Ord CertificationStage where
   a <= b = fromEnum a <= fromEnum b
 
 data ProfileBody = ProfileBody

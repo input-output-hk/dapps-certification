@@ -7,19 +7,19 @@ packages:
     dapps-certification-signature-verification
 
 package plutus-certification
-  ghc-options: -Wall
+  ghc-options: -Wall -Wunused-packages
 
 package dapps-certification-interface
-  ghc-options: -Wall
+  ghc-options: -Wall -Wunused-packages
 
 package dapps-certification-helpers
-  ghc-options: -Wall
+  ghc-options: -Wall -Wunused-packages
 
 package dapps-certification-persistence
-  ghc-options: -Wall
+  ghc-options: -Wall -Wunused-packages
 
 package dapps-certification-signature-verification
-  ghc-options: -Wall
+  ghc-options: -Wall -Wunused-packages
 
 source-repository-package
   type: git
@@ -37,5 +37,3 @@ source-repository-package
 write-ghc-environment-files: never
 tests: true
 test-show-details: streaming
-
-allow-older: cicero-api:base

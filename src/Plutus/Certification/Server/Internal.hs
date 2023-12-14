@@ -44,7 +44,7 @@ data ServerCaps m r = ServerCaps
   , -- | Delete all runs associated with a job
     abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> m ())
   , -- | Get the logs for all runs associated with a job
-    getLogs :: !(EventBackendModifiers r r -> Maybe KnownActionType -> RunIDV1 -> ConduitT () RunLog m ())
+    getLogs :: !(EventBackendModifiers r r -> Maybe CertificationStage -> RunIDV1 -> ConduitT () RunLog m ())
   }
 
 data CreateRunField
