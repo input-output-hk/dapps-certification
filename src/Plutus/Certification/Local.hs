@@ -70,7 +70,12 @@ addLocalLog actionType val js@JobState{..} = js { logs = newLogs}
 
 localServerCaps :: EventBackend IO r LocalSelector
                 -> IO (ServerCaps IO r)
-localServerCaps backend = do
+localServerCaps = flip localServerCaps' runCertifyInProcess
+
+localServerCaps' :: EventBackend IO r LocalSelector
+                 -> RunCertify IO
+                 -> IO (ServerCaps IO r)
+localServerCaps' backend runCertify = do
   jobs <- newIORef Map.empty
   cancellations <- newIORef Map.empty
   let
@@ -113,16 +118,19 @@ localServerCaps backend = do
               (setStatus . const $ Incomplete (Building Failed))
             setStatus $ \p -> Incomplete (Certifying (CertifyingStatus Running Nothing p))
             let go = await >>= \case
-                  Just (Success res) -> liftIO $ setStatus . const $ Finished res
-                  Just (Status pr) -> do
+                  Just (Right (Success res)) -> liftIO $ setStatus . const $ Finished res
+                  Just (Right (Status pr)) -> do
                     liftIO . setStatus $ \pl -> Incomplete (Certifying $ CertifyingStatus Running (Just pr) pl)
                     go
-                  Just (Plan p) -> do
+                  Just (Right (Plan p)) -> do
                     liftIO $ changeJobState (setPlan p)
+                    go
+                  Just (Left log) -> do
+                    liftIO $ addLogEntry Certify log
                     go
                   Nothing -> pure ()
             onException
-              (runConduitRes $ runCertify (addLogEntry Certify) certifyArgs (certifyOut </> "bin" </> "certify") .| go)
+              (runConduitRes $ runCertify certifyArgs (certifyOut </> "bin" </> "certify") .| go)
               (setStatus $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
 
       async ( finally runJob (freeCancellation jobId)) >>= addCancellation jobId

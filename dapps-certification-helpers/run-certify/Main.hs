@@ -8,6 +8,7 @@ import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import System.FilePath
 import Data.Aeson
+import Data.Text (Text)
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import Conduit
 import Control.Monad.Trans.Resource
@@ -31,16 +32,16 @@ argsInfo = info (argsParser <**> helper)
  <> header "run-certify — Run the certification binary"
   )
 
-printMessage :: ConduitT Message Void ResIO ()
+printMessage :: ConduitT (Either Text Message) Void ResIO ()
 printMessage = await >>= \case
   Nothing -> pure ()
-  Just m -> do
+  Just (Left _) -> printMessage
+  Just (Right m) -> do
     liftIO . BSL8.putStrLn $ encode m
     printMessage
 
 main :: IO ()
 main = do
   Args {..} <- execParser argsInfo
-  let noLogExtraction = const $ pure ()
-      certifyPath = buildOut </> "bin" </> "certify"
-  runConduitRes $ runCertify noLogExtraction certifyArgs certifyPath .| printMessage
+  let certifyPath = buildOut </> "bin" </> "certify"
+  runConduitRes $ runCertifyInProcess certifyArgs certifyPath .| printMessage

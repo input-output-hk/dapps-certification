@@ -121,18 +121,21 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
                        , "--print-build-logs"
                        ] ++ accessTokenToArg ghAccessTokenM
 
-runCertify :: (Text -> IO ()) -> CertifyArgs -> FilePath -> ConduitT () Message ResIO ()
-runCertify addLogEntry certifyArgs certify = do
+-- The 'Text' is a log line
+type RunCertify m = CertifyArgs -> FilePath -> ConduitT () (Either Text Message) (ResourceT m) ()
+
+runCertifyInProcess :: RunCertify IO
+runCertifyInProcess certifyArgs certify = do
     (k, p) <- allocateAcquire $ acquireProcessWait cfg
     let toMessage = await >>= \case
           Just (Right (_, v)) -> case fromJSON v of
             Aeson.Error s -> liftIO $ fail s
             Aeson.Success m -> do
-              liftIO $ addLogEntry $ LT.toStrict $ encodeToLazyText v
-              yield m
+              yield $ Left $ LT.toStrict $ encodeToLazyText v
+              yield $ Right m
               toMessage
           Just (Left e) -> do
-            liftIO $ addLogEntry $ T.pack $ show e
+            yield $ Left $ T.pack $ show e
             liftIO $ throw e
           Nothing -> release k
     sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
