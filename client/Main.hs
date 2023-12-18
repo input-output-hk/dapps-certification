@@ -281,7 +281,7 @@ data CreateCertificationArgs= CreateCertificationArgs !RunIDV1 !Auth !Certificat
 data GetLogsArgs = GetLogsArgs
   { runId :: !RunIDV1
   , after :: !(Maybe ZonedTime)
-  , actionType :: !(Maybe KnownActionType)
+  , actionType :: !(Maybe CertificationStage)
   }
 
 runCommandInfo :: ParserInfo RunCommand

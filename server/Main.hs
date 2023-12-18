@@ -36,16 +36,12 @@ import Observe.Event.Crash
 import Observe.Event.Render.JSON
 import Observe.Event.Render.IO.JSON
 import Observe.Event.Wai hiding (OnException)
-import Observe.Event.Servant.Client
 import System.IO
 import Data.IORef
 import Control.Concurrent.MVar
 import Control.Concurrent.Async
 import Network.Wai
 import Plutus.Certification.API
-import Plutus.Certification.Cache hiding (lookup)
-import Plutus.Certification.Cicero
-import Plutus.Certification.Client
 import Plutus.Certification.Server as Server
 import Plutus.Certification.Local
 import Data.Text (Text)
@@ -76,7 +72,6 @@ oneAda = 1000000
 
 data Backend
   = Local
-  | Cicero !BaseUrl
   deriving (Eq, Show)
 
 data Args = Args
@@ -111,16 +106,6 @@ baseUrlReader = do
       Nothing -> readerError $ "exception parsing '" ++ urlStr ++ "' as a URL: " ++ displayException e
     Right b -> pure b
 
-ciceroParser :: Parser Backend
-ciceroParser = Cicero
-  <$> option baseUrlReader
-      ( long "cicero-url"
-     <> metavar "CICERO_URL"
-     <> help "URL of the cicero server"
-     <> showDefaultWith showBaseUrl
-     <> Opts.value ( BaseUrl Http "localhost" 8080 "")
-      )
-
 localParser :: Parser Backend
 localParser = flag' Local
   ( long "local"
@@ -144,7 +129,7 @@ argsParser =  Args
      <> showDefault
      <> Opts.value "*"
       )
-  <*> (localParser <|> ciceroParser)
+  <*> localParser
   <*> walletParser
   <*> (plainAddressAuthParser <|> jwtArgsParser)
   <*> option auto
@@ -314,10 +299,8 @@ data RootEventSelector f where
   EnsureAdminExists :: RootEventSelector EnsureAdminExistsField
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
-  InjectRunRequest :: forall f . !(RunRequest f) -> RootEventSelector f
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
-  InjectRunClient :: forall f . !(RunClientSelector f) -> RootEventSelector f
-  InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
+  InjectIOServer :: forall f . !(IOServerSelector f) -> RootEventSelector f
   InjectDbMigration :: forall f . !(DB.MigrationSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
   MarkRunningTestsAsAborted :: RootEventSelector Int
@@ -333,7 +316,6 @@ renderRoot Initializing =
       ArgsField args -> ("args", object [ "port" .= args.port
                                         , "host" .= show args.host
                                         , "backend" .= case args.backend of
-                                            Cicero u -> object [ "cicero-url" .= u ]
                                             Local -> String "local"
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
@@ -345,10 +327,8 @@ renderRoot OnException =
 renderRoot (InjectServerSel serverSel) =
   renderServerEventSelector serverSel
 renderRoot (InjectCrashing s) = renderCrashing s
-renderRoot (InjectRunRequest s) = runRequestJSON s
 renderRoot (InjectServeRequest s) = renderServeRequest s
-renderRoot (InjectRunClient s) = renderRunClientSelector s
-renderRoot (InjectLocal s) = renderLocalSelector s
+renderRoot (InjectIOServer s) = renderIOServerSelector s
 renderRoot (InjectDbMigration s) = DB.renderMigrationSelector s
 renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 renderRoot OnAuthMode =
@@ -471,21 +451,7 @@ main = do
           closeSocket
     withAsync waitForCrash \_ -> withScheduleCrash (narrowEventBackend InjectCrashing eb) doCrash \scheduleCrash -> do
       caps <- case args.backend of
-        Cicero ciceroUrl -> do
-          actionCache <- newCacheMapIO
-
-          clientCaps <- clientCapsIO
-            ciceroUrl
-            (hoistScheduleCrash liftIO scheduleCrash)
-            ( hoistEventBackend liftIO
-            . narrowEventBackend InjectRunRequest
-            $ eb
-            )
-          pure . ciceroServerCaps ( hoistEventBackend liftIO
-                                  . narrowEventBackend InjectRunClient
-                                  $ eb
-                                  ) $ CiceroCaps {..}
-        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal eb )
+        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectIOServer eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host

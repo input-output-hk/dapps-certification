@@ -19,7 +19,6 @@ library
       directory,
       network-uri,
       process,
-      unliftio-core,
       containers,
       filepath,
       async,
@@ -71,7 +70,8 @@ executable run-certify
       conduit,
       aeson,
       bytestring,
-      resourcet
+      resourcet,
+      text
     main-is: Main.hs
     hs-source-dirs: run-certify
     default-language: Haskell2010

@@ -39,12 +39,12 @@ import Control.Monad.RWS (MonadReader)
 data ServerCaps m r = ServerCaps
   { -- | Submit a new certification job
     submitJob :: !(EventBackendModifiers r r -> CertifyArgs -> Maybe GitHubAccessToken -> FlakeRefV1 -> m RunIDV1)
-  , -- | Get the status of all runs associated with a job
-    getRuns :: !(EventBackendModifiers r r -> RunIDV1 -> ConduitT () RunStatusV1 m ())
+  , -- | Get the status of a job
+    getStatus :: !(EventBackendModifiers r r -> RunIDV1 -> m RunStatusV1)
   , -- | Delete all runs associated with a job
     abortRuns :: !(EventBackendModifiers r r -> RunIDV1 -> m ())
   , -- | Get the logs for all runs associated with a job
-    getLogs :: !(EventBackendModifiers r r -> Maybe KnownActionType -> RunIDV1 -> ConduitT () RunLog m ())
+    getLogs :: !(EventBackendModifiers r r -> Maybe CertificationStage -> RunIDV1 -> ConduitT () RunLog m ())
   }
 
 data CreateRunField
@@ -261,38 +261,6 @@ dbSync uuid' status = do
 
 getNow :: MonadIO m => m UTCTime
 getNow = liftIO getCurrentTime
-
-consumeRuns :: Monad m => ConduitT RunStatusV1 o (StateT IncompleteRunStatus m) RunStatusV1
-consumeRuns = await >>= \case
-  Nothing -> Incomplete <$> get
-  Just (Incomplete s) -> do
-    modify \s' -> case (s, s') of
-      (_, Queued) -> s
-      (Queued, _) -> s'
-
-      (Preparing st, Preparing st') -> case compare st st' of
-        LT -> s'
-        _ -> s
-      (_, Preparing _) -> s
-      (Preparing _, _) -> s'
-
-      (Building st, Building st') -> case compare st st' of
-        LT -> s'
-        _ -> s
-      (_, Building _) -> s
-      (Building _, _) -> s'
-
-      (Certifying (CertifyingStatus st mp _), Certifying (CertifyingStatus st' mp' _)) -> case compare st st' of
-        LT -> s'
-        GT -> s
-        EQ -> case (mp, mp') of
-          (_, Nothing) -> s
-          (Nothing, _) -> s'
-          (Just p, Just p') -> case compare p.progressIndex p'.progressIndex of
-            LT -> s'
-            _ -> s
-    consumeRuns
-  Just s -> pure s
 
 -- | this will create a new profile if there isn't any with the given address
 ensureProfileFromBs :: forall m env.

@@ -8,6 +8,7 @@ import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import System.FilePath
 import Data.Aeson
+import Data.Text (Text)
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import Conduit
 import Control.Monad.Trans.Resource
@@ -31,25 +32,16 @@ argsInfo = info (argsParser <**> helper)
  <> header "run-certify — Run the certification binary"
   )
 
-data PrefixJSON a = PrefixJSON [ Key ] a
-
-instance (ToJSON a) => ToJSON (PrefixJSON a) where
-  toJSON (PrefixJSON [] a) = toJSON a
-  toJSON (PrefixJSON (hd : tl) a) = object [ hd .= PrefixJSON tl a ]
-  toEncoding (PrefixJSON [] a) = toEncoding a
-  toEncoding (PrefixJSON (hd : tl) a) = pairs ( hd .= PrefixJSON tl a )
-
-printMessage :: ConduitT Message Void ResIO ()
+printMessage :: ConduitT (Either Text Message) Void ResIO ()
 printMessage = await >>= \case
   Nothing -> pure ()
-  Just m -> do
-    liftIO . BSL8.putStrLn . encode $ PrefixJSON [ "plutus-certification/run-certify" ] m
+  Just (Left _) -> printMessage
+  Just (Right m) -> do
+    liftIO . BSL8.putStrLn $ encode m
     printMessage
 
 main :: IO ()
 main = do
-  ss@Args {..} <- execParser argsInfo
-  putStrLn $ "Running certify with args: " <> show ss
-  let noLogExtraction = const $ pure ()
-      certifyPath = buildOut </> "bin" </> "certify"
-  runConduitRes $ runCertify noLogExtraction certifyArgs certifyPath .| printMessage
+  Args {..} <- execParser argsInfo
+  let certifyPath = buildOut </> "bin" </> "certify"
+  runConduitRes $ runCertifyInProcess certifyArgs certifyPath .| printMessage
