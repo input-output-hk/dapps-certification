@@ -300,7 +300,7 @@ data RootEventSelector f where
   InjectServerSel :: forall f . !(ServerEventSelector f) -> RootEventSelector f
   InjectCrashing :: forall f . !(Crashing f) -> RootEventSelector f
   InjectServeRequest :: forall f . !(ServeRequest f) -> RootEventSelector f
-  InjectLocal :: forall f . !(LocalSelector f) -> RootEventSelector f
+  InjectIOServer :: forall f . !(IOServerSelector f) -> RootEventSelector f
   InjectDbMigration :: forall f . !(DB.MigrationSelector f) -> RootEventSelector f
   InjectSynchronizer :: forall f . !(SynchronizerSelector f) -> RootEventSelector f
   MarkRunningTestsAsAborted :: RootEventSelector Int
@@ -328,7 +328,7 @@ renderRoot (InjectServerSel serverSel) =
   renderServerEventSelector serverSel
 renderRoot (InjectCrashing s) = renderCrashing s
 renderRoot (InjectServeRequest s) = renderServeRequest s
-renderRoot (InjectLocal s) = renderLocalSelector s
+renderRoot (InjectIOServer s) = renderIOServerSelector s
 renderRoot (InjectDbMigration s) = DB.renderMigrationSelector s
 renderRoot (InjectSynchronizer s) = renderSynchronizerSelector s
 renderRoot OnAuthMode =
@@ -451,7 +451,7 @@ main = do
           closeSocket
     withAsync waitForCrash \_ -> withScheduleCrash (narrowEventBackend InjectCrashing eb) doCrash \scheduleCrash -> do
       caps <- case args.backend of
-        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectLocal eb )
+        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectIOServer eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
