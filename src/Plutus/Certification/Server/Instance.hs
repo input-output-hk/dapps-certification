@@ -49,10 +49,10 @@ import IOHK.Certification.Persistence (FeatureType(..))
 import Plutus.Certification.ProfileWallet as PW
 import Data.Functor
 import Plutus.Certification.Metadata
-import Control.Monad.Reader (ReaderT(runReaderT))
+import Control.Monad.Reader (ReaderT(..))
 import Control.Concurrent (MVar, takeMVar, putMVar)
 import Data.Set (fromList)
-
+import Plutus.Certification.Persistence.Instrumentation as WDB hiding (CreateRun)
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
@@ -141,7 +141,7 @@ server ServerArgs{..} = NamedAPI
       -- get the run details from the db
       withDb ( DB.getRun uuid )
         >>= maybeToServerError err404 "Run not found"
-  , abortRun = \rid@RunID{..} deleteRun (profileId,_) -> withEvent eb AbortRun \ev -> do
+  , abortRun = \rid@RunID{..} deleteRun' (profileId,_) -> withEvent eb AbortRun \ev -> do
       addField ev rid
 
       -- ensure the user has necessary rights to start a run
@@ -157,16 +157,16 @@ server ServerArgs{..} = NamedAPI
         abortRuns (setAncestor $ reference ev) rid
         -- if abortion succeeded mark it in the db
         now <- getNow
-        void $ withDb $ DB.updateFinishedRun uuid False now
+        void $ runDbReader (WDB.updateFinishedRun eb' uuid False now)
 
       -- depending on the deleteRun flag either ...
-      if deleteRun == Just True
+      if deleteRun' == Just True
          -- delete the run from the db
-         then void (withDb $ DB.deleteRun uuid)
+         then void (runDbReader $ WDB.deleteRun eb' uuid)
          -- or just mark it as aborted
          else do
            now <- getNow
-           void $ withDb $ DB.markAsAborted uuid now
+           void $ runDbReader $ WDB.markAsAborted eb' uuid now
       pure NoContent
 
   , getCurrentProfileBalance = profileBalance
@@ -299,7 +299,7 @@ server ServerArgs{..} = NamedAPI
     addField ev $ SubscribeFieldTierId tierId
     now <- getNow
     adaUsdPrice' <- getAdaUsdPrice'
-    ret <- withDb (DB.createSubscription now profileId tierId adaUsdPrice')
+    ret <- runDbReader (WDB.createSubscription eb' now profileId tierId adaUsdPrice')
     forM_ ret $ \dto -> addField ev $ SubscribeFieldSubscriptionId (dto.subscriptionDtoId)
     maybeToServerError err404 "Tier not found" ret
 
@@ -359,7 +359,7 @@ server ServerArgs{..} = NamedAPI
       let filteredRoles = List.filter (/= DB.NoRole) allRoles
 
       verifyRole ownerId DB.Admin
-      void $ withDb $ DB.updateUserRoles profileId (Data.Set.fromList filteredRoles)
+      void $ runDbReader (WDB.updateUserRoles eb' profileId (Data.Set.fromList filteredRoles))
       pure NoContent
 
   , getCurrentProfileRoles = \(pid,_) -> getProfileRoles pid
@@ -487,14 +487,14 @@ server ServerArgs{..} = NamedAPI
             dappM = fmap (\(DB.DApp{dappId=_,..}) -> DB.DApp{..}) dapp
             -- replace profileId and ownerAddress from the serialization
             DB.Profile{ownerAddress=_,profileId=_,..} = profile
-        withDb $ do
-          --NOTE: ownerAddress is get from the JWT token
-          --not from the request body
-          _ <- DB.upsertProfile (DB.Profile{..}) dappM
+        --NOTE: ownerAddress is get from the JWT token
+        --not from the request body
+        _ <- runDbReader $ WDB.upsertProfile eb' (DB.Profile{..}) dappM
 
-          -- it's safe to call partial function fromJust
-          fromJust <$> DB.getProfile profileId
+        -- it's safe to call partial function fromJust
+        fromJust <$> withDb (DB.getProfile profileId)
 
+    eb' = hoistEventBackend (ReaderT . const) (narrowEventBackend InjectPersistenceSel eb)
     profileBalance (profileId,ownerAddress) =
       withEvent eb GetProfileBalance \ev -> do
         addField ev profileId
@@ -558,7 +558,7 @@ server ServerArgs{..} = NamedAPI
       --
       -- mark the run as ready for certification
       now <- getNow
-      _ <- withDb (DB.markAsReadyForCertification uuid ipfsCid now)
+      _ <- runDbReader (WDB.markAsReadyForCertification eb' uuid ipfsCid now)
 
       addField ev (CreateL1CertificationReportIpfsCid ipfsCid)
       pure ipfsCid
@@ -725,8 +725,8 @@ server ServerArgs{..} = NamedAPI
     createDbRun FlakeRef{..} profileId res commitDate commitHash withCustomOptions = do
       now <- getNow
       let uriTxt = pack $ uriToString id uri ""
-      withDb $ DB.createRun (uuid res) now uriTxt commitDate
+      runDbReader $ WDB.createRun eb' (uuid res) now uriTxt commitDate
         commitHash (serverWalletArgs.walletCertificationPrice) withCustomOptions profileId
+
     runDbReader :: ReaderT WithDBWrapper m a -> m a
     runDbReader dbWork = runReaderT dbWork (WithDBWrapper withDb)
-
