@@ -119,6 +119,9 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
                        , "--no-link"
                        , "--json"
                        , "--print-build-logs"
+                       , -- Work around issues with nixbuild.net as a remote store https://docs.nixbuild.net/remote-builds/#using-remote-stores
+                         "--eval-store"
+                       , "auto"
                        ] ++ accessTokenToArg ghAccessTokenM
 
 -- The 'Text' is a log line
@@ -315,6 +318,9 @@ lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> 
                        , "--no-update-lock-file"
                        , "--json"
                        , uriToString id flakeref ""
+                       , -- Work around issues with nixbuild.net as a remote store https://docs.nixbuild.net/remote-builds/#using-remote-stores
+                         "--eval-store"
+                       , "auto"
                        ] ++ accessTokenToArg ghAccessTokenM
 
 accessTokenToArg :: Maybe GitHubAccessToken -> [[Char]]
