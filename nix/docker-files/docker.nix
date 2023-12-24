@@ -105,12 +105,22 @@
         fi
       '').outPath;
 
-    nixImage = pkgs.dockerTools.pullImage {
+    # We'd like to use pkgs, not inputs.nixpkgs.legacyPackages, but:
+    #
+    # 1. iogx currently uses a pinned "stable" version of nixpkgs for dockerTools
+    # 2. We need nixos/nix:2.20.0pre20231224_e23983d or later for https://github.com/NixOS/nix/pull/9661 for proper nixbuild.net support
+    # 3. The nixos/nix:2.20.0pre20231224_e23983d image contains a Nix store with the same libunistring as iogx's "stable" nixpkgs
+    #
+    # This results in the pullImage derivation detecting a "runtime reference" to libunistring, which is not allowed for
+    # fixed output derivations.
+    #
+    # If we update iogx, or the Nix docker image, we should try pkgs again
+    nixImage = inputs.nixpkgs.legacyPackages.dockerTools.pullImage {
       imageName = "nixos/nix";
-      imageDigest = "sha256:31b808456afccc2a419507ea112e152cf27e9bd2527517b0b6ca8639cc423501";
-      sha256 = "0bbw3r0civlcm3inj23fq8f25aw63rnaay09qjbrvfjd7pcfbyqn";
+      imageDigest = "sha256:b1fb2af29645d15cb16e57cf4b3c307a47cc9b220cb4c9fed98d19a4a34433ce";
+      sha256 = "1m0v1c4154550bp7dd6w6cz7bh4r288pjjk0w1xdx8nqvkmz8xb3";
       finalImageName = "nixos/nix";
-      finalImageTag = "2.15.0";
+      finalImageTag = "2.20.0pre20231224_e23983d";
     };
     inherit (inputs.self.packages) generate-flake build-flake run-certify;
     image = pkgs.dockerTools.buildImage (imgAttributes // {

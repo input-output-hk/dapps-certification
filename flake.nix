@@ -3,6 +3,7 @@
 
   inputs = {
 
+    # See nixImage comment in docker.nix when updating
     iogx = {
       url = "github:input-output-hk/iogx";
       inputs.hackage.follows = "hackage";
