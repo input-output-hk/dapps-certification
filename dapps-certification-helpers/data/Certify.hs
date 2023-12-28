@@ -149,7 +149,6 @@ argsInfo = info (I.parseCertifyArgs <**> helper)
 main :: HasCallStack => IO ()
 main = do
   certifyArgs <- execParser argsInfo
-  putStrLn $ "Running certify with args: " <> show certifyArgs
   out <- dup stdOutput
   _ <- dupTo stdError stdOutput
 
