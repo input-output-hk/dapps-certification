@@ -35,8 +35,7 @@ argsInfo = info (argsParser <**> helper)
 printMessage :: ConduitT (Either Text Message) Void ResIO ()
 printMessage = await >>= \case
   Nothing -> pure ()
-  Just (Left _) -> printMessage
-  Just (Right m) -> do
+  Just m -> do
     liftIO . BSL8.putStrLn $ encode m
     printMessage
 
