@@ -149,6 +149,9 @@ spec:
             volumes:
               - name: ipc
                 path: /ipc
+        - type: service-account
+          properties:
+            name: dapps-certification
       type: webservice
   policies:
     - name: local-dapps-certification
@@ -166,3 +169,36 @@ spec:
         properties:
           policies:
             - local-dapps-certification
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "create", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dapps-certification
+subjects:
+  - kind: ServiceAccount
+    name: dapps-certification
+    namespace: dapps-certification-staging
