@@ -129,7 +129,7 @@
       #contents = [ pkgs.hello ];
       copyToRoot = pkgs.buildEnv {
         name = "image-root";
-        paths = [ pkgs.curl pkgs.zsh pkgs.coreutils pkgs.nmon pkgs.cacert generate-flake build-flake run-certify ];
+        paths = [ pkgs.curl pkgs.zsh pkgs.coreutils pkgs.nmon pkgs.cacert pkgs.kubectl generate-flake build-flake run-certify ];
         pathsToLink = [ "/bin" ];
       };
        runAsRoot = ''
