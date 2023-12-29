@@ -7,6 +7,7 @@ import Options.Applicative
 import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import System.FilePath
+import System.IO
 import Data.Aeson
 import Data.Text (Text)
 import qualified Data.ByteString.Lazy.Char8 as BSL8
@@ -42,5 +43,6 @@ printMessage = await >>= \case
 main :: IO ()
 main = do
   Args {..} <- execParser argsInfo
+  hSetBuffering stdout LineBuffering
   let certifyPath = buildOut </> "bin" </> "certify"
   runConduitRes $ runCertifyInProcess certifyArgs certifyPath .| printMessage
