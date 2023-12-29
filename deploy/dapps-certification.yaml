@@ -41,7 +41,12 @@ spec:
                 name: github-secrets
           - name: DB_PATH
             value: "/db/certification.sqlite"
-        image: ghcr.io/demoiog/plutus-certification:28
+          - name: token
+            valueFrom:
+              secretKeyRef:
+                key: token
+                name: nbn
+        image: ghcr.io/input-output-hk/plutus-certification:PLT-7784-nixbuild.net
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
           - iohk-ghcr-creds
@@ -56,6 +61,33 @@ spec:
             - name: ipc
               mountPath: /ipc
       traits:
+        # TODO: Abstract this into a custom trait type, along with the NBN token secret above
+        - type: storage
+          properties:
+            configMap:
+              - name: ssh
+                mountPath: /etc/ssh
+                data:
+                  ssh_config: |
+                    Host eu.nixbuild.net
+                      PreferredAuthentications none
+                      User authtoken
+                      SendEnv token
+
+                    Host *
+                    AddressFamily any
+                    GlobalKnownHostsFile /etc/ssh/ssh_known_hosts
+                  ssh_known_hosts: |
+                    eu.nixbuild.net ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIQCZc54poJ8vqawd8TraNryQeJnvH1eLpIDgbiqymM
+              - name: nix
+                mountPath: /etc/nix
+                data:
+                  nix.conf: |
+                    store = ssh-ng://eu.nixbuild.net
+                    experimental-features = nix-command flakes
+                    require-sigs = true
+                    substituters = https://cache.nixos.org/ https://cache.iog.io ssh://eu.nixbuild.net
+                    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= nixbuild.net/smart.contracts@iohk.io-1:s2PhQXWwsZo1y5IxFcx2D/i2yfvgtEnRBOZavlA8Bog=
         - type: storage
           properties:
             pvc:
