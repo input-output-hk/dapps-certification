@@ -29,6 +29,7 @@ import           Data.List.NonEmpty
 import           Data.Map                          as Map
 import           Data.Text                         as T
 import           Data.Text.Encoding
+import           Data.Text.Encoding.Error
 import           Data.Text.IO                      hiding (putStrLn)
 import           Data.Time.Clock.POSIX
 import           Data.Void
@@ -48,6 +49,7 @@ import           Text.Regex
 import qualified Data.ByteString.Lazy              as LBS
 import qualified Data.ByteString.Lazy.Internal     as LBS
 import qualified Data.Text.Lazy                    as LT
+import qualified Data.Text.Lazy.Encoding           as LT
 import qualified Data.Vector                       as V
 
 
@@ -107,11 +109,11 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
                    $ subEventBackend ev
       readProcessLogStderr_ backend' cmd addLogEntry
     case eitherDecodeWith jsonEOF decodeBuild buildJson of
-      Left (path, err) -> throw $ DecodeBuild path err
+      Left (path, err) -> throwIO $ DecodeBuild path err
       Right (BuildResult {..} :| []) -> case Map.lookup "out" outputs of
         Just p  -> pure p
-        Nothing -> throw $ MissingOut drvPath
-      Right (_ :| tl) -> throw . ExtraBuilds $ L.length tl
+        Nothing -> throwIO $ MissingOut drvPath
+      Right (_ :| tl) -> throwIO . ExtraBuilds $ L.length tl
   where
     cmd = proc "nix" $ [ "build"
                        , "--refresh"
@@ -129,22 +131,33 @@ type RunCertify m = CertifyArgs -> FilePath -> ConduitT () (Either Text Message)
 
 runCertifyInProcess :: RunCertify IO
 runCertifyInProcess certifyArgs certify = do
-    (k, p) <- allocateAcquire $ acquireProcessWait cfg
-    let toMessage = await >>= \case
-          Just (Right (_, v)) -> case fromJSON v of
-            Aeson.Error s -> liftIO $ fail s
-            Aeson.Success m -> do
-              yield $ Left $ LT.toStrict $ encodeToLazyText v
-              yield $ Right m
-              toMessage
-          Just (Left e) -> do
-            yield $ Left $ T.pack $ show e
-            liftIO $ throw e
-          Nothing -> release k
-    sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
-  where
-    cfg = setStdout createPipe
-        $ proc certify (certifyArgsToCommandList certifyArgs)
+  let
+    realiseCertifyCmd = setStdin closed
+                      $ setStdout nullStream
+                      $ proc "nix-store" [ "--store", "auto", "--realise", certify ]
+    runCertifyCmd = setStdout createPipe
+                  $ proc certify (certifyArgsToCommandList certifyArgs)
+
+  (res, err) <- readProcessStderr realiseCertifyCmd
+  case res of
+    ExitSuccess -> pure ()
+    ExitFailure _ -> do
+      yield . Left . LT.toStrict . LT.decodeUtf8With lenientDecode $ err
+      liftIO $ throwIO res
+
+  (k, p) <- allocateAcquire $ acquireProcessWait runCertifyCmd
+  let toMessage = await >>= \case
+        Just (Right (_, v)) -> case fromJSON v of
+          Aeson.Error s -> liftIO $ fail s
+          Aeson.Success m -> do
+            yield $ Left $ LT.toStrict $ encodeToLazyText v
+            yield $ Right m
+            toMessage
+        Just (Left e) -> do
+          yield $ Left $ T.pack $ show e
+          liftIO $ throwIO e
+        Nothing -> release k
+  sourceHandle (getStdout p) .| conduitArrayParserNoStartEither skipSpace .| toMessage
 
 acquireProcessWait :: ProcessConfig i o e -> Acquire (Process i o e)
 acquireProcessWait cfg = mkAcquireType (startProcess cfg) cleanup
@@ -307,7 +320,7 @@ lockRef backend ghAccessTokenM flakeref = withEvent backend LockingFlake \ev -> 
                    $ subEventBackend metaEv
       readProcessLogStderr_ backend' cmd (const $ pure ()) -- TODO should we add some logs extraction here?
     case eitherDecodeWith jsonEOF decodeFlakeLock meta of
-      Left (path, err) -> throw $ DecodeMeta path err
+      Left (path, err) -> throwIO $ DecodeMeta path err
       Right lock -> do
         addField ev $ LockingLock lock
         pure lock
