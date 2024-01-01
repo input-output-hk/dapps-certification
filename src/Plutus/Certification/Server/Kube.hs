@@ -1,12 +1,16 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Plutus.Certification.Server.Kube (kubeServerCaps) where
 
+import Conduit
 import Control.Concurrent.Async
-import Data.Acquire
-import Data.ByteString.Lazy
+import Control.Concurrent.MVar
+import Data.ByteString
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Conduit.Binary as DCB
 import Data.Functor
 import Data.Text
 import qualified Data.Text.IO as T
@@ -15,12 +19,13 @@ import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import Observe.Event
 import Paths_plutus_certification
-import Plutus.Certification.API.Routes
+import Plutus.Certification.API.Routes (RunIDV1(..))
 import Plutus.Certification.Server
 import System.FilePath
 import System.IO
 import System.Process.Typed
 import Text.Mustache
+import Text.Regex
 import UnliftIO.Exception
 
 data TemplateParams = TemplateParams
@@ -55,6 +60,76 @@ acquireKubeResource cfg = mkAcquire (KubeResourceHandle . BSL.unpack . BSL.dropE
         hClose h
       return ((), hClose h)
 
+data CertifyJobState
+  = Running
+  | Succeeded
+  | Failed
+
+data CertifyJobHandle = CertifyJobHandle
+  { k8sHandle :: !KubeResourceHandle
+  , jobState :: !(MVar CertifyJobState)
+  }
+
+-- | kubectl output format to get the job status
+statusFormat :: String
+statusFormat = "jsonpath={.status.ready}{\" \"}{.status.succeeded}{\" \"}{.status.failed}{\"\\n\"}"
+
+-- | Regex to match the kubectl job status output
+statusRegex :: Regex
+statusRegex = mkRegex "([[:digit:]]?) ([[:digit:]]?) ([[:digit:]]?)"
+
+-- | Exception for when @kubectl get@ outputs an unexpectedly formatted line
+newtype BadStatusLine = BadStatusLine
+  { line :: ByteString
+  } deriving Show
+instance Exception BadStatusLine
+
+acquireCertifyJob :: Text -> Acquire CertifyJobHandle
+acquireCertifyJob cfg = do
+  k8sHandle@(KubeResourceHandle {..}) <- acquireKubeResource cfg
+  let
+    -- Watch the kube job status in a loop
+    statusCmd = setStdout createPipe
+              $ proc "kubectl"
+                     [ "get"
+                     , resourceName
+                     , "-o"
+                     , statusFormat
+                     , "-w"
+                     ]
+  jobState <- liftIO newEmptyMVar
+  statusProc <- acquireProcessWait statusCmd
+  let
+    readStatus = await >>= \case
+      Nothing -> pure ()
+      Just line -> do
+        let
+          lineChars = BS.unpack line
+          lineParse = matchRegex statusRegex lineChars
+        case lineParse of
+          Just ("0" : "" : "" : []) -> readStatus
+          Just ("1" : "" : "" : []) -> do
+            void . liftIO $ tryPutMVar jobState Running
+            readStatus
+          Just ("0" : "1" : "" : []) -> do
+            void . liftIO $ tryTakeMVar jobState
+            liftIO $ putMVar jobState Succeeded
+            stopProcess statusProc
+          Just ("0" : "" : "1" : []) -> do
+            void . liftIO $ tryTakeMVar jobState
+            liftIO $ putMVar jobState Failed
+            stopProcess statusProc
+          _ -> do
+            stopProcess statusProc
+            throwIO $ BadStatusLine line
+  -- Consume the status line in the background, updating the job state mvar as needed
+  void $ mkAcquire
+    (async $ onException
+     (runConduitRes $ sourceHandle (getStdout statusProc) .| DCB.lines .| readStatus)
+     (void (tryTakeMVar jobState) >> putMVar jobState Failed))
+    cancel
+  pure $ CertifyJobHandle {..}
+
 runCertifyKube :: Text -- ^ The Docker image with run-certify
                -> IO (RunCertify RunIDV1 IO)
 runCertifyKube runCertifyImage = do
@@ -65,7 +140,7 @@ runCertifyKube runCertifyImage = do
     rck :: Template -> RunCertify RunIDV1 IO
     rck template runId certifyArgs certifyPath = do
       let jobConfig = substitute template (TemplateParams {..})
-      (_, jobHandle) <- allocateAcquire $ acquireKubeResource jobConfig
+      (_, jobHandle) <- allocateAcquire $ acquireCertifyJob jobConfig
       $(todo "stream job logs")
 
 -- | 'ServerCaps' that run the certification job in a kubernetes batch job
