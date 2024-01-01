@@ -110,7 +110,6 @@ ioServerCaps backend runCertify = do
           time <- utcToZonedTime utc <$> getCurrentTime
           changeJobState (addLog actionType (time,text))
 
-      -- Purposefully leak
       let runJob = withSubEvent ev RunningJob \rEv -> withSystemTempDirectory "generate-flake" \dir -> do
             addField rEv $ TempDir dir
             setStatus . const $ Incomplete (Preparing Running)

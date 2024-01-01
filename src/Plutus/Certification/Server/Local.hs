@@ -1,4 +1,4 @@
-module Plutus.Certification.Local where
+module Plutus.Certification.Server.Local where
 
 import IOHK.Certification.Actions
 import Observe.Event

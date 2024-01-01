@@ -64,7 +64,7 @@ library
     Plutus.Certification.Cache
     Plutus.Certification.Client
     Plutus.Certification.Server
-    Plutus.Certification.Local
+    Plutus.Certification.Server.Local
     Plutus.Certification.GitHubClient
     Plutus.Certification.JWT
     Plutus.Certification.WalletClient

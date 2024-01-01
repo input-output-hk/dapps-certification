@@ -43,7 +43,7 @@ import Control.Concurrent.Async
 import Network.Wai
 import Plutus.Certification.API
 import Plutus.Certification.Server as Server
-import Plutus.Certification.Local
+import Plutus.Certification.Server.Local
 import Data.Text (Text)
 import Data.Text.Encoding
 import Network.HTTP.Types.Method
