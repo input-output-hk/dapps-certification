@@ -15,7 +15,7 @@ import Conduit
 import Control.Monad.Trans.Resource
 
 data Args = Args
-  { buildOut :: !FilePath
+  { certifyPath :: !FilePath
   , certifyArgs :: !CertifyArgs
   } deriving (Show)
 
@@ -44,5 +44,4 @@ main :: IO ()
 main = do
   Args {..} <- execParser argsInfo
   hSetBuffering stdout LineBuffering
-  let certifyPath = buildOut </> "bin" </> "certify"
   runConduitRes $ runCertifyInProcess () certifyArgs certifyPath .| printMessage
