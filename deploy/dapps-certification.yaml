@@ -46,8 +46,10 @@ spec:
               secretKeyRef:
                 key: token
                 name: nbn
-        image: ghcr.io/input-output-hk/plutus-certification:PLT-7784-nixbuild.net
-        imagePullPolicy: IfNotPresent
+          - name: RUN_CERTIFY_IMAGE
+            value: ghcr.io/input-output-hk/plutus-certification:PLT-7784-k8s-sched
+        image: ghcr.io/input-output-hk/plutus-certification:PLT-7784-k8s-sched
+        imagePullPolicy: Always
         imagePullSecrets:
           - iohk-ghcr-creds
         memory: 8Gi
