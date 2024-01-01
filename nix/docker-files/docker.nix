@@ -20,7 +20,13 @@
       '';
       in (pkgs.writeShellScript "entryPoint" ''
         set -eEo pipefail
-        args="--local "
+        export PATH=/bin:$PATH
+        if [ -n "$RUN_CERTIFY_IMAGE" ];
+        then
+          args="--run-certify-image $RUN_CERTIFY_IMAGE"
+        else
+          args="--local"
+        fi
         ${addParameter "wallet-id" "WALLET_ID"} \
         ${addParameter "wallet-address" "WALLET_ADDRESS"} \
         ${addParameter "wallet-passphrase" "WALLET_PASSPHRASE"}
