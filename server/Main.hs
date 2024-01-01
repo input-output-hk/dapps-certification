@@ -73,7 +73,7 @@ oneAda = 1000000
 
 data Backend
   = Local
-  | Kube
+  | Kube !Text
   deriving (Eq, Show)
 
 data Args = Args
@@ -114,10 +114,11 @@ localParser = flag' Local
  <> help "Run with the local in-process \"job scheduler\""
   )
 kubeParser :: Parser Backend
-kubeParser = flag' Kube
-  ( long "kube"
- <> help "Run with the kubernetes-backed \"job scheduler\""
-  )
+kubeParser = Kube
+  <$> option str
+        ( long "run-certify-image"
+       <> help "The docker image (including tag) containing run-certify to use with the kubernetes-backed job scheduler"
+        )
 
 argsParser :: Parser Args
 argsParser =  Args
@@ -325,7 +326,7 @@ renderRoot Initializing =
                                         , "host" .= show args.host
                                         , "backend" .= case args.backend of
                                             Local -> String "local"
-                                            Kube -> String "kube"
+                                            Kube img -> object [ "kube" .= String img ]
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
   )
@@ -461,7 +462,7 @@ main = do
     withAsync waitForCrash \_ -> withScheduleCrash (narrowEventBackend InjectCrashing eb) doCrash \scheduleCrash -> do
       caps <- hoistServerCaps liftIO <$> (case args.backend of
         Local -> localServerCaps
-        Kube -> kubeServerCaps) ( narrowEventBackend InjectIOServer eb )
+        Kube img -> flip kubeServerCaps img) ( narrowEventBackend InjectIOServer eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host
