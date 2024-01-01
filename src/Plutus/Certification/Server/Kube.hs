@@ -1,20 +1,22 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-module Plutus.Certification.Server.Kube (kubeServerCaps) where
+module Plutus.Certification.Server.Kube (kubeServerCaps, BadStatusLine(..), CertifyFailed(..)) where
 
 import Conduit
 import Control.Concurrent.Async
 import Control.Concurrent.MVar
+import Control.Monad.Trans.Resource
+import Data.Aeson (fromJSON)
+import qualified Data.Aeson.Types as Aeson
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Conduit.Aeson
 import Data.Conduit.Binary as DCB
 import Data.Functor
-import Data.Text
+import Data.Text as T
 import qualified Data.Text.IO as T
-import Development.Placeholders
 import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import Observe.Event
@@ -130,6 +132,21 @@ acquireCertifyJob cfg = do
     cancel
   pure $ CertifyJobHandle {..}
 
+getJobState :: CertifyJobHandle -> IO CertifyJobState
+getJobState (CertifyJobHandle {..}) = readMVar jobState
+
+streamJobLogs :: CertifyJobHandle -> ConduitT () ByteString ResIO ()
+streamJobLogs j@(CertifyJobHandle {..}) = do
+  let logCmd = setStdout createPipe
+             $ proc "kubectl" [ "logs", "-f", resourceName k8sHandle ]
+  -- Wait for the job to be at least ready
+  void . liftIO $ getJobState j
+  (_, logProc) <- allocateAcquire $ acquireProcessWait logCmd
+  sourceHandle $ getStdout logProc
+
+data CertifyFailed = CertifyFailed deriving (Show)
+instance Exception CertifyFailed
+
 runCertifyKube :: Text -- ^ The Docker image with run-certify
                -> IO (RunCertify RunIDV1 IO)
 runCertifyKube runCertifyImage = do
@@ -140,8 +157,25 @@ runCertifyKube runCertifyImage = do
     rck :: Template -> RunCertify RunIDV1 IO
     rck template runId certifyArgs certifyPath = do
       let jobConfig = substitute template (TemplateParams {..})
-      (_, jobHandle) <- allocateAcquire $ acquireCertifyJob jobConfig
-      $(todo "stream job logs")
+      (k, jobHandle) <- allocateAcquire $ acquireCertifyJob jobConfig
+      let toMessage = await >>= \case
+            Just (Right (_, v)) -> case fromJSON v of
+              Aeson.Error s -> fail s
+              Aeson.Success m -> do
+                yield m
+                toMessage
+            Just (Left e) -> do
+              yield $ Left $ T.pack $ show e
+              liftIO $ throwIO e
+            Nothing -> release k
+      streamJobLogs jobHandle .| conduitArrayParserNoStartEither skipSpace .| toMessage
+      liftIO (getJobState jobHandle) >>= \case
+        Succeeded -> pure ()
+        Failed -> throwIO CertifyFailed
+        _ -> pure ()
+        -- TODO: There's a race here: The job state may not be updated by the
+        -- time the logs complete. We don't know if this is failure or success,
+        -- unless we check for the final certification result.
 
 -- | 'ServerCaps' that run the certification job in a kubernetes batch job
 kubeServerCaps :: EventBackend IO r IOServerSelector
