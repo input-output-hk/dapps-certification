@@ -12,6 +12,7 @@ bug-reports: https://github.com/input-output-hk/plutus-certification/issues
 description:
   Certification as a service for Plutus applications
 build-type: Simple
+data-files: data/run-certify-k8s.yaml.mustache
 
 source-repository head
     type: git
@@ -54,6 +55,8 @@ library
     cryptonite,
     insert-ordered-containers,
     placeholders,
+    mustache,
+    unliftio,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,

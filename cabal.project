@@ -1,4 +1,4 @@
-index-state: 2023-01-25T00:00:00Z
+index-state: 2024-01-01T00:00:00Z
 packages:
     .
     dapps-certification-interface
@@ -37,3 +37,9 @@ source-repository-package
 write-ghc-environment-files: never
 tests: true
 test-show-details: streaming
+
+-- Constraint needed for parse errors to be Exceptions
+-- It's unclear why this needs to be specified, since
+-- I'd expect cabal to just pick the latest absent
+-- upper bounds to the contrary
+constraints: parsec >= 3.1.17

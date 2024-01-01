@@ -45,4 +45,4 @@ main = do
   Args {..} <- execParser argsInfo
   hSetBuffering stdout LineBuffering
   let certifyPath = buildOut </> "bin" </> "certify"
-  runConduitRes $ runCertifyInProcess certifyArgs certifyPath .| printMessage
+  runConduitRes $ runCertifyInProcess () certifyArgs certifyPath .| printMessage

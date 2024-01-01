@@ -127,10 +127,10 @@ buildFlake backend addLogEntry ghAccessTokenM dir = do
                        ] ++ accessTokenToArg ghAccessTokenM
 
 -- The 'Text' is a log line
-type RunCertify m = CertifyArgs -> FilePath -> ConduitT () (Either Text Message) (ResourceT m) ()
+type RunCertify id m = id -> CertifyArgs -> FilePath -> ConduitT () (Either Text Message) (ResourceT m) ()
 
-runCertifyInProcess :: RunCertify IO
-runCertifyInProcess certifyArgs certify = do
+runCertifyInProcess :: RunCertify id IO
+runCertifyInProcess _ certifyArgs certify = do
   let
     realiseCertifyCmd = setStdin closed
                       $ setStdout nullStream

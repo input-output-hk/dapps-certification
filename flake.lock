@@ -301,11 +301,11 @@
     "hackage": {
       "flake": false,
       "locked": {
-        "lastModified": 1700785404,
-        "narHash": "sha256-DEgR+csNYbfObCUHA+PPbiUawo6Yi5p9qTZlfcVMexo=",
+        "lastModified": 1704068706,
+        "narHash": "sha256-5koI9VnLKo5P8Oy0T0aKUFU2KrBY2a111woz7Af74dY=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "c62c4136f34cb398dcea0963434c9e7e59fe11ba",
+        "rev": "2d2975b23759511ae5f91a06180216349b8b566b",
         "type": "github"
       },
       "original": {

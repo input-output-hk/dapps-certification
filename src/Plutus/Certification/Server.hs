@@ -82,7 +82,7 @@ addLog actionType val js@JobState{..} = js { logs = newLogs}
     Certify -> logs { certify = val:(logs.certify)}
 
 ioServerCaps :: EventBackend IO r IOServerSelector
-             -> RunCertify IO
+             -> RunCertify RunIDV1 IO
              -> IO (ServerCaps IO r)
 ioServerCaps backend runCertify = do
   jobs <- newIORef Map.empty
@@ -138,7 +138,7 @@ ioServerCaps backend runCertify = do
                     go
                   Nothing -> pure ()
             onException
-              (runConduitRes $ runCertify certifyArgs (certifyOut </> "bin" </> "certify") .| go)
+              (runConduitRes $ runCertify (RunID jobId) certifyArgs (certifyOut </> "bin" </> "certify") .| go)
               (setStatus $ \pl -> Incomplete (Certifying $ CertifyingStatus Failed Nothing pl)) -- TODO get latest actual status update
 
       async ( finally runJob (freeCancellation jobId)) >>= addCancellation jobId
