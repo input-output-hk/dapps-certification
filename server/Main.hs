@@ -44,6 +44,7 @@ import Network.Wai
 import Plutus.Certification.API
 import Plutus.Certification.Server as Server
 import Plutus.Certification.Server.Local
+import Plutus.Certification.Server.Kube
 import Data.Text (Text)
 import Data.Text.Encoding
 import Network.HTTP.Types.Method
@@ -72,6 +73,7 @@ oneAda = 1000000
 
 data Backend
   = Local
+  | Kube
   deriving (Eq, Show)
 
 data Args = Args
@@ -111,6 +113,12 @@ localParser = flag' Local
   ( long "local"
  <> help "Run with the local in-process \"job scheduler\""
   )
+kubeParser :: Parser Backend
+kubeParser = flag' Kube
+  ( long "kube"
+ <> help "Run with the kubernetes-backed \"job scheduler\""
+  )
+
 argsParser :: Parser Args
 argsParser =  Args
   <$> option auto
@@ -129,7 +137,7 @@ argsParser =  Args
      <> showDefault
      <> Opts.value "*"
       )
-  <*> localParser
+  <*> (localParser <|> kubeParser)
   <*> walletParser
   <*> (plainAddressAuthParser <|> jwtArgsParser)
   <*> option auto
@@ -317,6 +325,7 @@ renderRoot Initializing =
                                         , "host" .= show args.host
                                         , "backend" .= case args.backend of
                                             Local -> String "local"
+                                            Kube -> String "kube"
                                         ])
       VersionField v -> ("version", toJSON $ versionBranch v)
   )
@@ -450,8 +459,9 @@ main = do
           (closeSocket, ()) <- concurrently (takeMVar closeSocketVar) (takeMVar crashVar)
           closeSocket
     withAsync waitForCrash \_ -> withScheduleCrash (narrowEventBackend InjectCrashing eb) doCrash \scheduleCrash -> do
-      caps <- case args.backend of
-        Local -> hoistServerCaps liftIO <$> localServerCaps ( narrowEventBackend InjectIOServer eb )
+      caps <- hoistServerCaps liftIO <$> (case args.backend of
+        Local -> localServerCaps
+        Kube -> kubeServerCaps) ( narrowEventBackend InjectIOServer eb )
       let settings = defaultSettings
                    & setPort args.port
                    & setHost args.host

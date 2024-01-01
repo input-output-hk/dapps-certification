@@ -53,6 +53,7 @@ library
     http-conduit,
     cryptonite,
     insert-ordered-containers,
+    placeholders,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
@@ -64,6 +65,7 @@ library
     Plutus.Certification.Cache
     Plutus.Certification.Client
     Plutus.Certification.Server
+    Plutus.Certification.Server.Kube
     Plutus.Certification.Server.Local
     Plutus.Certification.GitHubClient
     Plutus.Certification.JWT
