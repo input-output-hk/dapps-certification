@@ -3,7 +3,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Plutus.Certification.Server.Kube (kubeServerCaps) where
 
+import Control.Concurrent.Async
+import Data.Acquire
+import Data.ByteString.Lazy
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Functor
 import Data.Text
+import qualified Data.Text.IO as T
 import Development.Placeholders
 import IOHK.Certification.Actions
 import IOHK.Certification.Interface
@@ -12,6 +18,8 @@ import Paths_plutus_certification
 import Plutus.Certification.API.Routes
 import Plutus.Certification.Server
 import System.FilePath
+import System.IO
+import System.Process.Typed
 import Text.Mustache
 import UnliftIO.Exception
 
@@ -30,6 +38,23 @@ instance ToMustache TemplateParams where
     , "certify_args" ~> certifyArgsToCommandList certifyArgs
     ]
 
+newtype KubeResourceHandle = KubeResourceHandle
+  { resourceName :: String
+  }
+
+acquireKubeResource :: Text -> Acquire KubeResourceHandle
+acquireKubeResource cfg = mkAcquire (KubeResourceHandle . BSL.unpack . BSL.dropEnd 1 <$> readProcessStdout_ createCmd) cleanup
+  where
+    cleanup (KubeResourceHandle {..}) =
+      runProcess_ $ proc "kubectl" [ "delete", resourceName ]
+    createCmd = setStdin (textInput cfg)
+              $ proc "kubectl" [ "create", "-o", "name", "-f", "-" ]
+    textInput val = mkPipeStreamSpec $ \_ h -> do
+      void $ async $ do
+        T.hPutStr h val
+        hClose h
+      return ((), hClose h)
+
 runCertifyKube :: Text -- ^ The Docker image with run-certify
                -> IO (RunCertify RunIDV1 IO)
 runCertifyKube runCertifyImage = do
@@ -40,7 +65,8 @@ runCertifyKube runCertifyImage = do
     rck :: Template -> RunCertify RunIDV1 IO
     rck template runId certifyArgs certifyPath = do
       let jobConfig = substitute template (TemplateParams {..})
-      $(todo "launch job")
+      (_, jobHandle) <- allocateAcquire $ acquireKubeResource jobConfig
+      $(todo "stream job logs")
 
 -- | 'ServerCaps' that run the certification job in a kubernetes batch job
 kubeServerCaps :: EventBackend IO r IOServerSelector

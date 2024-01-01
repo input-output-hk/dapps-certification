@@ -57,6 +57,8 @@ library
     placeholders,
     mustache,
     unliftio,
+    typed-process,
+    resourcet,
 
     dapps-certification-signature-verification,
     dapps-certification-persistence,
