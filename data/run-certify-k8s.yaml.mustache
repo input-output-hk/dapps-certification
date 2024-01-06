@@ -1,42 +1,38 @@
 ---
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
   name: certify-{{{run_id}}}
 spec:
-  template:
-    spec:
-      containers:
-        - name: certify
-          image: {{{run_certify_image}}}
-          imagePullPolicy: Always
-          command:
-            - "/bin/run-certify"
-            - "{{{certify_path}}}"
-            {{#certify_args}}
-            - {{{ . }}}
-            {{/certify_args}}
-          env:
-            - name: token
-              valueFrom:
-                secretKeyRef:
-                  key: token
-                  name: nbn
-          volumeMounts:
-            - mountPath: /etc/ssh
-              name: configmap-ssh
-            - mountPath: /etc/nix
-              name: configmap-nix
-      restartPolicy: Never
-      # TODO Pass in configMap names from the service
-      volumes:
-        - configMap:
-            defaultMode: 420
-            name: ssh
+  containers:
+    - name: certify
+      image: {{{run_certify_image}}}
+      imagePullPolicy: Always
+      command:
+        - "/bin/run-certify"
+        - "{{{certify_path}}}"
+        {{#certify_args}}
+        - {{{ . }}}
+        {{/certify_args}}
+      env:
+        - name: token
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: nbn
+      volumeMounts:
+        - mountPath: /etc/ssh
           name: configmap-ssh
-        - configMap:
-            defaultMode: 420
-            name: nix
+        - mountPath: /etc/nix
           name: configmap-nix
-  backoffLimit: 1
-  ttlSecondsAfterFinished: 86400
+  restartPolicy: Never
+  # TODO Pass in configMap names from the service
+  volumes:
+    - configMap:
+        defaultMode: 420
+        name: ssh
+      name: configmap-ssh
+    - configMap:
+        defaultMode: 420
+        name: nix
+      name: configmap-nix

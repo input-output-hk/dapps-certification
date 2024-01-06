@@ -1,22 +1,22 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-module Plutus.Certification.Server.Kube (kubeServerCaps, BadStatusLine(..), CertifyFailed(..)) where
+module Plutus.Certification.Server.Kube (kubeServerCaps, BadStatus(..), CertifyFailed(..), StatusLoopEOF(..)) where
 
 import Conduit
 import Control.Concurrent.Async
 import Control.Concurrent.MVar
 import Control.Monad.Trans.Resource
-import Data.Aeson (fromJSON)
+import Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import Data.ByteString
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Conduit.Aeson
-import Data.Conduit.Binary as DCB
 import Data.Functor
 import Data.Text as T
 import qualified Data.Text.IO as T
+import Data.Vector as V
 import IOHK.Certification.Actions
 import IOHK.Certification.Interface
 import Observe.Event
@@ -26,8 +26,7 @@ import Plutus.Certification.Server
 import System.FilePath
 import System.IO
 import System.Process.Typed
-import Text.Mustache
-import Text.Regex
+import Text.Mustache as M
 import UnliftIO.Exception
 
 data TemplateParams = TemplateParams
@@ -38,7 +37,7 @@ data TemplateParams = TemplateParams
   } deriving (Eq, Show)
 
 instance ToMustache TemplateParams where
-  toMustache (TemplateParams {..}) = object
+  toMustache (TemplateParams {..}) = M.object
     [ "run_certify_image" ~> runCertifyImage
     , "run_id" ~= runId
     , "certify_path" ~> certifyPath
@@ -67,73 +66,97 @@ data CertifyJobState
   | Succeeded
   | Failed
 
+data KubePodState = PodPending | PodReady | PodSucceeded | PodFailed deriving Show
+instance FromJSON KubePodState where
+  parseJSON = withObject "PodStatus" $ \v -> do
+    phase <- v .: "phase"
+    if
+      | phase == "Pending" -> pure PodPending
+      | phase == "Running" -> do
+          conditionsV <- v .: "conditions"
+          flip (withArray "Conditions") conditionsV $ \conditions -> do
+            let go acc = withObject "Condition" $ \condition -> do
+                  status <- condition .: "status"
+                  ty <- condition .: "type"
+                  pure $ if ty == ("Ready" :: Text) && status == ("True" :: Text)
+                    then True
+                    else acc
+            V.foldM go False conditions <&> \case
+              True -> PodReady
+              False -> PodPending
+      | phase == "Succeeded" -> pure PodSucceeded
+      | phase == "Failed" -> pure PodFailed
+      | otherwise -> fail $ "Unexpected phase " <> T.unpack phase
+
 data CertifyJobHandle = CertifyJobHandle
   { k8sHandle :: !KubeResourceHandle
   , jobState :: !(MVar CertifyJobState)
   }
 
--- | kubectl output format to get the job status
-statusFormat :: String
-statusFormat = "jsonpath={.status.ready}{\" \"}{.status.succeeded}{\" \"}{.status.failed}{\"\\n\"}"
-
--- | Regex to match the kubectl job status output
-statusRegex :: Regex
-statusRegex = mkRegex "([[:digit:]]?) ([[:digit:]]?) ([[:digit:]]?)"
-
--- | Exception for when @kubectl get@ outputs an unexpectedly formatted line
-newtype BadStatusLine = BadStatusLine
-  { line :: ByteString
+-- | Exception for when kubernetes reports an invalid status
+newtype BadStatus = BadStatus
+  { msg :: String
   } deriving Show
-instance Exception BadStatusLine
+instance Exception BadStatus
+
+-- | Exception for when the status loop terminates unexpectedly
+data StatusLoopEOF = StatusLoopEOF deriving Show
+instance Exception StatusLoopEOF
 
 acquireCertifyJob :: Text -> Acquire CertifyJobHandle
 acquireCertifyJob cfg = do
   k8sHandle@(KubeResourceHandle {..}) <- acquireKubeResource cfg
   let
-    -- Watch the kube job status in a loop
+    -- Watch the kube pod status in a loop
     statusCmd = setStdout createPipe
               $ proc "kubectl"
                      [ "get"
                      , resourceName
                      , "-o"
-                     , statusFormat
+                     , "jsonpath={.status}"
                      , "-w"
                      ]
   jobState <- liftIO newEmptyMVar
   statusProc <- acquireProcessWait statusCmd
   let
     readStatus = await >>= \case
-      Nothing -> pure ()
-      Just line -> do
-        let
-          lineChars = BS.unpack line
-          lineParse = matchRegex statusRegex lineChars
-        case lineParse of
-          Just ("0" : "" : "" : []) -> readStatus
-          Just ("1" : "" : "" : []) -> do
-            void . liftIO $ tryPutMVar jobState Running
-            readStatus
-          Just ("0" : "1" : "" : []) -> do
-            void . liftIO $ tryTakeMVar jobState
-            liftIO $ putMVar jobState Succeeded
-            stopProcess statusProc
-          Just ("0" : "" : "1" : []) -> do
-            void . liftIO $ tryTakeMVar jobState
-            liftIO $ putMVar jobState Failed
-            stopProcess statusProc
-          _ -> do
-            stopProcess statusProc
-            throwIO $ BadStatusLine line
-  -- Consume the status line in the background, updating the job state mvar as needed
+      Just (Right (_, v)) -> case fromJSON v of
+        Aeson.Error s -> throwIO $ BadStatus s
+        Aeson.Success PodPending -> readStatus
+        Aeson.Success PodReady -> do
+          void . liftIO $ tryPutMVar jobState Running
+          readStatus
+        Aeson.Success PodSucceeded -> do
+          void . liftIO $ tryTakeMVar jobState
+          liftIO $ putMVar jobState Succeeded
+          stopProcess statusProc
+        Aeson.Success PodFailed -> do
+          void . liftIO $ tryTakeMVar jobState
+          liftIO $ putMVar jobState Failed
+          stopProcess statusProc
+      Just (Left e) -> do
+        throwIO . BadStatus $ show e
+      Nothing -> throwIO StatusLoopEOF
+
+  -- Query the pod status in the background, updating the job state mvar as needed
   void $ mkAcquire
     (async $ onException
-     (runConduitRes $ sourceHandle (getStdout statusProc) .| DCB.lines .| readStatus)
+     (runConduitRes $ sourceHandle (getStdout statusProc) .| conduitArrayParserNoStartEither skipSpace .| readStatus)
      (void (tryTakeMVar jobState) >> putMVar jobState Failed))
     cancel
   pure $ CertifyJobHandle {..}
 
 getJobState :: CertifyJobHandle -> IO CertifyJobState
 getJobState (CertifyJobHandle {..}) = readMVar jobState
+
+-- | True if successful, False otherwise
+waitForCompletion :: CertifyJobHandle -> IO Bool
+waitForCompletion (CertifyJobHandle {..}) = go
+  where
+    go = takeMVar jobState >>= \case
+      Running -> go
+      Succeeded -> pure True
+      Failed -> pure False
 
 streamJobLogs :: CertifyJobHandle -> ConduitT () ByteString ResIO ()
 streamJobLogs j@(CertifyJobHandle {..}) = do
@@ -144,6 +167,7 @@ streamJobLogs j@(CertifyJobHandle {..}) = do
   (_, logProc) <- allocateAcquire $ acquireProcessWait logCmd
   sourceHandle $ getStdout logProc
 
+-- | The certification process failed
 data CertifyFailed = CertifyFailed deriving (Show)
 instance Exception CertifyFailed
 
@@ -169,13 +193,9 @@ runCertifyKube runCertifyImage = do
               liftIO $ throwIO e
             Nothing -> release k
       streamJobLogs jobHandle .| conduitArrayParserNoStartEither skipSpace .| toMessage
-      liftIO (getJobState jobHandle) >>= \case
-        Succeeded -> pure ()
-        Failed -> throwIO CertifyFailed
-        _ -> pure ()
-        -- TODO: There's a race here: The job state may not be updated by the
-        -- time the logs complete. We don't know if this is failure or success,
-        -- unless we check for the final certification result.
+      liftIO (waitForCompletion jobHandle) >>= \case
+        True -> pure ()
+        False -> throwIO CertifyFailed
 
 -- | 'ServerCaps' that run the certification job in a kubernetes batch job
 kubeServerCaps :: EventBackend IO r IOServerSelector
