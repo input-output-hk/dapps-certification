@@ -12,11 +12,13 @@ library
                     , IOHK.Certification.Persistence.API.Run
                     , IOHK.Certification.Persistence.API.Profile
                     , IOHK.Certification.Persistence.API.UserRole
+                    , IOHK.Certification.Persistence.API.Invoicing
                     , IOHK.Certification.Persistence.Structure.Subscription
                     , IOHK.Certification.Persistence.Structure.Certification
                     , IOHK.Certification.Persistence.Structure.Run
                     , IOHK.Certification.Persistence.Structure.Profile
                     , IOHK.Certification.Persistence.Structure.Internal
+                    , IOHK.Certification.Persistence.Structure.Invoicing
                     , IOHK.Certification.Persistence.Pattern
                     , IOHK.Certification.Persistence.Migration
                     , IOHK.Certification.Persistence.FieldSelector
@@ -25,6 +27,7 @@ library
                     , IOHK.Certification.Persistence.Migration.SQLite.V2
                     , IOHK.Certification.Persistence.Migration.SQLite.V3
                     , IOHK.Certification.Persistence.Migration.SQLite.V4
+                    , IOHK.Certification.Persistence.Migration.SQLite.V5
 
     build-depends: base
                  , selda
@@ -43,5 +46,6 @@ library
                  , dapps-certification-interface
                  , bytestring
                  , scientific
+                 , insert-ordered-containers
     hs-source-dirs:   src
     default-language: Haskell2010

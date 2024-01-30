@@ -10,8 +10,9 @@ import           IOHK.Certification.Persistence.Structure.Profile
 import           IOHK.Certification.Persistence.Structure.Subscription
 import           IOHK.Certification.Persistence.Structure.Certification
 import           IOHK.Certification.Persistence.Structure.Run
-import           Data.Text hiding (index)
+import           IOHK.Certification.Persistence.Structure.Invoicing
 import           IOHK.Certification.Persistence.Structure
+import           Data.Text hiding (index)
 import           IOHK.Certification.Persistence.API
 import           Database.Selda.Unsafe (rawStm)
 import           Control.Monad.Catch
@@ -23,6 +24,7 @@ import qualified IOHK.Certification.Persistence.Migration.SQLite.V1 as V1
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V2 as V2
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V3 as V3
 import qualified IOHK.Certification.Persistence.Migration.SQLite.V4 as V4
+import qualified IOHK.Certification.Persistence.Migration.SQLite.V5 as V5
 import Control.Monad (forM_)
 import Data.Aeson (ToJSON(toJSON))
 
@@ -47,6 +49,10 @@ createTables = do
   createTable lookupValues
   -- v3
   createTable auditorReportEvents
+  -- v5
+  createTable invoices
+  createTable invoiceItems
+  createTable subscriptionInvoices
 
 
 --------------------------------------------------------------------------------
@@ -72,8 +78,18 @@ createTablesV4 :: (MonadSelda m,MonadMask m) => m ()
 createTablesV4 = do
   mapM_ rawStm V4.createTables
 
+createTablesV5 :: (MonadSelda m,MonadMask m) => m ()
+createTablesV5 = do
+  mapM_ rawStm V5.createTables
+
 steps :: (MonadSelda m,MonadMask m) => [m ()]
-steps = [createTablesV0,createTablesV1,createTablesV2,createTablesV3,createTablesV4]
+steps = [ createTablesV0
+        , createTablesV1
+        , createTablesV2
+        , createTablesV3
+        , createTablesV4
+        , createTablesV5
+        ]
 
 getDBVersion :: (MonadSelda m,MonadMask m) => m Int
 getDBVersion = do

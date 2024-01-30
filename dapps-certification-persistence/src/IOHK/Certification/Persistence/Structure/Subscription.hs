@@ -57,7 +57,7 @@ instance ToSchema FeatureType where
       & enum_ ?~ values
 
 data TierType = Developer | Auditor
-                 deriving (Eq,Generic, Show, Bounded, Enum, Read)
+              deriving (Eq,Generic, Show, Bounded, Enum, Read)
 instance SqlType TierType
 
 instance ToJSON TierType where
@@ -173,6 +173,8 @@ data Subscription = Subscription
   , subscriptionStatus :: SubscriptionStatus
   } deriving (Generic, Show,Eq)
 
+type SubscriptionId = ID Subscription
+
 data SubscriptionLite = SubscriptionLite
   { subId :: Int64
   , subName :: Text
@@ -203,8 +205,6 @@ instance FromJSON Subscription where
 
 instance ToSchema Subscription where
   declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions { fieldLabelModifier = dropAndLowerFirst 12 }
-
-type SubscriptionId = ID Subscription
 
 instance ToJSON (ID Subscription) where
   toJSON = toJSON . show . fromId

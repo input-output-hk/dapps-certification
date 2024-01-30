@@ -105,6 +105,33 @@ data GetAuditorReportMetricsField
   | GetAuditorReportMetricsFieldEnd UTCTime
   | GetAuditorReportMetricsFieldReports Int
 
+data GetProfileInvoicesField
+  = GetProfileInvoicesFieldProfileId DB.ProfileId
+  | GetProfileInvoicesFieldInvoicesNo Int
+
+data GetAllInvoicesField
+  = GetAllInvoicesFieldInvoicesNo Int
+  | GetAllInvoicesFieldFrom (Maybe UTCTime)
+  | GetAllInvoicesFieldTo (Maybe UTCTime)
+
+data CancelInvoiceField
+  = CancelInvoiceFieldSourceInvoiceId DB.InvoiceId
+  | CancelInvoiceFieldByProfileId DB.ProfileId
+  | CancelInvoiceFieldForProfileId DB.ProfileId
+  | CancelInvoiceFieldResultingInvoiceId DB.InvoiceId
+
+data CreateInvoiceField
+  = CreateInvoiceFieldByProfileId DB.ProfileId
+  | CreateInvoiceFieldForProfileId DB.ProfileId
+  | CreateInvoiceFieldInvoiceId DB.InvoiceId
+  | CreateInvoiceFieldAdaUsdPrice DB.AdaUsdPrice
+
+data CreateSubscriptionInvoiceField
+  = CreateSubscriptionInvoiceFieldByProfileId DB.ProfileId
+  | CreateSubscriptionInvoiceFieldForProfileId DB.ProfileId
+  | CreateSubscriptionInvoiceFieldInvoiceId DB.InvoiceId
+  | CreateSubscriptionInvoiceFieldSubscriptionId DB.SubscriptionId
+
 data ServerEventSelector f where
   InjectPersistenceSel :: forall f . !(DbSelector f) -> ServerEventSelector f
   Version :: ServerEventSelector Void
@@ -139,6 +166,11 @@ data ServerEventSelector f where
   GetSubscriptionsStartingInInterval :: ServerEventSelector GetSubscriptionsInIntervalField
   GetSubscriptionsEndingInInterval :: ServerEventSelector GetSubscriptionsInIntervalField
   GetAuditorReportMetrics :: ServerEventSelector GetAuditorReportMetricsField
+  GetProfileInvoices :: ServerEventSelector GetProfileInvoicesField
+  GetAllInvoices :: ServerEventSelector GetAllInvoicesField
+  CancelInvoice :: ServerEventSelector CancelInvoiceField
+  CreateInvoice :: ServerEventSelector CreateInvoiceField
+  CreateSubscriptionInvoice :: ServerEventSelector CreateSubscriptionInvoiceField
   InternalError :: forall a. ToJSON a => ServerEventSelector a
 
 
@@ -229,6 +261,33 @@ renderServerEventSelector GetAuditorReportMetrics = ("get-auditor-report-metrics
   GetAuditorReportMetricsFieldReports reports -> ("reports", toJSON reports)
   )
 renderServerEventSelector (InjectPersistenceSel s) = renderPersistenceSelector s
+renderServerEventSelector GetProfileInvoices = ("get-profile-invoices", \case
+  GetProfileInvoicesFieldProfileId pid -> ("profile-id", toJSON (show pid))
+  GetProfileInvoicesFieldInvoicesNo len -> ("invoices", toJSON len)
+  )
+renderServerEventSelector GetAllInvoices = ("get-all-invoices", \case
+  GetAllInvoicesFieldInvoicesNo len -> ("invoices", toJSON len)
+  GetAllInvoicesFieldFrom start -> ("from", toJSON start)
+  GetAllInvoicesFieldTo end -> ("to", toJSON end)
+  )
+renderServerEventSelector CancelInvoice = ("invoice-cancellation", \case
+  CancelInvoiceFieldSourceInvoiceId invoiceId -> ("source-invoice-id", toJSON (show invoiceId))
+  CancelInvoiceFieldByProfileId pid -> ("by-profile-id", toJSON (show pid))
+  CancelInvoiceFieldForProfileId pid -> ("invoice-owner", toJSON (show pid))
+  CancelInvoiceFieldResultingInvoiceId invoiceId -> ("cancellation-invoice-id", toJSON (show invoiceId))
+  )
+renderServerEventSelector CreateInvoice = ("invoice-creation", \case
+  CreateInvoiceFieldInvoiceId invoiceId -> ("invoice-id", toJSON (show invoiceId))
+  CreateInvoiceFieldByProfileId pid -> ("by-profile-id", toJSON (show pid))
+  CreateInvoiceFieldForProfileId pid -> ("invoice-owner", toJSON (show pid))
+  CreateInvoiceFieldAdaUsdPrice price -> ("ada-usd-price", toJSON price)
+  )
+renderServerEventSelector CreateSubscriptionInvoice = ("subscription-invoice-creation", \case
+  CreateSubscriptionInvoiceFieldInvoiceId invoiceId -> ("invoice-id", toJSON (show invoiceId))
+  CreateSubscriptionInvoiceFieldByProfileId pid -> ("by-profile-id", toJSON (show pid))
+  CreateSubscriptionInvoiceFieldForProfileId pid -> ("invoice-owner", toJSON (show pid))
+  CreateSubscriptionInvoiceFieldSubscriptionId subId -> ("subscription-id", toJSON (show subId))
+  )
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

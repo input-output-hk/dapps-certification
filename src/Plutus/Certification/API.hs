@@ -45,6 +45,7 @@ import Plutus.Certification.API.Routes as X
   , ProfileBody(..)
   , RunTimeArguments(..)
   , SlotSelector(..)
+  , FlexibleSlotSelector(..)
   , CreateRunOptions(..)
   , RawHtml(..)
   )

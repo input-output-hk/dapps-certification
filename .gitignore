@@ -18,3 +18,4 @@ run.x86.sh
 #except all test/Data files
 !test/Data/**
 run.x86.sh
+db.sql

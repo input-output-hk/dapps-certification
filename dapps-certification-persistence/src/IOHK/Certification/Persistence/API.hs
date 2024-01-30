@@ -16,6 +16,7 @@ import Database.Selda.Backend hiding (withConnection)
 import IOHK.Certification.Persistence.Structure.Profile
 import IOHK.Certification.Persistence.Structure.Subscription as Subscription
 import IOHK.Certification.Persistence.Structure.Run
+import IOHK.Certification.Persistence.Structure.Internal
 import IOHK.Certification.Persistence.Structure
 import IOHK.Certification.Persistence.Pattern
 import Data.Time.Clock
@@ -27,6 +28,8 @@ import Data.Functor
 import qualified Data.Map as Map
 import IOHK.Certification.Persistence.API.Run
 import IOHK.Certification.Persistence.API.Profile
+import IOHK.Certification.Persistence.API.Invoicing
+
 
 getTransactionIdQ:: Text -> Query t (Col t (ID Transaction))
 getTransactionIdQ  externalAddress = do
@@ -106,13 +109,16 @@ getPendingSubscriptions = query $ do
   restrict (sub ! #subscriptionStatus .== literal PendingSubscription)
   pure sub
 
-activateAllPendingSubscriptions :: MonadSelda m => m [ID Subscription]
-activateAllPendingSubscriptions = do
-  updates <- mapM activateSubscription =<< getPendingSubscriptions
+activateAllPendingSubscriptions :: MonadSelda m => VatPercentage -> m [ID Subscription]
+activateAllPendingSubscriptions vat = do
+  updates <- mapM (activateSubscription vat) =<< getPendingSubscriptions
   pure $ catMaybes updates
 
-activateSubscription :: MonadSelda m => Subscription -> m (Maybe (ID Subscription))
-activateSubscription sub = do
+activateSubscription :: MonadSelda m
+                     => Int64
+                     -> Subscription
+                     -> m (Maybe (ID Subscription))
+activateSubscription vat sub = do
   profile <- getProfile (sub.subscriptionProfileId)
   case profile of
     Just p -> do
@@ -122,6 +128,8 @@ activateSubscription sub = do
         update_ subscriptions
           (\s -> s ! #subscriptionId .== literal (sub.subscriptionId))
           (`with` [ #subscriptionStatus := literal ActiveSubscription])
+        -- try to invoice the subscription
+        _ <- createSubscriptionInvoice (sub.subscriptionId) vat
         pure $ Just (sub.subscriptionId)
       else
         pure Nothing
@@ -191,7 +199,6 @@ addInitialData = void $ do
   insert_ tierFeatures  [TierFeature def developerId (featureId f) | f <- devFeatures]
   insert_ tierFeatures  [TierFeature def auditorId (featureId f) | f <- devFeatures <> auditFeatures]
 
-type AdaUsdPrice = Micro
 -- | Create a subscription for a profile based on a tier.
 -- creates a pending subscription and disables all other subscriptions for this profile
 createSubscription :: MonadSelda m

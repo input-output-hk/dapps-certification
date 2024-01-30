@@ -89,6 +89,7 @@ data ServerArgs m r = ServerArgs
   , serverValidateSubscriptions :: Bool
   , serverAdaUsdPrice :: m (Maybe DB.AdaUsdPrice)
   , serverAddressRotation :: MVar AddressRotation
+  , serverVat :: DB.VatPercentage
   -- TODO: maybe replace the 'server' prefix
   , withDb :: forall a k. (MonadIO k, MonadMask k)
            -- TODO: Removing DB.Backend n ~ DB.SQLite it's the starting point
@@ -295,6 +296,10 @@ server ServerArgs{..} = NamedAPI
       impersonate DB.Support . profileSubscription
 
   , subscribe = \(profileId,_) tierIdInt -> withEvent eb Subscribe \ev -> do
+    -- check if the profile is ready for invoicing
+    isReady <- withDb $ DB.isProfileReadyForInvoicing profileId
+    unless isReady $
+      throwError err405 { errBody = "Profile is not ready for invoicing" }
     let tierId = DB.toId tierIdInt
     addField ev $ SubscribeFieldProfileId profileId
     addField ev $ SubscribeFieldTierId tierId
@@ -371,10 +376,12 @@ server ServerArgs{..} = NamedAPI
       addField ev role
       verifyRole pid DB.Support
       withDb $ DB.getAllProfilesByRole role
+
   , getProfilesSummary = \(pid,_) -> withEvent eb GetProfilesSummary \ev -> do
       addField ev pid
       verifyRole pid DB.Support
       withDb DB.getProfilesSummary
+
   , getRunTimeMetrics = \RunTimeArguments{..} (pid,_) -> withEvent eb GetRunTimeMetrics \ev -> do
       let SlotSelector (start,end) = interval
       verifyRole pid DB.Support
@@ -388,6 +395,7 @@ server ServerArgs{..} = NamedAPI
       addField ev $ GetRunTimeMetricsFieldRuns (List.length filteredRuns)
       mapM_ (addField ev . GetRunTimeMetricsFieldMinimumTime) minRunTime
       pure filteredRuns
+
   , getSubscriptionsStartingInIntervalRoute = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetSubscriptionsStartingInInterval \ev -> do
       verifyRole pid DB.Support
       addField ev $ GetSubscriptionsInIntervalFieldStart start
@@ -395,6 +403,7 @@ server ServerArgs{..} = NamedAPI
       subs <- withDb $ DB.getSubscriptionsStartingInInterval start end
       addField ev $ GetSubscriptionsInIntervalFieldSubscriptions (List.length subs)
       pure subs
+
   , getSubscriptionsEndingInIntervalRoute = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetSubscriptionsEndingInInterval \ev -> do
       verifyRole pid DB.Support
       addField ev $ GetSubscriptionsInIntervalFieldStart start
@@ -402,6 +411,7 @@ server ServerArgs{..} = NamedAPI
       subs <- withDb $ DB.getSubscriptionsEndingInInterval start end
       addField ev $ GetSubscriptionsInIntervalFieldSubscriptions (List.length subs)
       pure subs
+
   , getAuditorReportMetrics = \(SlotSelector (start,end)) (pid,_) -> withEvent eb GetAuditorReportMetrics \ev -> do
       verifyRole pid DB.Support
       addField ev $ GetAuditorReportMetricsFieldStart start
@@ -409,11 +419,76 @@ server ServerArgs{..} = NamedAPI
       auditorReportEvs <- withDb $ DB.getAuditorReportsInInterval start end
       addField ev $ GetAuditorReportMetricsFieldReports (List.length auditorReportEvs)
       pure auditorReportEvs
+
   , htmx = homePage
        :<|> htmxPage
        :<|> getProfileSummaryRow
        :<|> transactionsPage
        :<|> billingPage
+
+  , getProfileInvoices = impersonate DB.Support \profileId -> withEvent eb GetProfileInvoices \ev -> do
+      addField ev (GetProfileInvoicesFieldProfileId profileId)
+      invoices  <- withDb $ DB.getProfileInvoices profileId Nothing Nothing
+      addField ev (GetProfileInvoicesFieldInvoicesNo (List.length invoices))
+      pure invoices
+
+  , getAllInvoices = \(FlexibleSlotSelector (from,to)) (ownerId,_) -> withEvent eb GetAllInvoices \ev -> do
+      addField ev $ GetAllInvoicesFieldFrom from
+      addField ev $ GetAllInvoicesFieldTo to
+      verifyRole ownerId DB.Support
+      invoices <- withDb $ DB.getAllInvoices from to
+      addField ev $ GetAllInvoicesFieldInvoicesNo (List.length invoices)
+      pure invoices
+
+  , cancelInvoice = \invId (ownerId,_) -> withEvent eb CancelInvoice \ev -> do
+      addField ev $ CancelInvoiceFieldSourceInvoiceId invId
+      addField ev $ CancelInvoiceFieldByProfileId ownerId
+      verifyRole ownerId DB.Support
+      cancellationResult <- withDb $ DB.cancelInvoice invId
+      case cancellationResult of
+        DB.InvoiceNotFound -> throwError err404 { errBody = "Invoice not found" }
+        DB.InvoiceAlreadyCanceled -> throwError err405 { errBody = "Invoice already canceled" }
+        DB.InvoiceCanceled inv -> do
+          addField ev $ CancelInvoiceFieldResultingInvoiceId (inv.invDtoParent.invId)
+          addField ev $ CancelInvoiceFieldForProfileId (inv.invDtoParent.invProfileId)
+          pure inv
+
+  , createInvoice = \profileId invoiceBody (ownerId,_) -> withEvent eb CreateInvoice \ev -> do
+      addField ev $ CreateInvoiceFieldByProfileId ownerId
+      addField ev $ CreateInvoiceFieldForProfileId profileId
+      verifyRole ownerId DB.Support
+      adaUsdPrice <- getAdaUsdPrice'
+      addField ev $ CreateInvoiceFieldAdaUsdPrice adaUsdPrice
+      now <- getNow
+      invResult <- withDb $ DB.createInvoice profileId now adaUsdPrice invoiceBody
+      case invResult of
+        DB.CreateInvoiceResultProfileNotFound ->
+          throwError err404 { errBody = "Profile not found" }
+        DB.CreateInvoiceResultRequiredFieldMissing field -> do
+          let fieldBs =LSB.fromStrict $ encodeUtf8 field
+          throwError err400 { errBody = "Required field missing: " <> fieldBs }
+        DB.CreateInvoiceResultInvoice inv -> do
+          addField ev $ CreateInvoiceFieldInvoiceId (inv.invDtoParent.invId)
+          pure inv
+
+  , createSubscriptionInvoice = \subId (ownerId,_) -> withEvent eb CreateSubscriptionInvoice \ev -> do
+      addField ev $ CreateSubscriptionInvoiceFieldByProfileId ownerId
+      addField ev $ CreateSubscriptionInvoiceFieldSubscriptionId subId
+      verifyRole ownerId DB.Support
+      result <- withDb $ DB.createSubscriptionInvoice subId serverVat
+      case result of
+        DB.SubscriptionNotFound ->
+          throwError err404 { errBody = "Subscription not found" }
+        DB.SubscriptionStatusNotCompatible ->
+          throwError err405 { errBody = "Subscription status not compatible" }
+        DB.SubscriptionAlreadyInvoiced ->
+          throwError err405 { errBody = "Subscription already invoiced" }
+        DB.SubscriptionMissingProfileData field ->
+          throwError err400 { errBody = "Subscription missing profile data: " <> LSB.pack field }
+        DB.SubscriptionInvoiced inv@(DB.InvoiceDTO DB.Invoice{..}  _) -> do
+          addField ev $ CreateSubscriptionInvoiceFieldInvoiceId invId
+          addField ev $ CreateSubscriptionInvoiceFieldForProfileId invProfileId
+          pure inv
   }
   where
     homePage = pure $ RawHtml Htmx.homePage

@@ -262,14 +262,22 @@ fromInputToDbInput (TxInput index _ (Just TxOutput{..}))
   , DB.txEntryInput = True
   }
 
-monitorWalletTransactions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
+monitorWalletTransactions :: ( MonadIO m
+                             , MonadMask m
+                             , MonadError IOException m
+                             , MonadReader env m
+                             , HasDb env
+                             )
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
                           -> Word64
                           -> IORef PrevAssignments
                           -> IORef Bool
+                          -> DB.VatPercentage
                           -> m ()
-monitorWalletTransactions eb args minAssignmentAmount refAssignments firstSyncRef =
+monitorWalletTransactions eb args minAssignmentAmount
+  refAssignments firstSyncRef vat =
+
   withEvent eb MonitorTransactions $ \ev -> do
 
   -- fetch the list of transactions from the wallet
@@ -278,7 +286,7 @@ monitorWalletTransactions eb args minAssignmentAmount refAssignments firstSyncRe
   transactions <-  getTransactionList wc >>= handleResponse
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions (subEventBackend ev) transactions firstSyncRef
-  activateSubscriptions (subEventBackend ev)
+  activateSubscriptions (subEventBackend ev) vat
   -- synchronize wallets
   isOurAddress <- getIsOurAddress
   liftIO (readIORef refAssignments)
@@ -325,10 +333,11 @@ certifyRuns eb wc = do
 
 activateSubscriptions :: (MonadIO m, MonadMask m,MonadError IOException m,MonadReader env m,HasDb env)
                       => EventBackend m r SynchronizerSelector
+                      -> DB.VatPercentage
                       -> m ()
-activateSubscriptions eb = withEvent eb ActivateSubscriptions $ \ev -> do
+activateSubscriptions eb vat = withEvent eb ActivateSubscriptions $ \ev -> do
   -- activate all pending subscriptions with enough credits
-  withDb DB.activateAllPendingSubscriptions >>= addField ev
+  withDb (DB.activateAllPendingSubscriptions vat) >>= addField ev
 
 -- certify all runs of a profile
 certifyProfileRuns :: (MonadIO m, MonadMask m,MonadReader env m,HasDb env)
@@ -370,12 +379,13 @@ startTransactionsMonitor :: (MonadIO m, MonadMask m, MonadError IOException m,Ha
                          -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
                          -> Word64
+                         -> DB.VatPercentage
                          -> env
                          -> m ()
-startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds minAssignmentAmount = runReaderT reader'
+startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds minAssignmentAmount vat = runReaderT reader'
   where
   reader' = startTransactionsMonitor' eb' scheduleCrash' args adaPriceRef
-              delayInSeconds minAssignmentAmount
+              delayInSeconds minAssignmentAmount vat
   eb' = hoistEventBackend (ReaderT . const) eb
   scheduleCrash' = hoistScheduleCrash (ReaderT . const) scheduleCrash
 
@@ -386,8 +396,11 @@ startTransactionsMonitor' :: (MonadIO m, MonadMask m, MonadError IOException m,M
                          -> IORef (Maybe DB.AdaUsdPrice)
                          -> Int
                          -> Word64
+                         -> DB.VatPercentage
                          -> m ()
-startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds minAssignmentAmount =
+startTransactionsMonitor' eb scheduleCrash args adaPriceRef
+  delayInSeconds minAssignmentAmount vat =
+
   withEvent eb InitializingSynchronizer $ \ev -> do
     addField ev $ WalletArgsField args
     addField ev $ DelayField delayInSeconds
@@ -406,7 +419,8 @@ startTransactionsMonitor' eb scheduleCrash args adaPriceRef delayInSeconds minAs
       firstSyncRef <- liftIO $ newIORef True
       void $ forever $ do
         updateAdaPrice (subEventBackend ev) adaPriceRef
-        monitorWalletTransactions (subEventBackend ev) args minAssignmentAmount ref firstSyncRef
+        monitorWalletTransactions (subEventBackend ev) args
+          minAssignmentAmount ref firstSyncRef vat
         liftIO $ threadDelay delayInMicroseconds
     delayInMicroseconds = delayInSeconds * 1000000
 

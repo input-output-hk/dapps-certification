@@ -388,6 +388,8 @@ type GetProfilesSummaryRoute  (auth :: Symbol)
 
 newtype SlotSelector = SlotSelector (UTCTime, UTCTime)
 
+newtype FlexibleSlotSelector = FlexibleSlotSelector (Maybe UTCTime, Maybe UTCTime)
+
 data RunTimeArguments = RunTimeArguments
   { interval :: !SlotSelector
   , minRunTime :: !(Maybe NominalDiffTime)
@@ -430,6 +432,52 @@ type GetAuditorReportMetrics (auth :: Symbol)
   :> AuthProtect auth
   :> Post '[JSON] [DB.AuditorReportEvent]
 
+--------------------------------------------------------------------------------
+-- | TODO: INVOICING
+
+type GetProfileInvoicesRoute (auth :: Symbol)
+  = "profile"
+  :> Description "Get all invoices for a given profile"
+  :> Capture "id" ProfileId
+  :> "invoices"
+  :> AuthProtect auth
+  :> Get '[JSON] [DB.InvoiceDTO]
+
+type CancelInvoiceRoute (auth :: Symbol)
+  = "invoices"
+  :> Description "Cancel an invoice (creates a new cancellation invoice)"
+  :> Capture "id" DB.InvoiceId
+  :> "cancellation"
+  :> AuthProtect auth
+  :> Post '[JSON] DB.InvoiceDTO
+
+type GetAllInvoicesRoute (auth :: Symbol)
+  = "invoices"
+  :> Description "Get all invoices in a given interval"
+  :> ReqBody '[JSON] FlexibleSlotSelector
+  :> AuthProtect auth
+  :> Post '[JSON] [DB.InvoiceDTO]
+
+type CreateInvoiceRoute (auth :: Symbol)
+  = "profile"
+  :> Description "Create an invoice attached to a profile"
+  :> Capture "id" ProfileId
+  :> "invoices"
+  :> ReqBody '[JSON] DB.InvoiceBody
+  :> AuthProtect auth
+  :> Post '[JSON] DB.InvoiceDTO
+
+type CreateSubscriptionInvoiceRoute (auth :: Symbol)
+  =  "subscriptions"
+  :> Description "Create an invoice attached to a subscription"
+  :> Capture "id" DB.SubscriptionId
+  :> "invoices"
+  :> AuthProtect auth
+  :> Post '[JSON] DB.InvoiceDTO
+
+--------------------------------------------------------------------------------
+-- | TYPES AND INSTANCES
+
 instance FromJSON SlotSelector where
   parseJSON = withObject "SlotSelector" $ \o -> do
     from' <- o .: "from"
@@ -453,6 +501,29 @@ instance ToSchema SlotSelector where
         , ("to", toSchema')
         ]
       & required .~ ["from", "to"]
+
+instance FromJSON FlexibleSlotSelector where
+  parseJSON = withObject "FlexibleSlotSelector" $ \o -> do
+    from' <- o .:? "from"
+    to' <- o .:? "to"
+    pure $ FlexibleSlotSelector (from', to')
+
+instance ToJSON FlexibleSlotSelector where
+  toJSON (FlexibleSlotSelector (from', to')) = object
+    [ "from" .= from'
+    , "to" .= to'
+    ]
+
+instance ToSchema FlexibleSlotSelector where
+  declareNamedSchema _ = do
+    fromSchema <- declareSchemaRef (Proxy @UTCTime)
+    toSchema' <- declareSchemaRef (Proxy @UTCTime)
+    pure $ NamedSchema (Just "FlexibleSlotSelector") $ mempty
+      & type_ ?~ SwaggerObject
+      & properties .~ fromList
+        [ ("from", fromSchema)
+        , ("to", toSchema')
+        ]
 
 instance FromJSON RunTimeArguments where
   parseJSON = withObject "RunTimeArguments" $ \o -> do
@@ -495,12 +566,11 @@ instance FromHttpApiData DB.ProfileWalletAddress where
   parseUrlPiece  = left Text.pack . DB.mkPatternedText
 
 
-instance FromHttpApiData ProfileId where
-  parseUrlPiece  = left Text.pack . maybe (Left "Invalid profile id") (Right . DB.toId) . readMaybe . Text.unpack
+instance FromHttpApiData (DB.ID a) where
+  parseUrlPiece  = left Text.pack . maybe (Left "Invalid id") (Right . DB.toId) . readMaybe . Text.unpack
 
-instance ToHttpApiData ProfileId where
+instance ToHttpApiData (DB.ID a) where
   toUrlPiece  = Text.pack . show . DB.fromId
-
 
 data LoginBody = LoginBody
   { address :: !WalletAddress
@@ -542,12 +612,6 @@ instance ToJSON LoginBody where
       , "signature" .= decodeUtf8 (encodeHex signature)
       ] ++ maybe [] (\exp' -> ["expiration" .= exp']) expiration
       )
-
-instance FromHttpApiData DB.TierId where
-  parseUrlPiece  = left Text.pack . maybe (Left "Invalid tier id") (Right . DB.toId) . readMaybe . Text.unpack
-
-instance ToHttpApiData DB.TierId where
-  toUrlPiece  = Text.pack . show . DB.fromId
 
 newtype CertificateCreationResponse = CertificateCreationResponse
   { certCreationReportId :: Text
@@ -602,6 +666,11 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , getSubscriptionsEndingInIntervalRoute :: mode :- GetSubscriptionsEndingInIntervalRoute auth
   , getAuditorReportMetrics :: mode :- GetAuditorReportMetrics auth
   , htmx :: mode :- HTMLMain
+  , getProfileInvoices :: mode :- GetProfileInvoicesRoute auth
+  , getAllInvoices :: mode :- GetAllInvoicesRoute auth
+  , cancelInvoice :: mode :- CancelInvoiceRoute auth
+  , createInvoice :: mode :- CreateInvoiceRoute auth
+  , createSubscriptionInvoice :: mode :- CreateSubscriptionInvoiceRoute auth
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
@@ -913,11 +982,14 @@ instance ToSchema ProfileBody where
         -- remove address from required
         & required %~ Prelude.filter (/= "address")
 
+dummyAddress :: Text
+dummyAddress = "addr100000000000000000000000000000000000000000000000000000000"
+
 instance ToJSON ProfileBody where
   toJSON (ProfileBody p dapp) = Object (x <> y)
     where
     address :: DB.ProfileWalletAddress =
-      case DB.mkPatternedText "addr100000000000000000000000000000000000000000000000000000000" of
+      case DB.mkPatternedText dummyAddress of
          Right addr -> addr
          Left err   -> error $ "failed to create dummy address: " <> err
     profile = p { DB.ownerAddress = address }
@@ -929,7 +1001,7 @@ instance ToJSON ProfileBody where
 instance FromJSON ProfileBody where
   parseJSON = withObject "ProfileBody" $ \v -> do
     -- if there isn't an address add a dummy one
-    address <- v .:? "address" .!= ("addr100000000000000000000000000000000000000000000000000000000" :: Text)
+    address <- v .:? "address" .!= dummyAddress
     let v' = KM.insert "address" (toJSON address) v
     dapp <- v .:? "dapp"
     ProfileBody
