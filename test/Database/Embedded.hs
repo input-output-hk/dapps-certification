@@ -25,3 +25,7 @@ certificationV2 =
 certificationV3 :: ByteString
 certificationV3 =
     $(makeRelativeToProject "test/Data/certification.v3.sqlite" >>= embedFile)
+
+certificationV4 :: ByteString
+certificationV4 =
+    $(makeRelativeToProject "test/Data/certification.v4.sqlite" >>= embedFile)

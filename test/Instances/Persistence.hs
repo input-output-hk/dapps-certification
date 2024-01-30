@@ -327,3 +327,64 @@ instance Arbitrary AuditorReportEvent where
     <*> arbitrary
     <*> arbitrary
     <*> genArbitraryName
+
+--------------------------------------------------------------------------------
+-- | invoice
+
+instance Arbitrary InvoiceId where
+  arbitrary = toId . (+1) . abs <$> arbitrary
+
+instance Arbitrary InvoiceBody where
+  arbitrary = InvoiceBody
+    <$> arbitrary
+    <*> arbitrary
+    <*> liftArbitrary genArbitraryName
+    <*> liftArbitrary genArbitraryName
+    <*> arbitrary
+
+instance Arbitrary InvoiceItemBody where
+  arbitrary = InvoiceItemBody <$> (InvoiceItem (toId (-1))
+    <$> arbitrary
+    <*> genArbitraryName
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary)
+
+instance Arbitrary InvoiceItemDTO where
+  arbitrary = InvoiceItemDTO <$> (InvoiceItem (toId (-1))
+    <$> arbitrary
+    <*> genArbitraryName
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary)
+
+instance Arbitrary InvoiceDTO where
+  arbitrary = do
+    invoice <- arbitrary
+    items' <- listOf arbitrary
+    let items'' = flip Prelude.map items' $ \item -> do
+        let item' = item { invItemInvId = invId invoice }
+        InvoiceItemDTO item'
+    pure $ InvoiceDTO invoice items''
+
+instance Arbitrary InvoiceItem where
+  arbitrary = InvoiceItem
+    <$> arbitrary
+    <*> arbitrary
+    <*> genArbitraryName
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+instance Arbitrary Invoice where
+  arbitrary = Invoice
+    <$> (toId . (+1) . abs <$> arbitrary)
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> genArbitraryName
+    <*> genArbitraryName
+    <*> arbitrary
+    <*> arbitrary

@@ -92,6 +92,7 @@ data Args = Args
   -- Normally, the admin wallet is not enforced, but only when there is no admin left
   -- though, if this is set true, will be enforced even if there are admins left
   , forceAdminAlways :: !Bool
+  , vat :: DB.VatPercentage
   }
 
 data GitHubArgs = GitHubArgs
@@ -185,9 +186,17 @@ argsParser =  Args
             <> "if this is set true, will be enforced even if there are other admins in the system"
              )
       )
+  -- subscription VAT percentage
+  <*> option auto
+      ( long "subscription-vat"
+     <> metavar "SUB_VAT"
+     <> help "the VAT percentage to apply to the subscription price"
+     <> showDefault
+     <> Opts.value 0
+      )
 
 -- | Parse a URL piece
--- NOTE: there is a duplicate in clien/Main.hs
+-- NOTE: there is a duplicate in client/Main.hs
 -- it is intended because we don't have yet a common library
 -- which doesn't imply the full server-library
 -- TODO: in the future we should split the API definition in a common library
@@ -507,8 +516,10 @@ main = do
       runSettings settings . application (narrowEventBackend InjectServeRequest eb) $
         cors (const $ Just corsPolicy) .
         serveWithContext (Proxy @APIWithSwagger) (genAuthServerContext (DB.withConnection conn) whitelist jwtConfig) .
-        (\r -> swaggerSchemaUIServer (documentation args.auth)
-               :<|> server (serverArgs conn args caps r eb whitelist adaPriceRef jwtConfig addressRotation))
+        (\r -> swaggerSchemaUIServer (documentation args.auth) :<|> server (
+            serverArgs conn args caps r eb whitelist adaPriceRef jwtConfig
+            addressRotation args.vat
+        ))
   exitFailure
   where
   markAllRunningAsAborted eb conn = withEvent eb MarkRunningTestsAsAborted \ev -> do
@@ -555,10 +566,10 @@ main = do
     ref <- newIORef Nothing
     _ <- forkIO $ startTransactionsMonitor
             (narrowEventBackend InjectSynchronizer eb) scheduleCrash
-            (args.wallet) ref 10 (args.minAmountForAddressAssignment)
-            (WithDBWrapper (DB.withConnection conn) )
+            args.wallet ref 10 (args.minAmountForAddressAssignment)
+            args.vat (WithDBWrapper (DB.withConnection conn) )
     pure ref
-  serverArgs conn  args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation = ServerArgs
+  serverArgs conn  args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation serverVat = ServerArgs
     { serverWalletArgs  = args.wallet
     , serverGithubToken = args.github.accessToken
     , serverEventBackend = be r eb

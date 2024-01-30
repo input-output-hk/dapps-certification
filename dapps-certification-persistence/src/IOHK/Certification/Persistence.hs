@@ -15,12 +15,27 @@ import Database.Selda
 import Database.Selda.SQLite
 import Database.Selda.Backend (SeldaConnection)
 
+import IOHK.Certification.Persistence.Structure.Invoicing as X
+  ( Invoice(..)
+  , InvoiceItem(..)
+  , InvoiceDTO(..)
+  , InvoiceItemDTO(..)
+  , InvoiceId
+  , InvoiceBody(..)
+  , InvoiceItemBody(..)
+  )
+
 import IOHK.Certification.Interface  as X
   ( GitHubAccessToken(..)
   , GitHubAccessTokenType(..)
   , ghAccessTokenPattern
   )
 
+import IOHK.Certification.Persistence.Structure.Internal as X
+  ( dummyAddress
+  , DummyAddress
+  , AdaUsdPrice
+  )
 import IOHK.Certification.Persistence.Structure.Run as X
   ( Run(..)
   , Status(..)
@@ -122,7 +137,6 @@ import IOHK.Certification.Persistence.API.UserRole as X
 import IOHK.Certification.Persistence.API as X
   ( MinimalTransaction(..)
   , MinimalTransactionEntry(..)
-  , AdaUsdPrice
   , upsertTransaction
   , withConnection
   , getProfileBalance
@@ -142,6 +156,18 @@ import IOHK.Certification.Persistence.API as X
   , deleteTransaction
   , getSubscriptionsStartingInInterval
   , getSubscriptionsEndingInInterval
+  )
+import IOHK.Certification.Persistence.API.Invoicing as X
+  ( getProfileInvoices
+  , getAllInvoices
+  , createInvoice
+  , cancelInvoice
+  , isProfileReadyForInvoicing
+  , CancelInvoiceResult(..)
+  , CreateSubscriptionInvoiceResult(..)
+  , CreateInvoiceResult(..)
+  , VatPercentage
+  , createSubscriptionInvoice
   )
 {-
 

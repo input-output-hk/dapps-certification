@@ -68,6 +68,11 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetSubscriptionsStartingInIntervalRoute auth
   :<|> GetSubscriptionsEndingInIntervalRoute auth
   :<|> GetAuditorReportMetrics auth
+  :<|> GetProfileInvoicesRoute auth
+  :<|> CancelInvoiceRoute auth
+  :<|> GetAllInvoicesRoute auth
+  :<|> CreateInvoiceRoute auth
+  :<|> CreateSubscriptionInvoiceRoute auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

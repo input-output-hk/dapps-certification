@@ -38,6 +38,13 @@ spec = do
       testJSONWithEq' eqProfileSummaryDTO "ProfileSummaryDTO" (na :: ProfileSummaryDTO)
       testJSONWithEq' eqProfileBody "ProfileBody" (na :: ProfileBody)
 
+      testJSON' "Invoice" (na :: Invoice)
+      testJSON' "InvoiceItem" (na :: InvoiceItem)
+      testJSON' "InvoiceDTO" (na :: InvoiceDTO)
+      testJSON' "InvoiceItemDTO" (na :: InvoiceItemDTO)
+      testJSON' "InvoiceBody" (na :: InvoiceBody)
+      testJSON' "InvoiceItemBody" (na :: InvoiceItemBody)
+
   where
 
   dummyAddress :: ProfileWalletAddress

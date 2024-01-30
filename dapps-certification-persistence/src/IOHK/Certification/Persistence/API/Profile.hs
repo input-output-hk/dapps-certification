@@ -111,6 +111,13 @@ upsertProfileWallet ProfileWallet{..} = do
      ])
     [ProfileWallet{..}]
 
+getProfile' :: MonadSelda m => ID Profile -> m (Maybe Profile)
+getProfile' pid = listToMaybe <$> query (do
+  p <- select profiles
+  restrict (p ! #profileId .== literal pid)
+  pure p)
+
+
 getProfile :: MonadSelda m => ID Profile -> m (Maybe ProfileDTO)
 getProfile pid = do
    ret <- listToMaybe <$> query (getProfileQ pid)
