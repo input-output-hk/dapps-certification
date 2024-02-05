@@ -7,6 +7,7 @@ module IOHK.Certification.Persistence
   , SQLite
   , Backend
   , SeldaConnection
+  , ID
   ) where
 
 import Database.Selda
@@ -23,6 +24,8 @@ import IOHK.Certification.Interface  as X
 import IOHK.Certification.Persistence.Structure.Run as X
   ( Run(..)
   , Status(..)
+  , CommitHash
+  , CertificationPrice
   )
 import IOHK.Certification.Persistence.Structure.Certification as X
   ( Certification(..)

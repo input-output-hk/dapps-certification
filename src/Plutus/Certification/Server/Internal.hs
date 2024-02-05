@@ -34,6 +34,7 @@ import Plutus.Certification.Internal
 
 import qualified IOHK.Certification.Persistence as DB
 import Control.Monad.RWS (MonadReader)
+import Plutus.Certification.Persistence.Instrumentation (DbSelector, renderPersistenceSelector)
 
 -- | Capabilities needed to run a server for 'API'
 data ServerCaps m r = ServerCaps
@@ -105,6 +106,7 @@ data GetAuditorReportMetricsField
   | GetAuditorReportMetricsFieldReports Int
 
 data ServerEventSelector f where
+  InjectPersistenceSel :: forall f . !(DbSelector f) -> ServerEventSelector f
   Version :: ServerEventSelector Void
   WalletAddress :: ServerEventSelector Void
   CreateRun :: ServerEventSelector CreateRunField
@@ -226,6 +228,7 @@ renderServerEventSelector GetAuditorReportMetrics = ("get-auditor-report-metrics
   GetAuditorReportMetricsFieldEnd end -> ("end", toJSON end)
   GetAuditorReportMetricsFieldReports reports -> ("reports", toJSON reports)
   )
+renderServerEventSelector (InjectPersistenceSel s) = renderPersistenceSelector s
 
 renderRunIDV1 :: RenderFieldJSON RunIDV1
 renderRunIDV1 rid = ("run-id",toJSON rid)

@@ -417,8 +417,10 @@ updateAdaPrice :: (MonadIO m,MonadMask m)
 updateAdaPrice eb ref = withEvent eb UpdateAdaPrice $ \_ -> do
   -- fetch the ada price from the wallet
   adaPrice <- getAdaPrice ( narrowEventBackend InjectCoinGeckoClient eb )
+  prevValue <- liftIO $ readIORef ref
   liftIO $ writeIORef ref $
     case adaPrice of
-     Left _ -> Nothing
+     -- TODO: this is a temporary hack to avoid crashing any consumer of
+     -- the ada price. 
+     Left _ -> prevValue
      Right p -> Just p
-

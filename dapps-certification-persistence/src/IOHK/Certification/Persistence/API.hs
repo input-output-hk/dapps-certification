@@ -194,7 +194,12 @@ addInitialData = void $ do
 type AdaUsdPrice = Micro
 -- | Create a subscription for a profile based on a tier.
 -- creates a pending subscription and disables all other subscriptions for this profile
-createSubscription :: MonadSelda m => UTCTime -> ID Profile -> ID Tier -> AdaUsdPrice  -> m (Maybe SubscriptionDTO)
+createSubscription :: MonadSelda m
+                   => UTCTime
+                   -> ID Profile
+                   -> ID Tier
+                   -> Micro
+                   -> m (Maybe SubscriptionDTO)
 createSubscription startDate pid tid adaUsdPrice = do
   tierM <- listToMaybe <$> query (do
     tier <- select tiers

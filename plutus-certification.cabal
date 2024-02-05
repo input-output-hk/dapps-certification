@@ -86,6 +86,7 @@ library
     Plutus.Certification.API.Swagger
     Plutus.Certification.Web3StorageClient
     Plutus.Certification.Internal
+    Plutus.Certification.Persistence.Instrumentation
     Plutus.Certification.WalletClient.Transaction
     Plutus.Certification.CertificationBroadcaster
     Plutus.Certification.Server.Internal
