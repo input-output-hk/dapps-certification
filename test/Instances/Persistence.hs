@@ -9,7 +9,7 @@
 module Instances.Persistence where
 
 import Test.QuickCheck
-import IOHK.Certification.Persistence
+import IOHK.Certification.Persistence as DB
 import Plutus.Certification.API
 import Plutus.Certification.Metadata
 import Control.Monad (replicateM)
@@ -17,6 +17,7 @@ import Data.Text
 import GHC.TypeLits (KnownSymbol)
 import Debug.Trace
 import Test.QuickCheck.Instances.Time ()
+import Plutus.Certification.ProfileWallet as PW
 
 --------------------------------------------------------------------------------
 -- | GitHubAccessToken
@@ -245,6 +246,36 @@ instance Arbitrary UserRole where
 instance Arbitrary TierType where
 -- Developer | Auditor
   arbitrary = elements [Developer,Auditor]
+
+instance Arbitrary WalletAddress where
+  arbitrary = do
+    (walletAddress :: ProfileWalletAddress) <- arbitrary
+    let value = getPatternedText walletAddress
+    pure $ WalletAddress value
+
+
+instance Arbitrary WalletAddressStatus where
+  arbitrary = elements [Reserved , Overlapping]
+
+instance Arbitrary DB.ProfileWallet where
+  arbitrary = do
+    (walletAddress :: ProfileWalletAddress) <- arbitrary
+    let value = getPatternedText walletAddress
+    DB.ProfileWallet
+      <$> arbitrary
+      <*> pure value
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary PW.ProfileWallet where
+  arbitrary = do
+    (reservedAddress,status) <- arbitrary
+    walletAddress'  <- arbitrary
+    balance <- fromInteger <$> choose (0,1000000000000)
+    pure $ PW.ProfileWallet
+      (reservedAddress,status)
+      walletAddress'
+      balance
 
 instance Arbitrary SubscriptionLite where
   arbitrary = SubscriptionLite
