@@ -13,7 +13,7 @@ module Plutus.Certification.ProfileWallet
   , renderProfileWalletSyncSelector
   , ProfileWalletSyncSelector
   , PrevAssignments
-  , AddressReservation(..)
+  , WalletAddressStatus(..)
   , getTemporarilyWalletAddress
   , AddressRotation(..)
   , emptyAddressRotation
@@ -22,6 +22,9 @@ module Plutus.Certification.ProfileWallet
   -- for testing purposes
   , fromDbTransaction
   , Transaction(..)
+  , updateProfileWallets
+  , createProfileWallets
+  , ProfileWallet(..)
   ) where
 
 import Prelude as P
@@ -31,7 +34,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.List
 import Control.Monad as M
-import Control.Lens.Internal.CTypes (Word64)
+import Data.Word (Word64)
 import Data.Text (Text)
 import Control.Monad.IO.Class
 import Control.Arrow
@@ -45,7 +48,7 @@ import Observe.Event.Render.JSON
 import Observe.Event
 import Data.Function
 import Plutus.Certification.WalletClient (WalletClient(..))
-import IOHK.Certification.Persistence (ProfileWalletAddress)
+import IOHK.Certification.Persistence (ProfileWalletAddress,WalletAddressStatus(..))
 
 import qualified Plutus.Certification.WalletClient as WalletClient
 import qualified IOHK.Certification.Persistence as DB
@@ -60,13 +63,11 @@ import Control.Monad.RWS (MonadReader)
 newtype WalletAddress = WalletAddress { unWalletAddress :: Text }
                       deriving (Eq,Show,Ord)
 
-data AddressReservation = Reserved | Overlapping
-
 data ProfileWallet = ProfileWallet
-    { pwAddressReservation :: (AddressReservation, WalletAddress)
+    { pwAddressReservation :: (DB.WalletAddressStatus, WalletAddress)
     , pwProfileAddress :: ProfileWalletAddress
     , pwBalance :: Word64
-    }
+    } deriving (Show,Eq)
 
 data Transaction = SimplePayment WalletAddress Word64
                  | DesignatedPayment ProfileWalletAddress WalletAddress Word64
@@ -527,16 +528,21 @@ updateProfileWallets wallets (DesignatedPayment profileAddress receiverAddress a
     [ProfileWallet (boolToReservation addressReserved, receiverAddress) profileAddress amount]
 
 updateProfileWallets wallets (WalletAddressAssignment profileAddress receiverAddress) =
-  -- we can't have any extra money, because we just reserve the address
-  (reserveAddress wallets,0)
+  -- we can't have any extra money, because we just reserved the address
+  (if addressAlreadyReserved then wallets else  reserveAddress wallets,0)
+
   where
+  addressAlreadyReserved =
+    any (\w -> w.pwAddressReservation == (Reserved,receiverAddress) && w.pwProfileAddress /= profileAddress)
+    wallets
+
   -- when the profileAddress is already reserved, we need to:
   reserveAddress (wallet@(ProfileWallet (Reserved,address) profileAddress' _):wallets')
     -- change the address if there is forced address assignation
     -- for the same profileAddress
     | profileAddress' == profileAddress = (wallet
         { pwAddressReservation = (Reserved, receiverAddress) }):wallets'
-    -- or, if there is different profile with the pointing to the same receiverAddress
+    -- or, if there is a different profile pointing to the same receiverAddress
     -- we ignore the assignment because the address is already reserved
     | address == receiverAddress = wallet:wallets'
     -- otherwise we continue searching
@@ -554,7 +560,7 @@ updateProfileWallets wallets (WalletAddressAssignment profileAddress receiverAdd
   -- with the reserved address and the balance of 0
   reserveAddress [] = [ProfileWallet (Reserved, receiverAddress) profileAddress 0]
 
-boolToReservation :: Bool -> AddressReservation
+boolToReservation :: Bool -> DB.WalletAddressStatus
 boolToReservation True = Overlapping
 boolToReservation False = Reserved
 

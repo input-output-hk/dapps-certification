@@ -9,8 +9,8 @@ import qualified DatabaseSpec as Database
 
 main :: IO ()
 main = hspec $ modifyMaxSuccess (const 1000) $ do
-  ProfileWallet.spec
   Signature.spec
   Pattern.spec
   JSON.spec
   Database.spec
+  ProfileWallet.spec

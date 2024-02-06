@@ -160,6 +160,8 @@ test-suite plutus-certification-test
     PatternSpec
     JSONSpec
     ProfileWallet.Data
+    ProfileWallet.TxPreProcessingSpec
+    ProfileWallet.TxProcessingSpec
     Instances.Persistence
     Utils.JSON
     SignatureSpec
