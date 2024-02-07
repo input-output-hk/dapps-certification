@@ -1,7 +1,7 @@
 { inputs, pkgs, lib, ... }: let
     imgAttributes = {
       name = "plutus-certification";
-      tag = "28";
+      tag = "29";
     };
     nixConfig = ''
         trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
@@ -288,7 +288,7 @@ rec {
     push-docker-image = {
       type = "app";
       # Usage: nix run .\#dockerApps.push-docker-image -- <docker registry> [<docker image tag>]
-      # Example: nix run .\#dockerApps.push-docker-image -- ghcr.io/demoiog "1.0.0"
+      # Example: nix run .\#dockerApps.push-docker-image -- ghcr.io/input-output-hk "1.0.0"
       program = (pkgs.writeShellScript "push-docker-image" ''
           source ${headerScript.program}
 
@@ -334,7 +334,7 @@ rec {
     push-branch-to-docker-registry = {
       type = "app";
       # Usage: nix run .\#dockerApps.push-branch-to-docker-registry -- <docker registry>
-      # Example: nix run .\#dockerApps.push-branch-to-docker-registry -- ghcr.io/demoiog
+      # Example: nix run .\#dockerApps.push-branch-to-docker-registry -- ghcr.io/input-output-hk
       program = (pkgs.writeShellScript "push-branch-to-docker-registry" ''
           # extract the current branch name and print it
           branch=$(git rev-parse --abbrev-ref HEAD)

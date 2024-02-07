@@ -30,10 +30,10 @@ To run the service without building it locally or even pulling the code, you can
 
 Examples:
 
-- ~bash <( curl -L -s bit.ly/46nuQIp ) master~
-- ~bash <( curl -L -s bit.ly/46nuQIp ) master --env-file ./nix/docker-files/default.env~
-- ~bash <( curl -L -s bit.ly/46nuQIp ) master --admin-address stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd~
-- ~bash <( curl -L -s bit.ly/46nuQIp ) master --docker-volume-prefix my-prefix~
+- ~bash <( curl -L -s bit.ly/3UCsWRP ) master~
+- ~bash <( curl -L -s bit.ly/3UCsWRP ) master --env-file ./nix/docker-files/default.env~
+- ~bash <( curl -L -s bit.ly/3UCsWRP ) master --admin-address stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd~
+- ~bash <( curl -L -s bit.ly/3UCsWRP ) master --docker-volume-prefix my-prefix~
 
 ** Pushing the docker image to the registry
 
@@ -43,6 +43,6 @@ Examples:
     ~nix run .\#dockerApps.push-branch-to-docker-registry -- <docker-registry>~
 
 > [!NOTE]
-> Temporarly, we use as the ~ghcr.io/demoiog~ for the docker registry. This will be changed in the future.
+> We use the ~ghcr.io/input-output-hk~ for the docker registry.
 
 

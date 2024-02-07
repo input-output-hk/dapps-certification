@@ -49,7 +49,7 @@ shift
 imageTag=${branch//\//-}
 echo "Image tag: \"$imageTag\""
 
-imageName=ghcr.io/demoiog/plutus-certification:$imageTag
+imageName=ghcr.io/input-output-hk/plutus-certification:$imageTag
 echo "Image name: \"$imageName\""
 
 #prepare to fetch the env vars but also verify if the branch exists
