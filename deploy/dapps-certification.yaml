@@ -47,8 +47,8 @@ spec:
                 key: token
                 name: nbn
           - name: RUN_CERTIFY_IMAGE
-            value: ghcr.io/input-output-hk/plutus-certification:PLT-7784-k8s-sched
-        image: ghcr.io/input-output-hk/plutus-certification:PLT-7784-k8s-sched
+            value: ghcr.io/input-output-hk/plutus-certification:29
+        image: ghcr.io/input-output-hk/plutus-certification:29
         imagePullPolicy: Always
         imagePullSecrets:
           - iohk-ghcr-creds
