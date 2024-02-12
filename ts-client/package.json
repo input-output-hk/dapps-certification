@@ -1,0 +1,20 @@
+{
+    "name": "dapps-certification",
+    "version": "1.0.0",
+    "description": "",
+    "scripts": {
+        "generate-index": "npx swagger-typescript-api -p http://localhost:9671/swagger.json  -o ./src -n ./index.ts --axios",
+        "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+    },
+    "main": "./lib/cjs/index.js",
+    "module": "./lib/esm/index.js",
+    "files": [
+        "lib/"
+    ],
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "peerDependencies": {
+        "axios": "^0.27.2"
+    }
+}

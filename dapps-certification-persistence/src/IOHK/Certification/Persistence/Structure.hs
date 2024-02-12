@@ -32,6 +32,7 @@ import           IOHK.Certification.Persistence.Structure.Subscription
 import           IOHK.Certification.Persistence.Structure.Internal
 import           IOHK.Certification.Persistence.Pattern
 import           Data.Text hiding (index)
+import           Data.HashMap.Strict.InsOrd as HM
 
 import           IOHK.Certification.Interface
   ( GitHubAccessToken(..)
@@ -92,9 +93,11 @@ instance FromJSON TierDTO where
 instance ToSchema TierDTO where
   declareNamedSchema _ = do
     tierSchema <- declareSchema (Proxy :: Proxy Tier)
+    stringSchema <- declareSchemaRef (Proxy :: Proxy String)
     featureSchema <- declareSchemaRef (Proxy :: Proxy [Feature])
     return $ NamedSchema (Just "TierDTO") $ tierSchema
-              & properties %~ (`mappend` [ ("features", featureSchema) ])
+              & properties %~ (`mappend` [ ("features", featureSchema) ,("id",stringSchema) ])
+                . HM.delete "id"
               & required %~  (<> [ "features" ])
 
 data WalletAddressStatus = Reserved | Overlapping
@@ -252,7 +255,7 @@ instance ToSchema ProfileSummaryDTO where
             , ("id", profileId)
             , ("runStats", runStatsSchema)
             ])
-        & required %~ (<> ["role","profileId","runStats" ])
+        & required %~ (<> ["role","profileId","runStats","id" ])
 
 data RunStats = RunStats
   { runsProfileId :: ID Profile
