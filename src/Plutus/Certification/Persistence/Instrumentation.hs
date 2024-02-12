@@ -190,4 +190,5 @@ renderPersistenceSelector CreateRun = ("create-run",\case
   CreateRunFieldsCommitHash commitHash' -> ("commit-hash",toJSON commitHash')
   CreateRunFieldsCertificationPrice certificationPrice' -> ("certification-price",toJSON certificationPrice')
   CreateRunFieldsProfileId profileId' -> ("profile-id",toJSON profileId')
+  CreateRunFieldsWithOptions withCustomOptions' -> ("with-custom-options",toJSON withCustomOptions')
   )
