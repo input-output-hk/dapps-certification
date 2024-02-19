@@ -14,7 +14,7 @@ In order to modify parameters, you can edit ~./nix/docker-files/default.env~.
 Regularly the developers are pushing into the docker registry the latest version of every branch.
 To run the service without building it locally or even pulling the code, you can run the following command:
 
-~bash <( curl -L -s bit.ly/46nuQIp ) <brach-name> [--env-file <env-file>] [--admin-address <stake-address>] [--docker-volume-prefix <volume-prefix-name>]~
+~bash <( curl -L -s bit.ly/3UCsWRP ) <brach-name> [--env-file <env-file>] [--admin-address <stake-address>] [--docker-volume-prefix <volume-prefix-name>]~
 
 > [!NOTE] 1.
 > You can find how the default env file looks at ~./nix/docker-files/default.env~.
