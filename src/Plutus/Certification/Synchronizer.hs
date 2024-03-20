@@ -12,6 +12,7 @@
 module Plutus.Certification.Synchronizer
   ( startTransactionsMonitor
   , SynchronizerSelector(..)
+  , SynchronizerEnv(..)
   , renderSynchronizerSelector
   -- TODO: remove this export, we are using this just to suppress warnings
   , certifyRuns
@@ -32,22 +33,22 @@ import Plutus.Certification.CoinGeckoClient
 import Data.Aeson
 import Data.Aeson.QQ
 import Plutus.Certification.CertificationBroadcaster
-import Observe.Event.Render.JSON
 import Control.Exception
-import Observe.Event.Crash
 import Data.Function (on)
 import Data.UUID (UUID)
 import Control.Monad.Except
 import Data.Maybe
-import Observe.Event.Backend
 import Observe.Event
+import Observe.Event.Crash
+import Observe.Event.Render.JSON
+import Observe.Event.BackendModification (setAncestor)
 import Data.Void
 import Control.Monad.RWS
 import Control.Monad.Reader (ReaderT(..))
-import Observe.Event.BackendModification (setAncestor)
 import Plutus.Certification.ProfileWallet
 import Data.IORef
 import Data.Word (Word64)
+import Plutus.Certification.PdfInvoice
 import qualified Data.HashSet as HashSet
 
 import qualified Plutus.Certification.WalletClient as Wallet
@@ -70,6 +71,7 @@ data SynchronizerSelector f where
   InitializingSynchronizer :: SynchronizerSelector InitializingField
   InjectTxBroadcaster :: forall f . !(TxBroadcasterSelector f) -> SynchronizerSelector f
   InjectCoinGeckoClient :: forall f . !(CoinGeckoClientSelector f) -> SynchronizerSelector f
+  InjectPdfInvoice :: forall f . !(PdfInvoiceSelector f) -> SynchronizerSelector f
   InjectProfileWalletSync :: forall f . !(ProfileWalletSyncSelector f) -> SynchronizerSelector f
   MonitorTransactions :: SynchronizerSelector TransactionsCount
   ActivateSubscriptions :: SynchronizerSelector [DB.SubscriptionId]
@@ -96,6 +98,7 @@ renderSynchronizerSelector (InjectCoinGeckoClient selector) = renderCoinGeckoCli
 renderSynchronizerSelector MonitorTransactions = ("monitor-transactions", renderTransactionsCount)
 renderSynchronizerSelector ActivateSubscriptions = ("activate-subscriptions", renderSubscriptions)
 renderSynchronizerSelector UpdateAdaPrice = ("refresh-ada-price", absurd)
+renderSynchronizerSelector (InjectPdfInvoice selector) = renderPdfInvoiceSelector selector
 renderSynchronizerSelector (InjectProfileWalletSync selector) = renderProfileWalletSyncSelector selector
 renderSynchronizerSelector SynchronizeTransactions =
   ( "synchronize-transactions"
@@ -135,6 +138,23 @@ walletTxStatusToDbStatus (Pending _ _) = DB.Pending
 walletTxStatusToDbStatus (Expired _) = DB.Expired
 walletTxStatusToDbStatus (InLedger _) = DB.InLedger
 walletTxStatusToDbStatus Submitted = DB.Submitted
+
+data SynchronizerEnv = SynchronizerEnv
+    { syncEnvDb :: !WithDB
+    , syncInvoicesFolder :: !FilePath
+    , syncWeasyPrintPath :: !FilePath
+    }
+
+instance HasDb SynchronizerEnv where
+  getWithDb = syncEnvDb
+
+instance HasInvoiceOutputFolder SynchronizerEnv where
+  getDestinationFolder = syncInvoicesFolder
+
+instance HasWeasyPrintPath SynchronizerEnv where
+  getWeasyPrintPath = syncWeasyPrintPath
+
+instance HasInvoiceTools SynchronizerEnv where
 
 synchronizeDbTransactions :: (MonadIO m, MonadMask m,MonadReader env m,HasDb env)
                           => EventBackend m r SynchronizerSelector
@@ -267,6 +287,7 @@ monitorWalletTransactions :: ( MonadIO m
                              , MonadError IOException m
                              , MonadReader env m
                              , HasDb env
+                             , HasInvoiceTools env
                              )
                           => EventBackend m r SynchronizerSelector
                           -> WalletArgs
@@ -287,6 +308,8 @@ monitorWalletTransactions eb args minAssignmentAmount
   addField ev $ TransactionsCount $ length transactions
   synchronizeDbTransactions (subEventBackend ev) transactions firstSyncRef
   activateSubscriptions (subEventBackend ev) vat
+  -- generate all unprocessed invoices
+  generateUnprocessedInvoices ( narrowEventBackend InjectPdfInvoice eb )
   -- synchronize wallets
   isOurAddress <- getIsOurAddress
   liftIO (readIORef refAssignments)
@@ -372,7 +395,12 @@ certifyProfileRuns certificationProcess runs =
 --
 -- The thread will run forever, and will be restarted if it crashes.
 -- The delay between each check is specified in seconds.
-startTransactionsMonitor :: (MonadIO m, MonadMask m, MonadError IOException m,HasDb env)
+startTransactionsMonitor :: ( MonadIO m
+                            , MonadMask m
+                            , MonadError IOException m
+                            , HasDb env
+                            , HasInvoiceTools env
+                            )
                          => EventBackend m r SynchronizerSelector
                          -> ScheduleCrash m r
                          -> WalletArgs
@@ -389,7 +417,13 @@ startTransactionsMonitor eb scheduleCrash args adaPriceRef delayInSeconds minAss
   eb' = hoistEventBackend (ReaderT . const) eb
   scheduleCrash' = hoistScheduleCrash (ReaderT . const) scheduleCrash
 
-startTransactionsMonitor' :: (MonadIO m, MonadMask m, MonadError IOException m,MonadReader env m,HasDb env)
+startTransactionsMonitor' :: ( MonadIO m
+                             , MonadMask m
+                             , MonadError IOException m
+                             , MonadReader env m
+                             , HasDb env
+                             , HasInvoiceTools env
+                             )
                          => EventBackend m r SynchronizerSelector
                          -> ScheduleCrash m r
                          -> WalletArgs
@@ -417,6 +451,9 @@ startTransactionsMonitor' eb scheduleCrash args adaPriceRef
     doWork ev = do
       ref <- liftIO $ newIORef []
       firstSyncRef <- liftIO $ newIORef True
+      -- synchronize all invoices with what's in the destination invoice folder
+      syncAllInvoices ( narrowEventBackend InjectPdfInvoice eb )
+      -- and now loop forever
       void $ forever $ do
         updateAdaPrice (subEventBackend ev) adaPriceRef
         monitorWalletTransactions (subEventBackend ev) args

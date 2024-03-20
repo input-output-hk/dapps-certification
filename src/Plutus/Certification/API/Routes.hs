@@ -359,12 +359,19 @@ type GetAllProfileIdsByRole (auth :: Symbol)
 --------------------------------------------------------------------------------
 -- | HTML
 
-type HTMLMain = "control-panel" :>
+type HTMLMain = "dev-panel" :>
   ( Get '[HTML] RawHtml
   :<|> "accounts" :> Get '[HTML] RawHtml
   :<|> "accounts" :> (Capture "profileId" DB.ProfileId :> Get '[HTML] RawHtml)
   :<|> "transactions" :> Get '[HTML] RawHtml
   :<|> "billing" :> Get '[HTML] RawHtml
+  :<|> "invoice" :> (Capture "invoiceId" DB.InvoiceId :> Get '[HTML] RawHtml)
+  :<|> "invoice" :> (Capture "invoiceId" DB.InvoiceId :> "pdf"
+        :> Get '[OctetStream] (Headers
+            '[ Servant.Header "Content-Type" String
+             , Servant.Header "Content-Transfer-Encoding" String
+             , Servant.Header "Content-Disposition" String
+             ] PdfBytesString))
   )
 
 data HTML = HTML
@@ -474,6 +481,23 @@ type CreateSubscriptionInvoiceRoute (auth :: Symbol)
   :> "invoices"
   :> AuthProtect auth
   :> Post '[JSON] DB.InvoiceDTO
+
+
+type DownloadInvoiceRoute auth = "invoice"
+  :> Description "Download an invoice in pdf format"
+  :> AuthProtect auth
+  :> Capture "id" DB.InvoiceId
+  :> Get '[OctetStream] (Headers
+      '[ Servant.Header "Content-Type" String
+       , Servant.Header "Content-Transfer-Encoding" String
+       , Servant.Header "Content-Disposition" String
+       ] PdfBytesString)
+
+newtype PdfBytesString = PdfBytesString { unPdfBytesString :: ByteString }
+
+instance ToSchema PdfBytesString where
+  declareNamedSchema _ = do
+    return $ NamedSchema (Just "PdfBytesString") binarySchema
 
 --------------------------------------------------------------------------------
 -- | TYPES AND INSTANCES
@@ -671,6 +695,7 @@ data NamedAPI (auth :: Symbol) mode = NamedAPI
   , cancelInvoice :: mode :- CancelInvoiceRoute auth
   , createInvoice :: mode :- CreateInvoiceRoute auth
   , createSubscriptionInvoice :: mode :- CreateSubscriptionInvoiceRoute auth
+  , downloadInvoice :: mode :- DownloadInvoiceRoute auth
   } deriving stock Generic
 
 newtype VersionV1 = VersionV1 { version :: Version } deriving (Generic)
@@ -767,6 +792,11 @@ instance MimeUnrender OctetStream RunIDV1 where
     Just rid -> pure $ RunID rid
     Nothing -> Left $ "couldn't parse '" ++ BSL8.unpack ridbs ++ "' as a run ID"
 
+instance MimeRender OctetStream PdfBytesString where
+  mimeRender _ (PdfBytesString bs) = bs
+
+instance MimeUnrender OctetStream PdfBytesString where
+  mimeUnrender _ bs = Right $ PdfBytesString bs
 
 instance MimeUnrender HTML RawHtml where
   mimeUnrender _ = Right . RawHtml . decodeUtf8 . BSL8.toStrict

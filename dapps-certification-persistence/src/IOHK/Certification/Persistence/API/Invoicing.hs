@@ -35,6 +35,20 @@ getAllInvoices :: MonadSelda m
                -> m [InvoiceDTO]
 getAllInvoices = getInvoices' Nothing
 
+getAllInvoiceIds :: MonadSelda m => m [InvoiceId]
+getAllInvoiceIds = query $ do
+    inv <- select invoices
+    pure (inv ! #invId)
+
+-- | get all unprinted invoices
+--
+-- @return all unprinted invoices
+getUnprintedInvoices :: MonadSelda m => m [InvoiceId]
+getUnprintedInvoices = query $ do
+    inv <- select invoices
+    restrict (inv ! #invPrinted .== literal (0 :: Int64))
+    pure (inv ! #invId)
+
 -- | get all invoices for a given profile in a period
 --
 -- @param profileId profile id
@@ -50,6 +64,19 @@ getProfileInvoices :: MonadSelda m
                       -> Maybe UTCTime
                       -> m [InvoiceDTO]
 getProfileInvoices profileId = getInvoices' (Just profileId)
+
+getInvoice :: MonadSelda m
+           => InvoiceId
+           -> m (Maybe InvoiceDTO)
+getInvoice invId' = do
+  invM <- listToMaybe <$> query  (do
+    inv <- select invoices
+    restrict (inv ! #invId .== literal invId')
+    pure inv)
+  itemsM <- forM invM $ \Invoice{invId} -> query (getInvoiceItems invId)
+  case (invM,itemsM) of
+    (Just inv, Just items) -> pure $ Just $ toDTO inv items
+    _ -> pure Nothing
 
 getInvoices' :: MonadSelda m
              => Maybe ProfileId
@@ -67,20 +94,22 @@ getInvoices' profileIdM start end = do
         mapM_ (\e -> restrict (inv ! #invDate .< literal e)) end
         pure inv
   -- get all invoice items for the invoices
-  items <- forM invoices' $ \Invoice{invId} -> query $ do
-    items <- select invoiceItems
-    restrict (items ! #invItemInvId .== literal invId)
-    pure items
+  items <- forM invoices' $ \Invoice{invId} -> query (getInvoiceItems invId)
   pure $ zipWith toDTO invoices' items
-  where
-  toDTO :: Invoice -> [InvoiceItem] -> InvoiceDTO
-  toDTO inv items = InvoiceDTO inv (Prelude.map InvoiceItemDTO items)
+
+toDTO :: Invoice -> [InvoiceItem] -> InvoiceDTO
+toDTO inv items = InvoiceDTO inv (Prelude.map InvoiceItemDTO items)
 
 data CreateInvoiceResult
   = CreateInvoiceResultProfileNotFound
   | CreateInvoiceResultRequiredFieldMissing Text.Text
   | CreateInvoiceResultInvoice InvoiceDTO
 
+getInvoiceItems :: ID Invoice -> Query t (Row t InvoiceItem)
+getInvoiceItems invId' = do
+    items <- select invoiceItems
+    restrict (items ! #invItemInvId .== literal invId')
+    pure items
 -- | create an invoice for a profile
 --
 -- @param inv invoice to create
@@ -120,6 +149,7 @@ createInvoice profileId now adaUsdPrice InvoiceBody{..} = do
             , invEmail = invBodyEmail <|> email <|> contactEmail
             , invFullName = fromMaybe (fromJust fullName) invBodyFullName
             , invCompanyName = fromMaybe (fromJust companyName) invBodyCompanyName
+            , invPrinted = 0
             }
       -- insert the invoice and get the id
       invId <- insertWithPK invoices [inv]
@@ -271,6 +301,7 @@ createSubscriptionInvoice subId vat = do
                   , invCompanyName = companyName'
                   , invFullName = fullName'
                   , invAdaUsdPrice = subscriptionAdaUsdPrice
+                  , invPrinted = 0
                   }
             invId <- insertWithPK invoices [inv]
             let invItem = InvoiceItem
@@ -303,4 +334,11 @@ createSubscriptionInvoice subId vat = do
       (\canceled -> canceled ! #invCancelledInvId .== just (subInv ! #subInvInvId))
       (select invoices)
     pure (subInv :*: cancellation)
+
+-- increase subscription counter for the invoice
+increaseInvoicePrintCounter :: MonadSelda m => InvoiceId -> m ()
+increaseInvoicePrintCounter  invId' = do
+  update_ invoices
+    (\inv -> inv ! #invId .== literal invId')
+    (\inv -> inv `with` [ #invPrinted := inv ! #invPrinted + 1 ])
 

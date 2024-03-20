@@ -19,3 +19,4 @@ run.x86.sh
 !test/Data/**
 run.x86.sh
 db.sql
+invoices/

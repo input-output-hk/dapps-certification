@@ -36,6 +36,7 @@ data Invoice = Invoice
   , invFullName       :: Text
   , invAdaUsdPrice    :: Double
   , invCancelledInvId :: Maybe (ID Invoice)
+  , invPrinted        :: Int64
   } deriving (Generic, Show, Eq)
 
 instance SqlRow Invoice

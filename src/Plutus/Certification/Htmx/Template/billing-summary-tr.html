@@ -1,13 +1,11 @@
 <tr
-  id="pid_$profileId'"
+  id="pid_$invoiceId"
   class="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 >
-  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$address'</td>
-  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$dapp'</td>
-  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$labels'</td>
-  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-    $totalRuns'
-  </td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$invoiceId</td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$date</td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$adaPrice</td>
+  <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">$url</td>
   <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
     <button
       type="button"
@@ -19,7 +17,7 @@
       <button
         class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-2 py-1 bg-transparent text-black hover:bg-gray-200 active:bg-gray-300 rounded"
         type="button"
-        onclick="toggleElementsByClass('pid_${profileId'}_details')"
+        onclick="toggleElementsByClass('pid_${invoiceId}_details')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -42,66 +40,64 @@
   </td>
 </tr>
 <tr
-  class="pid_${profileId'}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+  class="pid_${invoiceId}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
   style="display: none"
 >
   <td
     class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0"
     colspan="2"
   >
-    $companyName'
+    ___
   </td>
   <td class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0">
-    Subscribed on: $subscribedOn
+    ___
   </td>
   <td
     class="px-4 pt-4 pb-1 align-middle [&amp;:has([role=checkbox])]:pr-0"
     colspan="2"
   >
-    Succeeded: $succeededRuns
+    ___
   </td>
 </tr>
 <tr
-  class="pid_${profileId'}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+  class="pid_${invoiceId}_details bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
   style="display: none"
 >
   <td
     class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0"
     colspan="2"
   >
-    ProfileId: $profileId'
+    ___
   </td>
-  <td class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0">
-    Expires on: $expiresOn
-  </td>
+  <td class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0">___</td>
   <td
     class="px-4 py-1 align-middle [&amp;:has([role=checkbox])]:pr-0"
     colspan="2"
   >
-    Failed: $failedRuns
+    ___
   </td>
 </tr>
 <tr
   class="border-b bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 >
   <td
-    class="pid_${profileId'}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+    class="pid_${invoiceId}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
     style="display: none"
     colspan="2"
   >
-    $dappRepo'
+    ___
   </td>
   <td
-    class="pid_${profileId'}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+    class="pid_${invoiceId}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
     style="display: none"
   >
-    Subscription: $subscriptionStatus
+    ___
   </td>
   <td
-    class="pid_${profileId'}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+    class="pid_${invoiceId}_details px-4 pt-1 pb-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
     style="display: none"
     colspan="2"
   >
-    Aborted: $abortedRuns
+    ___
   </td>
 </tr>

@@ -22,6 +22,7 @@ createTables =
         "fullName" TEXT NOT NULL,
         "adaUsdPrice" DOUBLE PRECISION NOT NULL,
         "cancelledInvId" INTEGER NULL,
+        "printed" INTEGER NOT NULL,
         CONSTRAINT "fk0_profileId" FOREIGN KEY ("profileId") REFERENCES "profile"("profileId"),
         CONSTRAINT "fk1_cancelledInvId" FOREIGN KEY ("cancelledInvId") REFERENCES "invoice"("id")
       );

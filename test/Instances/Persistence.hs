@@ -360,12 +360,12 @@ instance Arbitrary InvoiceItemDTO where
 
 instance Arbitrary InvoiceDTO where
   arbitrary = do
-    invoice <- arbitrary
+    invoice' <- arbitrary
     items' <- listOf arbitrary
     let items'' = flip Prelude.map items' $ \item -> do
-        let item' = item { invItemInvId = invId invoice }
+        let item' = item { invItemInvId = invId invoice' }
         InvoiceItemDTO item'
-    pure $ InvoiceDTO invoice items''
+    pure $ InvoiceDTO invoice' items''
 
 instance Arbitrary InvoiceItem where
   arbitrary = InvoiceItem
@@ -386,5 +386,6 @@ instance Arbitrary Invoice where
     <*> arbitrary
     <*> genArbitraryName
     <*> genArbitraryName
+    <*> arbitrary
     <*> arbitrary
     <*> arbitrary

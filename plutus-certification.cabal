@@ -76,6 +76,8 @@ library
 
     neat-interpolation,
     http-media,
+    process,
+    directory,
 
     -- internal
     dapps-certification-signature-verification,
@@ -112,6 +114,7 @@ library
     Plutus.Certification.Server.Instance
     Plutus.Certification.CoinGeckoClient
     Plutus.Certification.Metrics
+    Plutus.Certification.PdfInvoice
     Plutus.Certification.Htmx.Internal
   autogen-modules: Paths_plutus_certification
   default-language: Haskell2010

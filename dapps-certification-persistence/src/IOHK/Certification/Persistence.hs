@@ -168,6 +168,10 @@ import IOHK.Certification.Persistence.API.Invoicing as X
   , CreateInvoiceResult(..)
   , VatPercentage
   , createSubscriptionInvoice
+  , getInvoice
+  , increaseInvoicePrintCounter
+  , getUnprintedInvoices
+  , getAllInvoiceIds
   )
 {-
 
