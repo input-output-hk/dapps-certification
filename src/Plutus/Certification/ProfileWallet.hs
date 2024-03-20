@@ -10,21 +10,21 @@
 {-# LANGUAGE OverloadedRecordDot  #-}
 module Plutus.Certification.ProfileWallet
   ( resyncWallets
+  , WalletAddressStatus(..)
   , renderProfileWalletSyncSelector
   , ProfileWalletSyncSelector
   , PrevAssignments
-  , WalletAddressStatus(..)
   , getTemporarilyWalletAddress
   , AddressRotation(..)
   , emptyAddressRotation
   , WalletAddress(..)
   , ProfileWalletAddress
-  -- for testing purposes
   , fromDbTransaction
   , Transaction(..)
+  , ProfileWallet(..)
+  -- for testing purposes
   , updateProfileWallets
   , createProfileWallets
-  , ProfileWallet(..)
   ) where
 
 import Prelude as P

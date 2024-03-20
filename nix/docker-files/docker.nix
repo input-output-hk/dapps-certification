@@ -1,7 +1,7 @@
 { inputs, pkgs, lib, ... }: let
     imgAttributes = {
       name = "plutus-certification";
-      tag = "30";
+      tag = "31";
     };
     nixConfig = ''
         trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
@@ -59,6 +59,10 @@
             ${addParameter "jwt-expiration-seconds" "JWT_EXPIRATION"}
           fi
         fi
+
+        #add weasyprint parameters
+
+        args="$args --weasyprint-path ${pkgs.python311Packages.weasyprint}/bin/weasyprint"
 
         # create a temporary directory for executing flakes
         mkdir -p /tmp
@@ -135,7 +139,8 @@
       #contents = [ pkgs.hello ];
       copyToRoot = pkgs.buildEnv {
         name = "image-root";
-        paths = [ pkgs.curl pkgs.zsh pkgs.coreutils pkgs.nmon pkgs.cacert pkgs.kubectl generate-flake build-flake run-certify ];
+        paths = [ pkgs.curl pkgs.zsh pkgs.coreutils pkgs.nmon pkgs.cacert pkgs.kubectl
+                pkgs.python311Packages.weasyprint generate-flake build-flake run-certify ];
         pathsToLink = [ "/bin" ];
       };
        runAsRoot = ''

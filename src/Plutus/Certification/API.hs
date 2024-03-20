@@ -48,6 +48,7 @@ import Plutus.Certification.API.Routes as X
   , FlexibleSlotSelector(..)
   , CreateRunOptions(..)
   , RawHtml(..)
+  , PdfBytesString(..)
   )
 import Plutus.Certification.API.RunLog as X
   ( RunLog(..)

@@ -1,0 +1,196 @@
+@import url("https://fonts.googleapis.com/css?family=Jaldi:700,400");
+.invoice_tile {
+  color: #000;
+  font-family: Jaldi;
+  font-size: 32px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 30px; /* 93.75% */
+}
+#balance_due {
+  color: #000;
+  text-align: right;
+  font-family: Jaldi;
+  font-style: normal;
+  font-weight: 400;
+}
+#balance {
+  color: #000;
+  text-align: right;
+  font-family: Jaldi;
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+@page {
+  margin: 3cm;
+}
+
+html {
+  color: #14213d;
+  font-family: Jaldi;
+  font-size: 11pt;
+  line-height: 1.6;
+}
+body {
+  margin: 0;
+}
+
+aside {
+  display: flex;
+  margin: 0em 0 0em;
+}
+
+#bill_to_group {
+  display: flex;
+  margin: 0em 0 3em;
+}
+
+aside div {
+  font-style: normal;
+}
+aside address {
+  font-style: normal;
+  white-space: pre-line;
+}
+aside address#iog {
+  /*color: #a9a;*/
+  color: #000;
+  flex: 1;
+}
+aside address#subinfo {
+  text-align: right;
+  color: #a9a;
+}
+
+aside address#bill_to {
+  /*color: #a9a;*/
+  color: #000;
+  flex: 1;
+}
+aside address#date {
+  text-align: right;
+}
+
+dl {
+  position: absolute;
+  right: 0;
+  text-align: right;
+  top: 0;
+}
+dt,
+dd {
+  display: inline;
+  margin: 0;
+}
+dt {
+  color: #a9a;
+}
+dt::before {
+  content: "";
+  display: block;
+}
+dt::after {
+  content: ":";
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: right;
+}
+th {
+  background: #3c3d3a;
+  color: #fff;
+  font-family: Jaldi;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+th,
+td {
+  padding-right: 0.5em;
+  padding-left: 0.5em;
+}
+td {
+  /*padding-top: 7mm;*/
+  /*padding horizontal*/
+  padding: 0.5em 0.5em;
+  border-bottom: 1px solid #adadad;
+  text-align: right;
+}
+/*td:last-of-type {*/
+/*text-align: right;*/
+/*}*/
+th,
+td {
+}
+thead th:first-of-type tbody td:first-of-type {
+  width: 5%;
+}
+
+/* No. */
+thead th:first-child,
+tbody td:first-child {
+}
+
+/* Description */
+thead tr th:nth-child(2),
+tbody tr td:nth-child(2) {
+  text-align: left;
+  width: 40%;
+}
+
+/*Quantity*/
+thead tr th:nth-child(3),
+tbody tr td:nth-child(3) {
+  width: 25%;
+}
+
+/* Rate */
+thead tr th:nth-child(4),
+tbody tr td:nth-child(4) {
+  width: 15%;
+}
+
+/* Amount */
+thead tr th:nth-child(5) tbody tr td:nth-child(5) {
+  width: 20%;
+}
+
+tfoot tr td {
+  border: none;
+  text-align: right;
+}
+
+.new_balance_due {
+  background: #f5f4f3;
+}
+
+footer {
+  padding-top: 1cm;
+  display: block;
+}
+
+footer div {
+  height: 2cm;
+}
+
+table#total {
+  background: #f6f6f6;
+  border-color: #f6f6f6;
+  border-style: solid;
+  border-width: 2cm 3cm;
+  bottom: 0;
+  font-size: 20pt;
+  margin: 0 -3cm;
+  position: absolute;
+  width: 18cm;
+}

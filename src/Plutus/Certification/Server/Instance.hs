@@ -53,6 +53,8 @@ import Control.Monad.Reader (ReaderT(..))
 import Control.Concurrent (MVar, takeMVar, putMVar)
 import Data.Set (fromList)
 import Plutus.Certification.Persistence.Instrumentation as WDB hiding (CreateRun)
+import System.FilePath
+
 import qualified Data.ByteString.Lazy.Char8 as LSB
 import qualified Paths_plutus_certification as Package
 import qualified Plutus.Certification.WalletClient as Wallet
@@ -90,6 +92,7 @@ data ServerArgs m r = ServerArgs
   , serverAdaUsdPrice :: m (Maybe DB.AdaUsdPrice)
   , serverAddressRotation :: MVar AddressRotation
   , serverVat :: DB.VatPercentage
+  , serverInvoicesFolder :: FilePath
   -- TODO: maybe replace the 'server' prefix
   , withDb :: forall a k. (MonadIO k, MonadMask k)
            -- TODO: Removing DB.Backend n ~ DB.SQLite it's the starting point
@@ -155,6 +158,7 @@ server ServerArgs{..} = NamedAPI
       -- abort the run if is still running
       status <- getStatus (setAncestor $ reference ev) rid
       when (toDbStatus status == DB.Queued) $ do
+
         -- finally abort the run
         abortRuns (setAncestor $ reference ev) rid
         -- if abortion succeeded mark it in the db
@@ -425,6 +429,20 @@ server ServerArgs{..} = NamedAPI
        :<|> getProfileSummaryRow
        :<|> transactionsPage
        :<|> billingPage
+       :<|> invoiceHtml
+       :<|> invoiceFromFile
+
+  , downloadInvoice = \ (ownerId,_) invId -> do
+      invoiceDtoM <- withDb $ DB.getInvoice invId
+      hasRole <- withDb (DB.hasAtLeastUserRole ownerId DB.Support)
+      -- if doesn't have the role for support, check if it's the owner of the invoice
+      unless hasRole $
+        case invoiceDtoM of
+          Nothing -> throwError err404 { errBody = "Invoice not found" }
+          Just (DB.InvoiceDTO DB.Invoice{invProfileId} _) -> do
+            unless (invProfileId == ownerId) $
+              throwError err403 {errBody = "You don't have the required rights"}
+      invoiceFromFile invId
 
   , getProfileInvoices = impersonate DB.Support \profileId -> withEvent eb GetProfileInvoices \ev -> do
       addField ev (GetProfileInvoicesFieldProfileId profileId)
@@ -451,6 +469,7 @@ server ServerArgs{..} = NamedAPI
         DB.InvoiceCanceled inv -> do
           addField ev $ CancelInvoiceFieldResultingInvoiceId (inv.invDtoParent.invId)
           addField ev $ CancelInvoiceFieldForProfileId (inv.invDtoParent.invProfileId)
+          --TODO: generate invoice pdf
           pure inv
 
   , createInvoice = \profileId invoiceBody (ownerId,_) -> withEvent eb CreateInvoice \ev -> do
@@ -461,6 +480,7 @@ server ServerArgs{..} = NamedAPI
       addField ev $ CreateInvoiceFieldAdaUsdPrice adaUsdPrice
       now <- getNow
       invResult <- withDb $ DB.createInvoice profileId now adaUsdPrice invoiceBody
+      --TODO: generate invoice pdf
       case invResult of
         DB.CreateInvoiceResultProfileNotFound ->
           throwError err404 { errBody = "Profile not found" }
@@ -491,14 +511,31 @@ server ServerArgs{..} = NamedAPI
           pure inv
   }
   where
+    invoiceFromFile invId = do
+      let strInvId = show (DB.fromId invId)
+      pdf <- liftIO $ LSB.readFile $ serverInvoicesFolder </> strInvId <> ".pdf"
+      let contentDisposition = "inline; filename=" <> strInvId <> ".pdf"
+      pure $ addHeader "application/pdf"
+           $ addHeader "Binary"
+           $ addHeader contentDisposition
+           $ PdfBytesString pdf
     homePage = pure $ RawHtml Htmx.homePage
     transactionsPage = pure $ RawHtml Htmx.transactionsPage
-    billingPage = pure $ RawHtml Htmx.billingPage
+    billingPage = do
+      -- get all invoices
+      invoices <- withDb $ DB.getAllInvoices Nothing Nothing
+      pure $ RawHtml $ Htmx.billingPage invoices
+    invoiceHtml invId = do
+      invoice <- withDb (DB.getInvoice invId)
+      case invoice of
+        Just inv -> pure $ RawHtml $ Htmx.renderInvoice inv
+        Nothing -> throwError err404 { errBody = "Invoice not found" }
+
     htmxPage = withDb DB.getProfilesSummary <&> RawHtml . Htmx.accountsPage
     getProfileSummaryRow profileId =
       withDb (DB.getProfileSummary profileId) >>= \case
         Nothing -> throwError err404 { errBody = "Profile not found" }
-        Just summary -> pure $ RawHtml $ Htmx.renderSummaryTrDetailed summary
+        Just summary -> pure $ RawHtml $ Htmx.renderAccountsTrDetailed summary
     createRun' CreateRunOptions{..} profileId = withEvent eb CreateRun \ev -> do
       -- get the flake ref and the github token from the db
       (fref,profileAccessToken) <- getFlakeRefAndAccessToken profileId croCommitOrBranch

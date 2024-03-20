@@ -93,6 +93,8 @@ data Args = Args
   -- though, if this is set true, will be enforced even if there are admins left
   , forceAdminAlways :: !Bool
   , vat :: DB.VatPercentage
+  , invoicesFolderPath :: !FilePath
+  , weasyprintPath :: !FilePath
   }
 
 data GitHubArgs = GitHubArgs
@@ -194,6 +196,20 @@ argsParser =  Args
      <> showDefault
      <> Opts.value 0
       )
+  <*> option str
+      ( long "invoices-folder-path"
+      <> metavar "INVOICES_FOLDER_PATH"
+      <> help "the path to the folder where the invoices will be stored"
+      <> showDefault
+      <> Opts.value "./invoices"
+      )
+  <*> option str
+      ( long "weasyprint-path"
+      <> metavar "WEASYPRINT_PATH"
+      <> help "the path to the weasyprint executable"
+      <> showDefault
+      <> Opts.value "weasyprint"
+  )
 
 -- | Parse a URL piece
 -- NOTE: there is a duplicate in client/Main.hs
@@ -567,7 +583,7 @@ main = do
     _ <- forkIO $ startTransactionsMonitor
             (narrowEventBackend InjectSynchronizer eb) scheduleCrash
             args.wallet ref 10 (args.minAmountForAddressAssignment)
-            args.vat (WithDBWrapper (DB.withConnection conn) )
+            args.vat $  SynchronizerEnv (DB.withConnection conn) args.invoicesFolderPath args.weasyprintPath
     pure ref
   serverArgs conn  args serverCaps r eb whitelist ref serverJWTConfig serverAddressRotation serverVat = ServerArgs
     { serverWalletArgs  = args.wallet
@@ -579,6 +595,7 @@ main = do
     , serverGitHubCredentials = args.github.credentials
     , serverAdaUsdPrice = liftIO $ readIORef ref
     , withDb = DB.withSQLiteConnection conn
+    , serverInvoicesFolder = args.invoicesFolderPath
     , ..
     }
   documentation PlainAddressAuth = swaggerJson

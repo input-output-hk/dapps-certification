@@ -4,18 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--TODO: This might change if the routes are changed-->
-    <base href="/control-panel">
+    <base href="/dev-panel" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.6" integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni" crossorigin="anonymous"></script>
+    <script
+      src="https://unpkg.com/htmx.org@1.9.6"
+      integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.0.943/pdf.min.js"></script>
     <script>
       function toggleElementsByClass(className) {
         const elements = document.getElementsByClassName(className);
 
         for (const element of elements) {
-          if (element.style.display === 'none' || getComputedStyle(element).display === 'none') {
+          if (
+            element.style.display === "none" ||
+            getComputedStyle(element).display === "none"
+          ) {
             element.style.display = null;
           } else {
-            element.style.display = 'none';
+            element.style.display = "none";
           }
         }
       }
@@ -31,14 +39,12 @@
         transition: opacity 150ms ease-out;
       }
     </style>
-    <div class="flex smooth" id="main" >
+    <div class="flex smooth" id="main">
       <aside class="sticky top-0 h-screen w-56 bg-gray-100 text-gray-800 p-4">
         <div class="flex items-center mb-4 space-x-1">
           <h1 class="text-lg font-medium">Control Panel</h1>
         </div>
-        <nav class="space-y-2">
-          $asideButtons
-        </nav>
+        <nav class="space-y-2">$asideButtons</nav>
       </aside>
       <main class="flex-grow p-6 fading">
         <div class="flex justify-between items-center mb-4">
@@ -66,25 +72,25 @@
             ><span>Download</span>
           </button>
         </div>
-        <div class="w-full overflow-auto">
-          $subPage
-        </div>
+        <div class="w-full overflow-auto">$subPage</div>
       </main>
     </div>
   </body>
   <script>
     // This might change if the routes are changed
-    document.body.addEventListener('htmx:configRequest', (event) => {
-      if(event.detail.path.startsWith('/control-panel')) {
+    document.body.addEventListener("htmx:configRequest", (event) => {
+      if (event.detail.path.startsWith("/dev-panel")) {
         // ignore the event
-        console.log(event)
-        return
+        console.log(event);
+        return;
       }
       // add / if it's not there
-      console.log("original",event.detail.path)
-      const path = !event.detail.path.startsWith('/') ? `/$${event.detail.path}` : event.detail.path
-      console.log("new",path)
-      event.detail.path = `/control-panel$${path}`
-    })
+      console.log("original", event.detail.path);
+      const path = !event.detail.path.startsWith("/")
+        ? `/$${event.detail.path}`
+        : event.detail.path;
+      console.log("new", path);
+      event.detail.path = `/dev-panel$${path}`;
+    });
   </script>
 </html>

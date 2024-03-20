@@ -73,6 +73,7 @@ type UnnamedApi (auth :: Symbol)
   :<|> GetAllInvoicesRoute auth
   :<|> CreateInvoiceRoute auth
   :<|> CreateSubscriptionInvoiceRoute auth
+  :<|> DownloadInvoiceRoute auth
 
 type UnnamedApiWithLogin (auth :: Symbol)
      = UnnamedApi auth

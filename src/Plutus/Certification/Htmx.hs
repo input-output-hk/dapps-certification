@@ -10,14 +10,14 @@ module Plutus.Certification.Htmx where
 import Plutus.Certification.Htmx.Internal
 import NeatInterpolation (text)
 import Data.Text as Text (take, drop, length,Text,pack)
--- import Persistence
 import qualified IOHK.Certification.Persistence as DB
 
 import Prelude hiding (length,drop)
 import Data.Maybe (fromMaybe)
 import Data.Time
 import Control.Arrow
-
+import Control.Lens.Internal.CTypes (Int64)
+import Data.Fixed (Centi)
 toText :: Show a => a -> Text
 toText = pack . show
 
@@ -30,23 +30,82 @@ truncateText maxLength text'
       right' = Text.take half (drop (length text' - half) text')
     in left' <> "..." <> right'
 
-renderSummaryTrDetailed :: DB.ProfileSummaryDTO -> Text
-renderSummaryTrDetailed summary@DB.ProfileSummaryDTO{..}  =
+--------------------------------------------------------------------------------
+-- | INVOICE
+renderInvoice :: DB.InvoiceDTO -> Text
+renderInvoice DB.InvoiceDTO{..} =
+  [textF|src/Plutus/Certification/Htmx/Template/Invoice/invoice.html|]
+  where
+  invNo = toText $ DB.fromId $ invDtoParent.invId
+  css = [textF|src/Plutus/Certification/Htmx/Template/Invoice/invoice.css|]
+  rows = map (invoiceRow adaMicro) invDtoItems
+  trs = foldl (\acc (row,_) -> acc <> row <> "\n") "" rows
+  adaMicro = realToFrac invAdaUsdPrice
+  DB.Invoice{..} = invDtoParent
+  total = toText $ sum $ map snd rows
+  company = invCompanyName
+  address = DB.getPatternedText invOwnerAddress
+  email = maybe "" DB.getPatternedText invEmail
+  date = formatDate invDate
 
-  renderSummaryTr summary <> renderDetailed
+invoiceRow :: Centi -> DB.InvoiceItemDTO -> (Text,Centi)
+invoiceRow adaUsdPrice (DB.InvoiceItemDTO DB.InvoiceItem{..}) =
+  ([textF|src/Plutus/Certification/Htmx/Template/Invoice/invoice-tr.html|],totalCenti)
+  where
+  no = toText $ invItemIx + 1
+  description = invItemName
+  qty = toText  invItemCount
+  unitPriceLovelace = lovelaceToUSD adaUsdPrice invItemUnitPrice
+  unitPrice = toText unitPriceLovelace
+  totalCenti = unitPriceLovelace * fromIntegral invItemCount
+  total = toText totalCenti
+
+type Lovelace = Int64
+lovelaceToUSD :: Centi -> Lovelace -> Centi
+lovelaceToUSD invAdaUsdPrice lovelace =
+  let
+    ada = fromIntegral lovelace / 1000000
+  in
+    ada * invAdaUsdPrice
+
+--------------------------------------------------------------------------------
+-- | HTMX PAGES
+renderAccountsTrDetailed :: DB.ProfileSummaryDTO -> Text
+renderAccountsTrDetailed summary@DB.ProfileSummaryDTO{..}  =
+  accountsTr summary <> renderDetailed
   where
   renderDetailed =
     let profileId'  = toText $ DB.fromId $ summaryProfile.profileId
     in [text|
-    <tr id="pidId_${profileId'}_detailed"
+    <tr id="pidId_${profileId'}_detailed$"
       class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
     >
-    CEVA
+    PLACE_HOLDER
     </tr>
   |]
 
-renderSummaryTr :: DB.ProfileSummaryDTO -> Text
-renderSummaryTr DB.ProfileSummaryDTO{..} =
+-- TODO: convert to local time when we figure out how would be configured
+formatUTCTime :: UTCTime -> Text
+formatUTCTime = pack . formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S"
+
+formatDate :: UTCTime -> Text
+formatDate = pack . formatTime defaultTimeLocale "%Y-%m-%d"
+
+billingTr :: DB.InvoiceDTO -> Text
+billingTr DB.InvoiceDTO{..} =
+  [textF|src/Plutus/Certification/Htmx/Template/billing-summary-tr.html|]
+  where
+    invoiceId = toText $ DB.fromId $ invDtoParent.invId
+    date = formatUTCTime $ invDtoParent.invDate
+    adaPrice = pack $ show $ invDtoParent.invAdaUsdPrice
+    url = [text|
+               <a target="_blank" href="/dev-panel/invoice/$invoiceId">html</a> <br/ >
+               <a target="_blank" href="/dev-panel/invoice/$invoiceId/pdf">pdf</a>
+            |]
+
+
+accountsTr :: DB.ProfileSummaryDTO -> Text
+accountsTr DB.ProfileSummaryDTO{..} =
   [textF|src/Plutus/Certification/Htmx/Template/profile-summary-tr.html|]
   where
     DB.Profile{..} = summaryProfile
@@ -82,9 +141,9 @@ renderSummaryTr DB.ProfileSummaryDTO{..} =
     companyName'= fromMaybe "-" companyName
 
 subStatusT :: DB.SubscriptionStatus -> Text
-subStatusT DB.ActiveSubscription = "Active"
+subStatusT DB.ActiveSubscription   = "Active"
 subStatusT DB.InactiveSubscription = "Inactive"
-subStatusT DB.PendingSubscription = "Pending"
+subStatusT DB.PendingSubscription  = "Pending"
 
 time' :: UTCTime -> Text
 time' = pack . formatTime defaultTimeLocale "%m/%d/%Y"
@@ -140,13 +199,23 @@ accountsPage allSummaryRows =
         $str
       </th> |]
    tableHeader = mconcat $ map th ["Address", "DApp", "Category", "Total Runs",""]
-   allSummaryTr = mconcat $ map renderSummaryTr allSummaryRows
+   allSummaryTr = mconcat $ map accountsTr allSummaryRows
+
+billingPage :: [DB.InvoiceDTO] -> Text
+billingPage allSummaryRows =
+  withMasterPage Billing [textF|src/Plutus/Certification/Htmx/Template/billing.html|]
+  where
+   th str = [text|
+     <th
+        class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0"
+      >
+        $str
+      </th> |]
+   tableHeader = mconcat $ map th ["Invoice No", "Date", "AdaPrice", "Url",""]
+   allSummaryTr = mconcat $ map billingTr allSummaryRows
 
 transactionsPage :: Text
 transactionsPage = withMasterPage Transactions [textF|src/Plutus/Certification/Htmx/Template/transactions.html|]
-
-billingPage :: Text
-billingPage = withMasterPage Billing [textF|src/Plutus/Certification/Htmx/Template/billing.html|]
 
 homePage :: Text
 homePage = withMasterPage Home [textF|src/Plutus/Certification/Htmx/Template/home.html|]
