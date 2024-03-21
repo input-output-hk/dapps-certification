@@ -1,0 +1,203 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+spec:
+  components:
+    - name: dapps-certification
+      properties:
+        env:
+          - name: WALLET_ADDRESS
+            value: addr_test1qphgqts20fhx0yx7ug42xehcnryukchy5k7hpaksgxax2fzt5w2gu33s8wrw3c9tjs97dr5pulsvf39e56v7c9ar39asptcrtp
+          - name: WALLET_ID
+            value: 73857344a0cf884fe044abfe85660cc9a81f6366
+          - name: WALLET_URL
+            value: http://localhost:8090
+          - name: WALLET_CERTIFICATION_PRICE
+            value: "1000000"
+          - name: MIN_AMOUNT_FOR_ADDRESS_RESERVATION
+            value: "1000000"
+          - name: PORT
+            value: "80"
+          - name: ADMIN_WALLET
+            value: stake_test1uq9cn4p6scw5rk4krttkddg0dcrzjnxuh9fkessajmlg9qgle0hjd
+          - name: FORCE_ADMIN_ALWAYS
+            value: "1"
+          - name: WALLET_PASSPHRASE
+            valueFrom:
+              secretKeyRef:
+                key: WALLET_PASSPHRASE
+                name: the-secrets
+          - name: GITHUB_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                key: GITHUB_CLIENT_ID
+                name: github-secrets
+          - name: GITHUB_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: GITHUB_CLIENT_SECRET
+                name: github-secrets
+          - name: DB_PATH
+            value: "/db/certification.sqlite"
+          - name: token
+            valueFrom:
+              secretKeyRef:
+                key: token
+                name: nbn
+          - name: RUN_CERTIFY_IMAGE
+            value: ghcr.io/input-output-hk/plutus-certification:31
+        image: ghcr.io/input-output-hk/plutus-certification:31
+        imagePullPolicy: Always
+        imagePullSecrets:
+          - iohk-ghcr-creds
+        memory: 8Gi
+        cpu: "3"
+        ports:
+          - expose: true
+            port: 80
+            protocol: TCP
+        volumeMounts:
+          emptyDir:
+            - name: ipc
+              mountPath: /ipc
+      traits:
+        # TODO: Abstract this into a custom trait type, along with the NBN token secret above
+        - type: storage
+          properties:
+            configMap:
+              - name: ssh
+                mountPath: /etc/ssh
+                data:
+                  ssh_config: |
+                    Host eu.nixbuild.net
+                      PreferredAuthentications none
+                      User authtoken
+                      SendEnv token
+
+                    Host *
+                    AddressFamily any
+                    GlobalKnownHostsFile /etc/ssh/ssh_known_hosts
+                  ssh_known_hosts: |
+                    eu.nixbuild.net ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIQCZc54poJ8vqawd8TraNryQeJnvH1eLpIDgbiqymM
+              - name: nix
+                mountPath: /etc/nix
+                data:
+                  nix.conf: |
+                    store = ssh-ng://eu.nixbuild.net
+                    experimental-features = nix-command flakes
+                    require-sigs = true
+                    substituters = https://cache.nixos.org/ https://cache.iog.io ssh://eu.nixbuild.net
+                    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= nixbuild.net/smart.contracts@iohk.io-1:s2PhQXWwsZo1y5IxFcx2D/i2yfvgtEnRBOZavlA8Bog=
+        - type: storage
+          properties:
+            pvc:
+            - name: db
+              mountPath: /db
+              storageClassName: ebs-sc
+              resources:
+                requests:
+                  storage: 10Gi
+        - type: storage
+          properties:
+            pvc:
+            - name: wallet-db
+              mountPath: /wallet-db
+              storageClassName: ebs-sc
+              resources:
+                requests:
+                  storage: 10Gi
+        - type: k8s-update-strategy
+          properties:
+            strategy:
+              type: Recreate
+        - properties:
+            replicas: 1
+          type: scaler
+        - properties:
+            domains:
+              - dapps-certification.scdev.aws.iohkdev.io
+            rules:
+              - port: 80
+                serviceName: dapps-certification
+          type: https-route
+        - type: sidecar
+          properties:
+            name: cardano-wallet
+            image: inputoutput/cardano-wallet:dev-master
+            args:
+              - serve
+              - --node-socket
+              - /ipc/node.socket
+              - --database
+              - /wallet-db
+              - --listen-address
+              - 0.0.0.0
+              - --testnet
+              - /config/preprod/genesis-byron.json
+            volumes:
+              - name: ipc
+                path: /ipc
+              - name: pvc-wallet-db
+                path: /wallet-db
+        - type: sidecar
+          properties:
+            name: socat
+            image: alpine/socat
+            args:
+              - UNIX-LISTEN:/ipc/node.socket,fork
+              - TCP-CONNECT:cardano-node-preprod.vela-system:8090
+            volumes:
+              - name: ipc
+                path: /ipc
+        - type: service-account
+          properties:
+            name: dapps-certification
+      type: webservice
+  policies:
+    - name: local-dapps-certification
+      properties:
+        clusters:
+          - local
+        namespace: dapps-certification-staging
+      type: topology
+  workflow:
+    steps:
+      - type: deploy
+        meta:
+          alias: Deploy To local-dapps-certification
+        name: local-dapps-certification
+        properties:
+          policies:
+            - local-dapps-certification
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "create", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dapps-certification
+  namespace: dapps-certification-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dapps-certification
+subjects:
+  - kind: ServiceAccount
+    name: dapps-certification
+    namespace: dapps-certification-staging
